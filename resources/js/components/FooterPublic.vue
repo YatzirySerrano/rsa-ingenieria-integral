@@ -1,14 +1,20 @@
 <script setup lang="ts">
+import { RSA_PUBLIC } from '@/config/rsaPublic'
+
 type NavLink = { label: string; id: string }
 
 const props = withDefaults(
   defineProps<{
-    links: readonly NavLink[]
+    links?: readonly NavLink[]
     onNav: (id: string) => void
-    waLink: string
+    waLink?: string
     logoSrc?: string
   }>(),
-  { logoSrc: '/img/rsa-logo.png' }
+  {
+    links: () => RSA_PUBLIC.links,
+    waLink: RSA_PUBLIC.waLink,
+    logoSrc: RSA_PUBLIC.logoSrc,
+  }
 )
 
 const address = 'Blvd. Paseo Cuauhnáhuac Km 5.5 Tejalpa 62570 Jiutepec, Mexico'
@@ -20,6 +26,7 @@ const email = 'rsaingenieriaintegral@gmail.com'
 </script>
 
 <template>
+  <!-- TU FOOTER IGUALITO: no cambié diseño -->
   <footer class="border-t border-slate-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
     <div class="mx-auto grid max-w-7xl gap-10 px-4 py-12 sm:px-6 lg:grid-cols-12 lg:px-8">
       <!-- Brand -->
@@ -67,9 +74,7 @@ const email = 'rsaingenieriaintegral@gmail.com'
              class="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white transition hover:bg-slate-50 dark:border-neutral-800 dark:bg-neutral-950 dark:hover:bg-neutral-900"
              aria-label="WhatsApp" title="WhatsApp">
             <svg viewBox="0 0 32 32" class="h-5 w-5 fill-slate-900 dark:fill-white" aria-hidden="true">
-              <path
-                d="M19.11 17.17c-.27-.13-1.6-.79-1.85-.88-.25-.09-.43-.13-.61.13-.18.27-.7.88-.86 1.06-.16.18-.32.2-.59.07-.27-.13-1.16-.43-2.21-1.37-.82-.73-1.37-1.64-1.53-1.91-.16-.27-.02-.42.12-.55.12-.12.27-.32.41-.48.13-.16.18-.27.27-.45.09-.18.04-.34-.02-.48-.07-.13-.61-1.47-.84-2.01-.22-.53-.45-.46-.61-.47h-.52c-.18 0-.48.07-.73.34-.25.27-.95.93-.95 2.27s.98 2.63 1.12 2.81c.13.18 1.93 2.95 4.68 4.14.65.28 1.16.45 1.56.58.65.21 1.24.18 1.71.11.52-.08 1.6-.65 1.83-1.27.23-.62.23-1.15.16-1.27-.07-.12-.25-.2-.52-.34ZM16.02 5.33c-5.89 0-10.67 4.78-10.67 10.67 0 1.88.49 3.7 1.43 5.3L5.2 26.67l5.55-1.46c1.53.83 3.25 1.27 5.27 1.27 5.89 0 10.67-4.78 10.67-10.67S21.91 5.33 16.02 5.33Z"
-              />
+              <path d="M19.11 17.17c-.27-.13-1.6-.79-1.85-.88-.25-.09-.43-.13-.61.13-.18.27-.7.88-.86 1.06-.16.18-.32.2-.59.07-.27-.13-1.16-.43-2.21-1.37-.82-.73-1.37-1.64-1.53-1.91-.16-.27-.02-.42.12-.55.12-.12.27-.32.41-.48.13-.16.18-.27.27-.45.09-.18.04-.34-.02-.48-.07-.13-.61-1.47-.84-2.01-.22-.53-.45-.46-.61-.47h-.52c-.18 0-.48.07-.73.34-.25.27-.95.93-.95 2.27s.98 2.63 1.12 2.81c.13.18 1.93 2.95 4.68 4.14.65.28 1.16.45 1.56.58.65.21 1.24.18 1.71.11.52-.08 1.6-.65 1.83-1.27.23-.62.23-1.15.16-1.27-.07-.12-.25-.2-.52-.34ZM16.02 5.33c-5.89 0-10.67 4.78-10.67 10.67 0 1.88.49 3.7 1.43 5.3L5.2 26.67l5.55-1.46c1.53.83 3.25 1.27 5.27 1.27 5.89 0 10.67-4.78 10.67-10.67S21.91 5.33 16.02 5.33Z"/>
             </svg>
           </a>
         </div>

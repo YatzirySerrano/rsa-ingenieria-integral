@@ -1,68 +1,83 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { Link } from '@inertiajs/vue3'
+import { RSA_PUBLIC } from '@/config/rsaPublic'
 
 type NavLink = { label: string; id: string }
 
 const props = withDefaults(
   defineProps<{
-    links: readonly NavLink[]
+    links?: readonly NavLink[]
     onNav: (id: string) => void
-    waLink: string
+    waLink?: string
     logoSrc?: string
   }>(),
-  { logoSrc: '/images/logoRSA.jpg' }
+  {
+    links: () => RSA_PUBLIC.links,
+    waLink: RSA_PUBLIC.waLink,
+    logoSrc: RSA_PUBLIC.logoSrc,
+  }
 )
 
 const open = ref(false)
-
-const navClass =
-  'text-sm font-medium text-slate-700 hover:text-slate-950 dark:text-slate-200 dark:hover:text-white'
-
-const navyBtn =
-  'inline-flex h-10 items-center justify-center rounded-xl bg-blue-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300'
 
 function go(id: string) {
   open.value = false
   props.onNav(id)
 }
+
+const itemBase =
+  'relative text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white transition'
+
+const underline =
+  'after:absolute after:left-0 after:-bottom-1 after:h-[2px] after:w-0 after:bg-slate-950 after:transition-all after:duration-300 hover:after:w-full dark:after:bg-white'
 </script>
 
 <template>
   <header class="sticky top-0 z-50 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-neutral-800 dark:bg-neutral-950/70">
     <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
       <!-- Logo -->
-      <button
-        type="button"
-        class="flex items-center gap-3"
-        @click="go('servicios')"
-        aria-label="Ir al inicio"
-      >
+      <button type="button" class="flex items-center gap-3" @click="go('servicios')" aria-label="Ir al inicio">
         <img :src="props.logoSrc" alt="RSA" class="h-9 w-9 rounded-lg object-contain" />
       </button>
 
       <!-- Desktop nav -->
-      <nav class="hidden items-center gap-6 md:flex">
+      <nav class="hidden items-center gap-7 md:flex">
         <button
           v-for="l in props.links"
           :key="l.id"
           type="button"
-          class="transition"
-          :class="navClass"
+          :class="[itemBase, underline]"
           @click="go(l.id)"
         >
           {{ l.label }}
         </button>
 
-        <a :href="props.waLink" target="_blank" rel="noopener noreferrer" :class="navyBtn">
-          Solicitar cotización
-        </a>
+        <div class="ml-2 flex items-center gap-2">
+          <Link
+            href="/login"
+            class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-950 transition hover:bg-slate-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
+          >
+            Iniciar sesión
+          </Link>
+
+          <Link
+            href="/register"
+            class="inline-flex h-10 items-center justify-center rounded-xl bg-blue-950 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+          >
+            Registrarse
+          </Link>
+        </div>
       </nav>
 
       <!-- Mobile -->
       <div class="flex items-center gap-3 md:hidden">
-        <a :href="props.waLink" target="_blank" rel="noopener noreferrer" :class="navyBtn">
-          Cotizar
-        </a>
+        <Link
+          href="/login"
+          class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
+        >
+          Login
+        </Link>
 
         <button
           type="button"
@@ -100,6 +115,22 @@ function go(id: string) {
           >
             {{ l.label }}
           </button>
+
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <Link
+              href="/login"
+              class="inline-flex h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-50 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white dark:hover:bg-neutral-900"
+            >
+              Iniciar sesión
+            </Link>
+
+            <Link
+              href="/register"
+              class="inline-flex h-10 items-center justify-center rounded-xl bg-blue-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+            >
+              Registrarse
+            </Link>
+          </div>
         </div>
       </div>
     </transition>
