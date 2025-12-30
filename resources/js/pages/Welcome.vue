@@ -13,6 +13,9 @@ function goTo(id: string) {
 
 const waLink = RSA_PUBLIC.waLink
 
+/**
+ * Cards derecha en HERO (ya las tenías)
+ */
 const stats = [
   { value: '24/7', label: 'Enfoque en continuidad' },
   { value: 'Mensual', label: 'Reportes a administración' },
@@ -31,57 +34,61 @@ type ServicioTile = {
   pill?: string
 }
 
+/**
+ * ✅ SOLO CAMBIO: SERVICIOS (mismo diseño, nueva info RSA)
+ * Revisa imágenes en /public/img/servicios/
+ */
 const serviciosTiles: ServicioTile[] = [
   {
-    title: 'Terminales biométricas',
-    subtitle: 'Facial y huella dactilar',
-    desc: 'Identificación rápida y control de acceso en puntos críticos.',
-    image: '/img/servicios/biometria.jpg',
+    title: 'Cámaras de seguridad (CCTV)',
+    subtitle: 'Videovigilancia profesional',
+    desc: 'Instalación y mantenimiento con cobertura optimizada, grabación estable y evidencia confiable.',
+    image: '/img/cctv.jpg',
     span: 'lg:col-span-2',
     theme: 'light',
     ctas: [
-      { k: '0.2 seg.', v: 'velocidad de comparación' },
-      { k: '2 seg.', v: 'velocidad de registro' },
+      { k: 'HD/4MP/8MP', v: 'calidad según proyecto' },
+      { k: 'NVR/DVR', v: 'grabación y respaldo' },
     ],
   },
   {
-    title: 'Lectores RFID, QR y móviles',
-    subtitle: 'Acceso flexible',
-    desc: 'Escala de una puerta a cientos con la misma línea de lectores.',
-    image: '/img/servicios/rfid.jpg',
+    title: 'Alarmas para casa y negocios',
+    subtitle: 'Detección y disuasión',
+    desc: 'Sensores, paneles y sirenas con instalación limpia, pruebas y configuración profesional.',
+    image: '/img/alarmas.png',
     span: 'lg:col-span-1',
     theme: 'dark',
   },
   {
-    title: 'Controladores inteligentes',
-    subtitle: 'Centralizado y cifrado',
-    desc: 'Control escalable para múltiples puertas con operación estable.',
-    image: '/img/servicios/controladores.jpg',
+    title: 'GPS y rastreo vehicular',
+    subtitle: 'Control en tiempo real',
+    desc: 'Monitoreo desde app, alertas y soporte para flotillas y vehículos particulares.',
+    image: '/img/gps.jpg',
     span: 'lg:col-span-1',
     theme: 'light',
   },
   {
-    title: 'Cerraduras inalámbricas',
-    subtitle: 'Instalación rápida',
-    desc: 'Control en puertas interiores con implementaciones sin cableado.',
-    image: '/img/servicios/cerraduras.jpg',
+    title: 'Cercas eléctricas',
+    subtitle: 'Perímetro reforzado',
+    desc: 'Protección disuasiva con instalación segura, señalización y mantenimiento preventivo.',
+    image: '/img/cerca-electrica.png',
     span: 'lg:col-span-2',
     theme: 'light',
   },
   {
-    title: 'Red de instaladores',
-    subtitle: 'Implementación a medida',
-    desc: 'Instalaciones rápidas con enfoque en continuidad y calidad.',
-    image: '/img/servicios/instaladores.jpg',
+    title: 'Control de acceso',
+    subtitle: 'Trazabilidad y control',
+    desc: 'Acceso por tarjeta/biometría con administración y reportes para empresa y fraccionamientos.',
+    image: '/img/control-acceso.png',
     span: 'lg:col-span-2',
     theme: 'light',
     pill: 'OBTENER PRESUPUESTO',
   },
   {
-    title: 'Soporte premium',
-    subtitle: 'Atención prioritaria',
-    desc: 'Mantenimiento preventivo/correctivo y respuesta con SLA operativo.',
-    image: '/img/servicios/soporte.jpg',
+    title: 'Dash cam profesional',
+    subtitle: 'Evidencia en ruta',
+    desc: 'Cámaras vehiculares con grabación continua, configuración y soporte profesional.',
+    image: '/img/dashcam.png',
     span: 'lg:col-span-1',
     theme: 'light',
   },
@@ -89,9 +96,21 @@ const serviciosTiles: ServicioTile[] = [
 
 type ProductoCard = { title: string; desc: string; image: string }
 const productos: ProductoCard[] = [
-  { title: 'CCTV / Videovigilancia', desc: 'Cámaras, DVR/NVR, almacenamiento y accesorios. Instalación opcional.', image: '/img/productos/cctv.jpg' },
-  { title: 'Control de acceso', desc: 'Lectores, tags, aperturas, casetas y control administrativo.', image: '/img/productos/acceso.jpg' },
-  { title: 'GPS / Seguimiento', desc: 'Dispositivos y soporte para rastreo desde aplicación.', image: '/img/productos/gps.jpg' },
+  {
+    title: 'CCTV / Videovigilancia',
+    desc: 'Cámaras, DVR/NVR, almacenamiento y accesorios. Instalación opcional.',
+    image: '/img/productos/cctv.jpg',
+  },
+  {
+    title: 'Control de acceso',
+    desc: 'Lectores, tags, aperturas, casetas y control administrativo.',
+    image: '/img/productos/acceso.jpg',
+  },
+  {
+    title: 'GPS / Seguimiento',
+    desc: 'Dispositivos y soporte para rastreo desde aplicación.',
+    image: '/img/productos/gps.jpg',
+  },
 ]
 
 type Testimonio = { name: string; role: string; text: string }
@@ -121,22 +140,22 @@ const testimonios: Testimonio[] = [
 const reasons = [
   { title: 'Ejecución limpia', desc: 'Instalación profesional con estándares: orden, pruebas y entrega documentada.' },
   { title: 'Soporte preventivo', desc: 'Mantenimiento programado, atención correctiva y reportes mensuales.' },
-  { title: 'Escalabilidad', desc: 'De una puerta a cientos: accesos, CCTV y perímetro integrados.' },
+  { title: 'Escalabilidad', desc: 'De una casa a un corporativo: accesos, CCTV y perímetro integrados.' },
   { title: 'Trazabilidad', desc: 'Control administrativo: evidencia, bitácoras y visibilidad operativa.' },
   { title: 'Enfoque empresarial', desc: 'Continuidad, SLA y comunicación clara para administración.' },
-  { title: 'Cobertura integral', desc: 'CCTV, accesos, alarmas, cercas eléctricas y seguimiento GPS.' },
+  { title: 'Cobertura integral', desc: 'CCTV, alarmas, cercas eléctricas, control de acceso y rastreo GPS.' },
 ] as const
 
 const babyBlue = 'text-sky-300'
 
+/**
+ * Botón "Descubrir más" (ya lo tenías)
+ */
 const primaryWhiteBtn =
-  'group inline-flex h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-slate-950 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60'
+  'inline-flex h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-semibold text-slate-950 shadow-sm transition-all duration-300 hover:bg-blue-950 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60'
 
-const sectionTitle =
-  'text-2xl font-semibold text-slate-950 dark:text-white'
-
-const sectionSubtitle =
-  'mt-1 text-sm text-slate-600 dark:text-slate-300'
+const sectionTitle = 'text-2xl font-semibold text-slate-950 dark:text-white'
+const sectionSubtitle = 'mt-1 text-sm text-slate-600 dark:text-slate-300'
 
 /**
  * Carrusel: scroll horizontal con snap + botones (sin libs).
@@ -153,14 +172,17 @@ function scrollCarousel(dir: 'left' | 'right') {
   <Head title="RSA Ingeniería Integral" />
 
   <PublicLayout>
-    <!-- HERO -->
+    <!-- ✅ HERO (FIX: que sí se vea la imagen de fondo) -->
     <section
       class="relative overflow-hidden bg-cover bg-center bg-no-repeat"
       :style="{ backgroundImage: `url('${RSA_PUBLIC.heroSrc}')` }"
     >
-      <!-- Overlay fuerte para legibilidad -->
-      <div class="absolute inset-0 bg-black/65" aria-hidden="true" />
-      <div class="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/65" aria-hidden="true" />
+      <!--
+        Antes lo tenías muy oscuro (black/65 + gradient oscuro), por eso “desaparecía” la foto.
+        Ajuste: overlay más ligero + gradient suave para legibilidad SIN matar la imagen.
+      -->
+      <div class="absolute inset-0 bg-black/35" aria-hidden="true" />
+      <div class="absolute inset-0 bg-gradient-to-r from-black/45 via-black/15 to-black/45" aria-hidden="true" />
 
       <div class="relative mx-auto max-w-7xl px-4 pt-16 sm:px-6 sm:pt-20 lg:px-8 lg:pt-24">
         <div class="grid items-center gap-10 lg:grid-cols-2">
@@ -177,17 +199,14 @@ function scrollCarousel(dir: 'left' | 'right') {
               </span>
             </h1>
 
-            <p class="max-w-xl text-base leading-relaxed text-white/85 sm:text-lg">
+            <p class="max-w-xl text-base leading-relaxed text-white/90 sm:text-lg">
               CCTV, control de accesos, alarmas, cercas eléctricas y seguimiento GPS.
               Operación estable, reportes mensuales y soporte con enfoque preventivo.
             </p>
 
             <div class="flex">
               <button type="button" :class="primaryWhiteBtn" @click="goTo('servicios')">
-                <span class="relative">
-                  Descubrir más
-                  <span class="absolute -bottom-1 left-0 h-[2px] w-0 bg-slate-900 transition-all duration-300 group-hover:w-full" />
-                </span>
+                Descubrir más
               </button>
             </div>
           </div>
@@ -198,10 +217,10 @@ function scrollCarousel(dir: 'left' | 'right') {
               <div
                 v-for="s in stats"
                 :key="s.label"
-                class="rounded-2xl border border-white/20 bg-white/10 p-4 text-center backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:bg-white/15"
+                class="rounded-2xl border border-white/25 bg-white/10 p-4 text-center backdrop-blur transition-all duration-300 hover:-translate-y-1 hover:bg-white/15"
               >
                 <div class="text-2xl font-semibold text-white">{{ s.value }}</div>
-                <div class="mt-1 text-xs text-white/85">{{ s.label }}</div>
+                <div class="mt-1 text-xs text-white/90">{{ s.label }}</div>
               </div>
             </div>
           </div>
@@ -211,7 +230,7 @@ function scrollCarousel(dir: 'left' | 'right') {
       <div class="relative mt-12 h-10 bg-gradient-to-b from-transparent to-white dark:to-neutral-950" aria-hidden="true" />
     </section>
 
-    <!-- SERVICIOS -->
+    <!-- SERVICIOS (mismo diseño, nueva info) -->
     <section id="servicios" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
       <div class="mb-7">
         <h2 :class="sectionTitle">Servicios</h2>
@@ -258,10 +277,16 @@ function scrollCarousel(dir: 'left' | 'right') {
 
             <div v-if="tile.ctas?.length" class="mt-6 grid grid-cols-2 gap-6">
               <div v-for="c in tile.ctas" :key="c.k">
-                <div class="text-2xl font-semibold" :class="tile.theme === 'dark' ? 'text-white' : 'text-slate-950 dark:text-white'">
+                <div
+                  class="text-2xl font-semibold"
+                  :class="tile.theme === 'dark' ? 'text-white' : 'text-slate-950 dark:text-white'"
+                >
                   {{ c.k }}
                 </div>
-                <div class="mt-1 text-xs" :class="tile.theme === 'dark' ? 'text-white/80' : 'text-slate-600 dark:text-slate-300'">
+                <div
+                  class="mt-1 text-xs"
+                  :class="tile.theme === 'dark' ? 'text-white/80' : 'text-slate-600 dark:text-slate-300'"
+                >
                   {{ c.v }}
                 </div>
               </div>
@@ -349,7 +374,7 @@ function scrollCarousel(dir: 'left' | 'right') {
         <article
           v-for="t in testimonios"
           :key="t.name + t.role"
-          class="min-w-[280px] max-w-[380px] flex-1 scroll-snap-align-start rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950"
+          class="min-w-[280px] max-w-[380px] flex-1 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md dark:border-neutral-800 dark:bg-neutral-950"
           style="scroll-snap-align: start;"
         >
           <div class="text-sm font-semibold text-slate-950 dark:text-white">{{ t.name }}</div>
