@@ -172,7 +172,7 @@ const sectionTitle = 'text-2xl font-semibold text-slate-950 dark:text-white'
 const sectionSubtitle = 'mt-1 text-sm text-slate-600 dark:text-slate-300'
 
 /**
- * ✅ SLIDER AUTOMÁTICO (3 imágenes) – Por qué elegirnos (lado derecho)
+ * SLIDER AUTOMÁTICO (3 imágenes) – Por qué elegirnos (lado derecho)
  * Cambia cada 4.5s con transición suave.
  */
 type WhyImage = { src: string; alt: string; caption?: string }
@@ -223,7 +223,7 @@ onMounted(() => {
     els.forEach((el) => observer?.observe(el))
   }
 
-  // ✅ iniciar autoplay de imágenes
+  // iniciar autoplay de imágenes
   startWhyAuto()
 })
 
@@ -258,51 +258,62 @@ onBeforeUnmount(() => {
         class="relative overflow-hidden bg-cover bg-center bg-no-repeat"
         :style="{ backgroundImage: `url('${RSA_PUBLIC.heroSrc}')` }"
       >
+        <!-- overlays -->
         <div class="absolute inset-0 bg-black/35" aria-hidden="true" />
         <div class="absolute inset-0 bg-gradient-to-b from-black/35 via-black/20 to-black/45" aria-hidden="true" />
 
-        <div class="relative mx-auto max-w-7xl px-4 pt-16 sm:px-6 sm:pt-20 lg:px-8 lg:pt-24">
-          <div class="mx-auto max-w-3xl text-center" data-reveal>
-            <div class="mx-auto w-fit rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur">
-              No somos una opción, somos tu solución
-            </div>
+        <!-- contenedor fullscreen real (resta header) -->
+        <div class="relative min-h-[calc(100svh-84px)] sm:min-h-[calc(100vh-84px)]">
+          <!-- centra verticalmente el contenido sin cortar -->
+          <div class="mx-auto flex min-h-[calc(100svh-84px)] sm:min-h-[calc(100vh-84px)] max-w-7xl items-center px-4 py-10 sm:px-6 lg:px-8">
+            <div class="mx-auto max-w-3xl text-center" data-reveal>
+              <div class="mx-auto w-fit rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur">
+                No somos una opción, somos tu solución
+              </div>
 
-            <h1 class="mt-6 text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              <span :class="babyBlue">RSA Ingeniería Integral</span>
-            </h1>
+              <h1 class="mt-6 text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
+                <span :class="babyBlue">RSA Ingeniería Integral</span>
+              </h1>
 
-            <div class="mt-3 text-lg font-semibold text-white/90 sm:text-xl">
-              Instalación y mantenimiento profesional de seguridad
-            </div>
+              <div class="mt-3 text-lg font-semibold text-white/90 sm:text-xl">
+                Instalación y mantenimiento profesional de seguridad
+              </div>
 
-            <p class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/90 sm:text-lg">
-              CCTV, control de accesos, alarmas, cercas eléctricas y seguimiento GPS.
-              Operación estable, reportes mensuales y soporte con enfoque preventivo.
-            </p>
+              <p class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/90 sm:text-lg">
+                CCTV, control de accesos, alarmas, cercas eléctricas y seguimiento GPS.
+                Operación estable, reportes mensuales y soporte con enfoque preventivo.
+              </p>
 
-            <div class="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div
-                v-for="s in stats"
-                :key="s.label"
-                class="rounded-2xl border border-white/25 bg-white/10 p-5 text-center backdrop-blur
-                       transition-all duration-300 ease-out
-                       hover:bg-white/14 hover:shadow-[0_10px_30px_-18px_rgba(0,0,0,0.55)]"
-              >
-                <div class="text-2xl font-semibold text-white">{{ s.value }}</div>
-                <div class="mt-1 text-xs text-white/90">{{ s.label }}</div>
+              <div class="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div
+                  v-for="s in stats"
+                  :key="s.label"
+                  class="rounded-2xl border border-white/25 bg-white/10 p-5 text-center backdrop-blur
+                        transition-all duration-300 ease-out
+                        hover:bg-white/14 hover:shadow-[0_10px_30px_-18px_rgba(0,0,0,0.55)]"
+                >
+                  <div class="text-2xl font-semibold text-white">{{ s.value }}</div>
+                  <div class="mt-1 text-xs text-white/90">{{ s.label }}</div>
+                </div>
+              </div>
+
+              <div class="mt-8 flex justify-center">
+                <button type="button" :class="primaryWhiteBtn" @click="goTo('servicios')">
+                  Descubrir más
+                </button>
               </div>
             </div>
-
-            <div class="mt-8 flex justify-center">
-              <button type="button" :class="primaryWhiteBtn" @click="goTo('servicios')">
-                Descubrir más
-              </button>
-            </div>
           </div>
-        </div>
 
-        <div class="relative mt-12 h-12 bg-gradient-to-b from-transparent to-white dark:to-neutral-950" aria-hidden="true" />
+          <!-- “cierre” del hero SIN blanco: funde hacia la sección siguiente -->
+          <div
+            class="pointer-events-none absolute bottom-0 left-0 right-0 h-24
+                  bg-gradient-to-b from-transparent to-slate-50 dark:to-neutral-950"
+            aria-hidden="true"
+          />
+        </div>
       </section>
+
 
       <!-- SERVICIOS -->
       <section id="servicios" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
