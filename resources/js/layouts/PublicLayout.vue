@@ -33,16 +33,21 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-white text-slate-950 dark:bg-neutral-950 dark:text-white">
+  <div class="min-h-[100dvh] w-full overflow-x-hidden bg-white text-slate-950 dark:bg-neutral-950 dark:text-white">
     <NavbarPublic :links="RSA_PUBLIC.links" :on-nav="goTo" />
 
-    <main>
+    <main class="w-full">
       <slot />
     </main>
 
-    <FooterPublic :links="RSA_PUBLIC.links" :on-nav="goTo" :wa-link="RSA_PUBLIC.waLink" :logo-src="RSA_PUBLIC.logoSrc" />
+    <FooterPublic
+      :links="RSA_PUBLIC.links"
+      :on-nav="goTo"
+      :wa-link="RSA_PUBLIC.waLink"
+      :logo-src="RSA_PUBLIC.logoSrc"
+    />
 
-    <!-- WhatsApp flotante (original / único) -->
+    <!-- WhatsApp flotante -->
     <a
       :href="RSA_PUBLIC.waLink"
       target="_blank"
@@ -58,7 +63,7 @@ onBeforeUnmount(() => {
       </svg>
     </a>
 
-    <!-- Subir (único) -->
+    <!-- Subir -->
     <button
       v-show="showTop"
       type="button"

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import { onBeforeUnmount, onMounted, ref } from 'vue'
+import Autoplay from 'embla-carousel-autoplay'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import { RSA_PUBLIC } from '@/config/rsaPublic'
 
@@ -25,7 +26,7 @@ function goTo(id: string) {
 const waLink = RSA_PUBLIC.waLink
 
 /**
- * Cards en HERO
+ * HERO - typing en labels de stats
  */
 const stats = [
   { value: '24/7', label: 'Enfoque en continuidad' },
@@ -33,6 +34,43 @@ const stats = [
   { value: 'Formal', label: 'Contrato y facturación' },
 ] as const
 
+const typedLabels = ref<string[]>(stats.map(() => ''))
+const typingDone = ref(false)
+
+function prefersReducedMotion() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false
+}
+
+async function runTyping() {
+  if (prefersReducedMotion()) {
+    typedLabels.value = stats.map((s) => s.label)
+    typingDone.value = true
+    return
+  }
+
+  typedLabels.value = stats.map(() => '')
+  typingDone.value = false
+
+  const baseDelay = 140
+  const charDelay = 18
+
+  for (let i = 0; i < stats.length; i++) {
+    await new Promise((r) => setTimeout(r, baseDelay))
+    const text = stats[i].label
+    let acc = ''
+    for (const ch of text) {
+      acc += ch
+      typedLabels.value[i] = acc
+      await new Promise((r) => setTimeout(r, charDelay))
+    }
+  }
+
+  typingDone.value = true
+}
+
+/**
+ * Servicios (agrego href como en navbar)
+ */
 type ServicioCta = { k: string; v: string }
 type ServicioTile = {
   title: string
@@ -43,11 +81,9 @@ type ServicioTile = {
   theme: 'light' | 'dark'
   ctas?: ServicioCta[]
   pill?: string
+  href: string
 }
 
-/**
- * SERVICIOS
- */
 const serviciosTiles: ServicioTile[] = [
   {
     title: 'Cámaras de seguridad (CCTV)',
@@ -56,6 +92,7 @@ const serviciosTiles: ServicioTile[] = [
     image: '/img/cctv.jpg',
     span: 'lg:col-span-2',
     theme: 'light',
+    href: '/servicios/cctv',
     ctas: [
       { k: 'HD/4MP/8MP', v: 'calidad según proyecto' },
       { k: 'NVR/DVR', v: 'grabación y respaldo' },
@@ -68,6 +105,7 @@ const serviciosTiles: ServicioTile[] = [
     image: '/img/alarmas.png',
     span: 'lg:col-span-1',
     theme: 'dark',
+    href: '/servicios/alarmas',
   },
   {
     title: 'GPS y rastreo vehicular',
@@ -76,6 +114,7 @@ const serviciosTiles: ServicioTile[] = [
     image: '/img/gps.jpg',
     span: 'lg:col-span-1',
     theme: 'light',
+    href: '/servicios/gps',
   },
   {
     title: 'Cercas eléctricas',
@@ -84,6 +123,7 @@ const serviciosTiles: ServicioTile[] = [
     image: '/img/cerca-electrica.png',
     span: 'lg:col-span-2',
     theme: 'light',
+    href: '/servicios/cercas-electricas',
   },
   {
     title: 'Control de acceso',
@@ -92,6 +132,7 @@ const serviciosTiles: ServicioTile[] = [
     image: '/img/control-acceso.png',
     span: 'lg:col-span-2',
     theme: 'light',
+    href: '/servicios/control-de-acceso',
     pill: 'OBTENER PRESUPUESTO',
   },
   {
@@ -101,16 +142,25 @@ const serviciosTiles: ServicioTile[] = [
     image: '/img/dashcam.png',
     span: 'lg:col-span-1',
     theme: 'light',
+    href: '/servicios/dashcam',
   },
 ]
 
+/**
+ * Productos (Más vendidos)
+ */
 type ProductoCard = { title: string; desc: string; image: string }
 const productos: ProductoCard[] = [
   { title: 'CCTV / Videovigilancia', desc: 'Cámaras, DVR/NVR, almacenamiento y accesorios. Instalación opcional.', image: '/img/cctv.jpg' },
-  { title: 'Control de acceso', desc: 'Lectores, tags, aperturas, casetas y control administrativo.', image: '/img/acceso.jpg' },
+  { title: 'Control de acceso', desc: 'Lectores, tags, aperturas, casetas y control administrativo.', image: '/img/control-acceso.png' },
   { title: 'GPS / Seguimiento', desc: 'Dispositivos y soporte para rastreo desde aplicación.', image: '/img/gps.jpg' },
 ]
 
+const activeProduct = ref<number | null>(null)
+
+/**
+ * Testimonios
+ */
 type Testimonio = { name: string; role: string; text: string }
 const testimonios: Testimonio[] = [
   { name: 'Cliente residencial', role: 'Fraccionamiento', text: 'Instalación rápida, cableado limpio y soporte real. Se nota el enfoque preventivo.' },
@@ -124,7 +174,7 @@ const testimonios: Testimonio[] = [
 ]
 
 /**
- * Razones (iconos distintos por card)
+ * Razones
  */
 type Reason = { title: string; desc: string; icon: 'check' | 'shield' | 'scale' | 'clock' | 'chat' | 'tool' }
 const reasons: readonly Reason[] = [
@@ -137,20 +187,19 @@ const reasons: readonly Reason[] = [
 ] as const
 
 function iconSvg(kind: Reason['icon']) {
-  const base = 'h-6 w-6'
   switch (kind) {
     case 'check':
-      return { cls: base, d: 'M9.2 16.2 4.8 11.8 3.4 13.2l5.8 5.8L20.6 7.6 19.2 6.2z' }
+      return { d: 'M9.2 16.2 4.8 11.8 3.4 13.2l5.8 5.8L20.6 7.6 19.2 6.2z' }
     case 'shield':
-      return { cls: base, d: 'M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 18c-3.1-1.2-6-4.6-6-9V6.3L12 4l6 2.3V11c0 4.4-2.9 7.8-6 9z' }
+      return { d: 'M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 18c-3.1-1.2-6-4.6-6-9V6.3L12 4l6 2.3V11c0 4.4-2.9 7.8-6 9z' }
     case 'scale':
-      return { cls: base, d: 'M12 2h2v4h4v2h-4v14h-2V8H6V6h6V2zm-7 7h4l-2 5-2-5zm10 0h4l-2 5-2-5zM7 16c-1.7 0-3-1.3-3-3h6c0 1.7-1.3 3-3 3zm10 0c-1.7 0-3-1.3-3-3h6c0 1.7-1.3 3-3 3z' }
+      return { d: 'M12 2h2v4h4v2h-4v14h-2V8H6V6h6V2zm-7 7h4l-2 5-2-5zm10 0h4l-2 5-2-5zM7 16c-1.7 0-3-1.3-3-3h6c0 1.7-1.3 3-3 3zm10 0c-1.7 0-3-1.3-3-3h6c0 1.7-1.3 3-3 3z' }
     case 'clock':
-      return { cls: base, d: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm1-13h-2v6l5 3 1-1.7-4-2.3z' }
+      return { d: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm1-13h-2v6l5 3 1-1.7-4-2.3z' }
     case 'chat':
-      return { cls: base, d: 'M4 4h16v11H7l-3 3V4zm2 2v8.2L6.8 13H18V6H6z' }
+      return { d: 'M4 4h16v11H7l-3 3V4zm2 2v8.2L6.8 13H18V6H6z' }
     case 'tool':
-      return { cls: base, d: 'M22 19l-6.2-6.2a6 6 0 0 1-7.6-7.6L10 7l3-3-1.8-1.8a6 6 0 0 1 7.6 7.6L25 16l-3 3zM5 21l6-6 2 2-6 6H5z' }
+      return { d: 'M22 19l-6.2-6.2a6 6 0 0 1-7.6-7.6L10 7l3-3-1.8-1.8a6 6 0 0 1 7.6 7.6L25 16l-3 3zM5 21l6-6 2 2-6 6H5z' }
   }
 }
 
@@ -164,16 +213,34 @@ const softHoverCard =
   'hover:-translate-y-[2px] hover:shadow-[0_14px_40px_-28px_rgba(2,6,23,0.25)] ' +
   'hover:bg-slate-50/60 dark:hover:bg-neutral-900/40'
 
+/**
+ * Glass (como navbar)
+ */
+const glassCard =
+  'border border-slate-200/60 bg-white/70 backdrop-blur-xl ' +
+  'shadow-[0_18px_60px_-40px_rgba(2,6,23,0.45)] ' +
+  'dark:border-neutral-800/70 dark:bg-neutral-950/70'
+
 const primaryWhiteBtn =
   'inline-flex h-11 items-center justify-center rounded-xl bg-white/95 px-6 text-sm font-semibold text-slate-950 shadow-sm ' +
   'transition-colors duration-300 hover:bg-blue-950 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60'
+
+/**
+ * Botón Ver servicio (glass premium visible sobre imagen)
+ */
+const serviceBtn =
+  'inline-flex h-10 items-center justify-center gap-2 rounded-full px-4 text-xs font-semibold ' +
+  'border border-white/25 bg-white/12 text-white backdrop-blur ' +
+  'shadow-[0_10px_30px_-18px_rgba(0,0,0,0.45)] ' +
+  'transition-all duration-300 ease-out ' +
+  'hover:bg-white/18 hover:-translate-y-[1px] hover:shadow-[0_18px_55px_-32px_rgba(0,0,0,0.65)] ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60'
 
 const sectionTitle = 'text-2xl font-semibold text-slate-950 dark:text-white'
 const sectionSubtitle = 'mt-1 text-sm text-slate-600 dark:text-slate-300'
 
 /**
- * SLIDER AUTOMÁTICO (3 imágenes) – Por qué elegirnos (lado derecho)
- * Cambia cada 4.5s con transición suave.
+ * Slider automático (Por qué)
  */
 type WhyImage = { src: string; alt: string; caption?: string }
 const whyImages: WhyImage[] = [
@@ -202,6 +269,17 @@ function stopWhyAuto() {
 }
 
 /**
+ * ✅ Testimonios: autoplay plugin embla
+ * - stopOnMouseEnter: true
+ * - stopOnInteraction: false
+ */
+const testiPlugin = Autoplay({
+  delay: 4200,
+  stopOnMouseEnter: true,
+  stopOnInteraction: false,
+})
+
+/**
  * Scroll reveal
  */
 let observer: IntersectionObserver | null = null
@@ -223,8 +301,8 @@ onMounted(() => {
     els.forEach((el) => observer?.observe(el))
   }
 
-  // iniciar autoplay de imágenes
   startWhyAuto()
+  runTyping()
 })
 
 onBeforeUnmount(() => {
@@ -238,7 +316,7 @@ onBeforeUnmount(() => {
   <Head title="RSA Ingeniería Integral" />
 
   <PublicLayout>
-    <div class="relative">
+    <div class="relative w-full overflow-x-hidden">
       <!-- Glow + gradientes -->
       <div
         class="pointer-events-none absolute inset-0 -z-10
@@ -255,20 +333,17 @@ onBeforeUnmount(() => {
 
       <!-- HERO -->
       <section
-        class="relative overflow-hidden bg-cover bg-center bg-no-repeat"
+        class="relative w-full overflow-hidden bg-cover bg-center bg-no-repeat"
         :style="{ backgroundImage: `url('${RSA_PUBLIC.heroSrc}')` }"
       >
-        <!-- overlays -->
         <div class="absolute inset-0 bg-black/35" aria-hidden="true" />
         <div class="absolute inset-0 bg-gradient-to-b from-black/35 via-black/20 to-black/45" aria-hidden="true" />
 
-        <!-- contenedor fullscreen real (resta header) -->
         <div class="relative min-h-[calc(100svh-84px)] sm:min-h-[calc(100vh-84px)]">
-          <!-- centra verticalmente el contenido sin cortar -->
           <div class="mx-auto flex min-h-[calc(100svh-84px)] sm:min-h-[calc(100vh-84px)] max-w-7xl items-center px-4 py-10 sm:px-6 lg:px-8">
             <div class="mx-auto max-w-3xl text-center" data-reveal>
               <div class="mx-auto w-fit rounded-full bg-white/15 px-4 py-2 text-xs font-semibold text-white backdrop-blur">
-                No somos una opción, somos tu solución
+                No somos una opción. Somos tu solución.
               </div>
 
               <h1 class="mt-6 text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
@@ -276,24 +351,26 @@ onBeforeUnmount(() => {
               </h1>
 
               <div class="mt-3 text-lg font-semibold text-white/90 sm:text-xl">
-                Instalación y mantenimiento profesional de seguridad
+                Diseñamos, instalamos y mantenemos sistemas profesionales de seguridad electrónica
               </div>
-
-              <p class="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/90 sm:text-lg">
-                CCTV, control de accesos, alarmas, cercas eléctricas y seguimiento GPS.
-                Operación estable, reportes mensuales y soporte con enfoque preventivo.
-              </p>
 
               <div class="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div
-                  v-for="s in stats"
-                  :key="s.label"
+                  v-for="(s, idx) in stats"
+                  :key="s.value"
                   class="rounded-2xl border border-white/25 bg-white/10 p-5 text-center backdrop-blur
                         transition-all duration-300 ease-out
                         hover:bg-white/14 hover:shadow-[0_10px_30px_-18px_rgba(0,0,0,0.55)]"
                 >
                   <div class="text-2xl font-semibold text-white">{{ s.value }}</div>
-                  <div class="mt-1 text-xs text-white/90">{{ s.label }}</div>
+                  <div class="mt-1 text-xs text-white/90">
+                    <span>{{ typedLabels[idx] }}</span>
+                    <span
+                      v-if="!typingDone && typedLabels[idx].length < s.label.length"
+                      class="ml-0.5 inline-block w-[1px] animate-caret bg-white/80 align-middle"
+                      aria-hidden="true"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -305,7 +382,6 @@ onBeforeUnmount(() => {
             </div>
           </div>
 
-          <!-- “cierre” del hero SIN blanco: funde hacia la sección siguiente -->
           <div
             class="pointer-events-none absolute bottom-0 left-0 right-0 h-24
                   bg-gradient-to-b from-transparent to-slate-50 dark:to-neutral-950"
@@ -313,7 +389,6 @@ onBeforeUnmount(() => {
           />
         </div>
       </section>
-
 
       <!-- SERVICIOS -->
       <section id="servicios" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
@@ -357,15 +432,24 @@ onBeforeUnmount(() => {
                 </div>
               </div>
 
-              <a
-                v-if="tile.pill"
-                :href="waLink"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="mt-7 inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-xs font-semibold text-blue-950 shadow-sm transition-colors duration-300 hover:bg-slate-50"
-              >
-                {{ tile.pill }}
-              </a>
+              <div class="mt-7 flex flex-wrap items-center gap-3">
+                <Link :href="tile.href" :class="serviceBtn">
+                  Ver servicio
+                  <svg viewBox="0 0 24 24" class="h-4 w-4 fill-white/90" aria-hidden="true">
+                    <path d="M14 3h7v7h-2V6.4l-9.3 9.3-1.4-1.4L17.6 5H14V3zM5 5h6v2H7v10h10v-4h2v6H5V5z" />
+                  </svg>
+                </Link>
+
+                <a
+                  v-if="tile.pill"
+                  :href="waLink"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-xs font-semibold text-blue-950 shadow-sm transition-colors duration-300 hover:bg-slate-50"
+                >
+                  {{ tile.pill }}
+                </a>
+              </div>
             </div>
           </article>
         </div>
@@ -382,15 +466,11 @@ onBeforeUnmount(() => {
           </div>
 
           <div class="mt-8 grid gap-8 lg:grid-cols-12">
-            <!-- LEFT: carrusel vertical -->
             <div class="lg:col-span-5" data-reveal>
               <Carousel orientation="vertical" class="relative w-full" :opts="{ align: 'start' }">
                 <CarouselContent class="h-[460px] sm:h-[520px] gap-3 py-3 pr-2">
                   <CarouselItem v-for="r in reasons" :key="r.title" class="basis-auto">
-                    <Card
-                      class="border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
-                      :class="softHoverCard"
-                    >
+                    <Card class="border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950" :class="softHoverCard">
                       <CardContent class="p-6">
                         <div class="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-950/10">
                           <svg viewBox="0 0 24 24" class="h-6 w-6 fill-blue-950 dark:fill-sky-200" aria-hidden="true">
@@ -414,7 +494,6 @@ onBeforeUnmount(() => {
               </Carousel>
             </div>
 
-            <!-- RIGHT: ✅ slider automático con transición -->
             <div class="lg:col-span-7" data-reveal>
               <div
                 class="group relative h-[460px] sm:h-[520px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm
@@ -422,10 +501,8 @@ onBeforeUnmount(() => {
                 @mouseenter="stopWhyAuto"
                 @mouseleave="startWhyAuto"
               >
-                <!-- marco glow suave -->
                 <div class="pointer-events-none absolute inset-0 bg-gradient-to-br from-blue-950/10 via-transparent to-sky-500/10 dark:from-blue-950/20" />
 
-                <!-- Imagen con transición -->
                 <Transition name="whyfade" mode="out-in">
                   <img
                     :key="whyIndex"
@@ -435,10 +512,8 @@ onBeforeUnmount(() => {
                   />
                 </Transition>
 
-                <!-- overlay para legibilidad (no mata la foto) -->
                 <div class="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" />
 
-                <!-- caption -->
                 <div class="absolute bottom-0 left-0 right-0 p-6 sm:p-7">
                   <div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
                     RSA <span class="opacity-80">•</span>
@@ -449,7 +524,6 @@ onBeforeUnmount(() => {
                     Evidencia visual de ejecución, operación y trazabilidad. (Autoplay; al pasar el mouse se pausa.)
                   </div>
 
-                  <!-- indicadores -->
                   <div class="mt-4 flex items-center gap-2">
                     <button
                       v-for="(_, i) in whyImages"
@@ -469,7 +543,7 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <!-- TESTIMONIOS -->
+      <!-- ✅ TESTIMONIOS (Autoplay + flechas abajo en mobile, laterales en md+) -->
       <section id="testimonios" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div class="flex items-end justify-between gap-6" data-reveal>
           <div>
@@ -479,13 +553,20 @@ onBeforeUnmount(() => {
         </div>
 
         <div class="mt-6" data-reveal>
-          <Carousel class="relative w-full" :opts="{ align: 'start' }">
+          <Carousel
+            class="relative w-full"
+            :opts="{ align: 'start' }"
+            :plugins="prefersReducedMotion() ? [] : [testiPlugin]"
+            @mouseenter="!prefersReducedMotion() && testiPlugin.stop()"
+            @mouseleave="!prefersReducedMotion() && (testiPlugin.reset(), testiPlugin.play())"
+          >
             <CarouselContent class="-ml-4">
-              <CarouselItem v-for="t in testimonios" :key="t.name + t.role" class="pl-4 md:basis-1/2 lg:basis-1/3">
-                <Card
-                  class="h-full border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
-                  :class="softHoverCard"
-                >
+              <CarouselItem
+                v-for="t in testimonios"
+                :key="t.name + t.role"
+                class="pl-4 md:basis-1/2 lg:basis-1/3"
+              >
+                <Card class="h-full border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950" :class="softHoverCard">
                   <CardContent class="p-6">
                     <div class="text-sm font-semibold text-slate-950 dark:text-white">{{ t.name }}</div>
                     <div class="text-xs text-slate-500 dark:text-slate-400">{{ t.role }}</div>
@@ -502,20 +583,28 @@ onBeforeUnmount(() => {
               </CarouselItem>
             </CarouselContent>
 
-            <CarouselPrevious />
-            <CarouselNext />
+            <!-- Desktop: laterales -->
+            <CarouselPrevious class="hidden md:flex testi-nav testi-nav-left" />
+            <CarouselNext class="hidden md:flex testi-nav testi-nav-right" />
+
+            <!-- Mobile: abajo (no tapa texto) -->
+            <div class="mt-5 flex items-center justify-center gap-3 md:hidden">
+              <CarouselPrevious class="testi-nav testi-nav-bottom" />
+              <CarouselNext class="testi-nav testi-nav-bottom" />
+            </div>
           </Carousel>
         </div>
       </section>
 
-      <!-- PRODUCTOS -->
+      <!-- PRODUCTOS (cards glass como navbar) -->
       <section id="productos" class="relative py-14">
         <div class="absolute inset-0 -z-10 bg-slate-50 dark:bg-neutral-900/40" aria-hidden="true" />
+
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div class="flex items-end justify-between gap-6" data-reveal>
             <div>
               <h2 :class="sectionTitle">Productos</h2>
-              <p :class="sectionSubtitle">Cards listas para catálogo: imagen + descripción.</p>
+              <p :class="sectionSubtitle">Los más vendidos: selección rápida de lo que más se instala.</p>
             </div>
 
             <a
@@ -524,19 +613,20 @@ onBeforeUnmount(() => {
                      transition-all duration-300 ease-out hover:bg-blue-900 hover:shadow-md
                      focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
             >
-              Ver más productos
+              Ver todos
             </a>
           </div>
 
-          <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <!-- Mobile/tablet -->
+          <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:hidden">
             <article
               v-for="p in productos"
               :key="p.title"
-              class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
-              :class="softHoverCard"
+              class="overflow-hidden rounded-2xl"
+              :class="[glassCard, softHoverCard]"
               data-reveal
             >
-              <div class="h-44 w-full bg-slate-100 dark:bg-neutral-900">
+              <div class="h-44 w-full bg-slate-100/40 dark:bg-neutral-900/40">
                 <img :src="p.image" alt="" class="h-full w-full object-cover" />
               </div>
 
@@ -546,15 +636,53 @@ onBeforeUnmount(() => {
               </div>
             </article>
           </div>
+
+          <!-- Desktop expand -->
+          <div class="mt-8 hidden gap-5 lg:flex" data-reveal>
+            <article
+              v-for="(p, i) in productos"
+              :key="p.title"
+              class="group relative overflow-hidden rounded-3xl"
+              :class="[glassCard, activeProduct === i ? 'flex-[1.35]' : 'flex-1', 'transition-all duration-400 ease-out']"
+              @mouseenter="activeProduct = i"
+              @mouseleave="activeProduct = null"
+            >
+              <div class="absolute inset-0">
+                <img :src="p.image" alt="" class="h-full w-full object-cover" />
+                <div class="absolute inset-0 bg-blue-950/45" />
+                <div class="absolute inset-0 bg-gradient-to-t from-blue-950/60 via-blue-950/35 to-blue-950/15" />
+              </div>
+
+              <div class="relative flex min-h-[280px] flex-col justify-end p-7">
+                <div class="inline-flex w-fit items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
+                  Más vendido
+                </div>
+
+                <div class="mt-3 text-xl font-semibold text-white">
+                  {{ p.title }}
+                </div>
+                <div class="mt-2 text-sm text-white/85">
+                  {{ p.desc }}
+                </div>
+
+                <div class="mt-5">
+                  <a
+                    href="/productos"
+                    class="inline-flex h-10 items-center justify-center rounded-full border border-white/20 bg-white/10 px-4 text-xs font-semibold text-white backdrop-blur
+                           transition hover:bg-white/16 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                  >
+                    Ver catálogo
+                  </a>
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
 
       <!-- CONTACTO -->
       <section id="contacto" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div
-          class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
-          data-reveal
-        >
+        <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-950" data-reveal>
           <div class="grid gap-6 lg:grid-cols-2 lg:items-center">
             <div>
               <h2 :class="sectionTitle">¿Listos para asegurar tu operación?</h2>
@@ -610,7 +738,7 @@ onBeforeUnmount(() => {
   transform: translateY(0);
 }
 
-/* ✅ Transición slider (fade + leve zoom premium) */
+/* slider why */
 .whyfade-enter-active,
 .whyfade-leave-active {
   transition: opacity 520ms ease, transform 720ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -633,6 +761,43 @@ onBeforeUnmount(() => {
   transform: scale(1.01);
 }
 
+/* caret typing */
+@keyframes caretBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.animate-caret {
+  height: 0.9em;
+  animation: caretBlink 900ms infinite;
+}
+
+/* ✅ Testimonios: estilo pro para flechas (y que no tapen contenido) */
+.testi-nav {
+  z-index: 50 !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+/* Desktop: laterales y centradas */
+.testi-nav-left {
+  position: absolute !important;
+  left: -0.25rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+.testi-nav-right {
+  position: absolute !important;
+  right: -0.25rem !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Mobile: botones abajo (no overlay) */
+.testi-nav-bottom {
+  position: static !important;
+  transform: none !important;
+}
+
 /* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
   [data-reveal] {
@@ -643,6 +808,9 @@ onBeforeUnmount(() => {
   .whyfade-enter-active,
   .whyfade-leave-active {
     transition: none !important;
+  }
+  .animate-caret {
+    animation: none !important;
   }
 }
 </style>
