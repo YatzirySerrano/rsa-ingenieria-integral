@@ -161,17 +161,77 @@ const activeProduct = ref<number | null>(null)
 /**
  * Testimonios
  */
-type Testimonio = { name: string; role: string; text: string }
+type Testimonio = {
+  name: string
+  meta: string // ej: "9 opiniones · 6 fotos"
+  time: string // ej: "Hace un mes"
+  text: string
+  rating: number // 1-5
+}
+
 const testimonios: Testimonio[] = [
-  { name: 'Cliente residencial', role: 'Fraccionamiento', text: 'Instalación rápida, cableado limpio y soporte real. Se nota el enfoque preventivo.' },
-  { name: 'Administración', role: 'Empresa', text: 'Reportes mensuales claros y seguimiento puntual. Operación estable y sin sorpresas.' },
-  { name: 'Seguridad', role: 'Caseta', text: 'Control de accesos más ágil y trazabilidad completa. Excelente atención.' },
-  { name: 'Logística', role: 'Flotilla', text: 'GPS con visibilidad en tiempo real y soporte inmediato cuando se requiere.' },
-  { name: 'Operaciones', role: 'Planta', text: 'Instalación ordenada, pruebas completas y entrega con evidencia. Cero improvisación.' },
-  { name: 'Gerencia', role: 'Sucursal', text: 'Comunicación clara y tiempos bien definidos. Se nota el enfoque profesional.' },
-  { name: 'Mantenimiento', role: 'Comercial', text: 'Soporte preventivo real: visitas programadas y correcciones antes de fallas.' },
-  { name: 'Supervisor', role: 'Accesos', text: 'Control y trazabilidad muy superiores. Ahora todo queda registrado y auditable.' },
+  {
+    name: 'Ahtziri Jaimes',
+    meta: '3 opiniones',
+    time: 'Hace un mes',
+    text: 'Excelente servicio, muy amables y la calidad buenísima. Super recomendado 👌🏽…',
+    rating: 5,
+  },
+  {
+    name: 'Ángeles MontesBrito',
+    meta: '9 opiniones · 6 fotos',
+    time: '3 semanas atrás',
+    text: 'Excelente atención, con opciones que se ajustan al presupuesto sin perder la calidad',
+    rating: 5,
+  },
+  {
+    name: 'Ivan Rojas Martinez',
+    meta: '2 opiniones',
+    time: 'Hace un mes',
+    text: 'Exelente servicio y calidad. Ajustándose al presupuesto deseado.',
+    rating: 5,
+  },
+  {
+    name: 'BIANKA HERNANDEZ',
+    meta: '1 opinión',
+    time: '3 semanas atrás',
+    text: 'Muy buena la experiencia, muy recomendados, siempre atentos a los detalles y a mis necesidades, precio justo.',
+    rating: 5,
+  },
+  {
+    name: 'Alexis Olivetto',
+    meta: '1 opinión',
+    time: 'Hace un mes',
+    text: 'Buen servicio y te antienden bien',
+    rating: 5,
+  },
+  {
+    name: 'Daniel Martinez',
+    meta: '1 opinión',
+    time: 'Hace un mes',
+    text: 'Está bien organizada y completa la tienda, la atención al cliente son muy amables. Te resuelven tus dudas y se acoplan a tus necesidades y presupuestos.',
+    rating: 5,
+  },
+  {
+    name: 'Luis Estrada',
+    meta: '4 opiniones · 1 foto',
+    time: 'Hace un mes',
+    text: 'Excelente servicio, me asesoraron y recomendaron las mejores cámaras según mi presupuesto y mis necesidades',
+    rating: 5,
+  },
+  {
+    name: 'Ana Alvarez',
+    meta: '2 opiniones · 2 fotos',
+    time: 'una semana atrás',
+    text: 'Servicio de calidad, la mejor opción para proteger tus bienes. Brindan un servicio de calidad y eficacia.',
+    rating: 5,
+  },
 ]
+
+// helper de estrellas
+function stars(n: number) {
+  return Array.from({ length: 5 }, (_, i) => i < Math.max(0, Math.min(5, n)))
+}
 
 /**
  * Razones
@@ -269,7 +329,7 @@ function stopWhyAuto() {
 }
 
 /**
- * ✅ Testimonios: autoplay plugin embla
+ * Testimonios: autoplay plugin embla
  * - stopOnMouseEnter: true
  * - stopOnInteraction: false
  */
@@ -543,58 +603,90 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <!-- ✅ TESTIMONIOS (Autoplay + flechas abajo en mobile, laterales en md+) -->
-      <section id="testimonios" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-        <div class="flex items-end justify-between gap-6" data-reveal>
-          <div>
-            <h2 :class="sectionTitle">Testimonios</h2>
-            <p :class="sectionSubtitle">Recomendaciones reales: confianza que se demuestra.</p>
-          </div>
-        </div>
+<!-- TESTIMONIOS (Autoplay + flechas abajo en mobile, laterales en md+) -->
+  <section id="testimonios" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+    <div class="flex items-end justify-between gap-6" data-reveal>
+      <div>
+        <h2 :class="sectionTitle">Testimonios</h2>
+        <p :class="sectionSubtitle">Opiniones de Google Maps: confianza validada por clientes.</p>
+      </div>
+    </div>
 
-        <div class="mt-6" data-reveal>
-          <Carousel
-            class="relative w-full"
-            :opts="{ align: 'start' }"
-            :plugins="prefersReducedMotion() ? [] : [testiPlugin]"
-            @mouseenter="!prefersReducedMotion() && testiPlugin.stop()"
-            @mouseleave="!prefersReducedMotion() && (testiPlugin.reset(), testiPlugin.play())"
+    <div class="mt-6" data-reveal>
+      <Carousel
+        class="relative w-full"
+        :opts="{ align: 'start' }"
+        :plugins="prefersReducedMotion() ? [] : [testiPlugin]"
+        @mouseenter="!prefersReducedMotion() && testiPlugin.stop()"
+        @mouseleave="!prefersReducedMotion() && (testiPlugin.reset(), testiPlugin.play())"
+      >
+        <CarouselContent class="-ml-4">
+          <CarouselItem
+            v-for="t in testimonios"
+            :key="t.name + t.time"
+            class="pl-4 md:basis-1/2 lg:basis-1/3"
           >
-            <CarouselContent class="-ml-4">
-              <CarouselItem
-                v-for="t in testimonios"
-                :key="t.name + t.role"
-                class="pl-4 md:basis-1/2 lg:basis-1/3"
-              >
-                <Card class="h-full border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950" :class="softHoverCard">
-                  <CardContent class="p-6">
-                    <div class="text-sm font-semibold text-slate-950 dark:text-white">{{ t.name }}</div>
-                    <div class="text-xs text-slate-500 dark:text-slate-400">{{ t.role }}</div>
-
-                    <p class="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
-                      “{{ t.text }}”
-                    </p>
-
-                    <div class="mt-5 flex items-center gap-1">
-                      <span v-for="i in 5" :key="i" class="text-yellow-500">★</span>
+            <Card
+              class="h-full border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
+              :class="softHoverCard"
+            >
+              <CardContent class="p-6">
+                <div class="flex items-start justify-between gap-4">
+                  <div class="min-w-0">
+                    <div class="truncate text-sm font-semibold text-slate-950 dark:text-white">
+                      {{ t.name }}
                     </div>
-                  </CardContent>
-                </Card>
-              </CarouselItem>
-            </CarouselContent>
+                    <div class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                      {{ t.meta }}
+                    </div>
+                  </div>
 
-            <!-- Desktop: laterales -->
-            <CarouselPrevious class="hidden md:flex testi-nav testi-nav-left" />
-            <CarouselNext class="hidden md:flex testi-nav testi-nav-right" />
+                  <div class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                    {{ t.time }}
+                  </div>
+                </div>
 
-            <!-- Mobile: abajo (no tapa texto) -->
-            <div class="mt-5 flex items-center justify-center gap-3 md:hidden">
-              <CarouselPrevious class="testi-nav testi-nav-bottom" />
-              <CarouselNext class="testi-nav testi-nav-bottom" />
-            </div>
-          </Carousel>
+                <!-- rating -->
+                <div class="mt-4 flex items-center gap-1">
+                  <span
+                    v-for="(on, i) in stars(t.rating)"
+                    :key="i"
+                    class="text-sm"
+                    :class="on ? 'text-yellow-500' : 'text-slate-200 dark:text-neutral-800'"
+                    aria-hidden="true"
+                  >
+                    ★
+                  </span>
+                  <span class="ml-2 text-xs text-slate-500 dark:text-slate-400">
+                    {{ t.rating.toFixed(1) }}
+                  </span>
+                </div>
+
+                <!--texto: padding extra lateral para que jamás “choque” con flechas en layouts raros -->
+                <p class="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300 pr-1">
+                  “{{ t.text }}”
+                </p>
+
+                <div class="mt-5 text-xs text-slate-500 dark:text-slate-400">
+                  Fuente: Google Maps
+                </div>
+              </CardContent>
+            </Card>
+          </CarouselItem>
+        </CarouselContent>
+
+        <!-- Desktop: laterales -->
+        <CarouselPrevious class="hidden md:flex testi-nav testi-nav-left" />
+        <CarouselNext class="hidden md:flex testi-nav testi-nav-right" />
+
+        <!-- Mobile: abajo -->
+        <div class="mt-5 flex items-center justify-center gap-3 md:hidden">
+          <CarouselPrevious class="testi-nav testi-nav-bottom" />
+          <CarouselNext class="testi-nav testi-nav-bottom" />
         </div>
-      </section>
+      </Carousel>
+    </div>
+  </section>
 
       <!-- PRODUCTOS (cards glass como navbar) -->
       <section id="productos" class="relative py-14">

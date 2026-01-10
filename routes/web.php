@@ -14,4 +14,8 @@ Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+Route::get('/servicios/cctv', function () {
+    return Inertia::render('servicios/cctv');
+})->name('servicios.cctv');
+
 require __DIR__.'/settings.php';
