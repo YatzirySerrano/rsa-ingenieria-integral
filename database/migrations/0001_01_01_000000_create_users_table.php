@@ -4,19 +4,30 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
+    
     /**
-     * Run the migrations.
+     * Ejecuta la migracion
      */
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+
+            // Datos base Breeze
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+
+            // 🔹 Campos funcionales extra
+            $table->string('rol', 30)->default('cliente')->index(); 
+            // admin | vendedor | cliente
+
+            $table->string('status', 10)->default('activo')->index(); 
+            // activo | inactivo (eliminación lógica)
+
+            // Tokens y timestamps
             $table->rememberToken();
             $table->timestamps();
         });
@@ -38,12 +49,13 @@ return new class extends Migration
     }
 
     /**
-     * Reverse the migrations.
+     * Revierte las migraciones
      */
     public function down(): void
     {
-        Schema::dropIfExists('users');
-        Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');
+        Schema::dropIfExists('password_reset_tokens');
+        Schema::dropIfExists('users');
     }
+
 };

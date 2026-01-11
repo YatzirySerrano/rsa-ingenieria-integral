@@ -92,7 +92,7 @@ const serviciosTiles: ServicioTile[] = [
     image: '/img/cctv.jpg',
     span: 'lg:col-span-2',
     theme: 'light',
-    href: '/servicios/cctv',
+    href: '/Servicios/cctv',
     ctas: [
       { k: 'HD/4MP/8MP', v: 'calidad según proyecto' },
       { k: 'NVR/DVR', v: 'grabación y respaldo' },
