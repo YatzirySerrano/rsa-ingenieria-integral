@@ -1,30 +1,90 @@
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { router, useForm, usePage } from '@inertiajs/vue3'
+import type { AppPageProps } from '@/types'
 import type { Paginated } from '@/types/pagination'
 import type { Producto, Status, MarcaLite, CategoriaLite, ProductoMedia } from '@/types/catalogo'
-import type { AppPageProps } from '@/types'
 import { useSwal } from './useSwal'
 
+/**
+ * Props extra esperadas desde Inertia::render('Productos/Index', ...)
+ */
 type ProductosExtraProps = {
   filters: { q: string; status: string }
-  productos: Paginated<Producto>
-  marcas: MarcaLite[]
-  categorias: CategoriaLite[]
+  productos: Paginated<Producto> | any // el backend actual puede mandar data "doble"
+  marcas: MarcaLite[] | any
+  categorias: CategoriaLite[] | any
+}
+
+/**
+ * Endpoints SIN Ziggy (evita `route is not defined`).
+ * Laravel ya tiene exactamente estas rutas en web.php.
+ */
+const endpoints = {
+  index: '/productos',
+  store: '/productos',
+  update: (id: number) => `/productos/${id}`,
+  destroy: (id: number) => `/productos/${id}`,
+  mediaStore: (productoId: number) => `/productos/${productoId}/media`,
+  mediaDestroy: (productoId: number, mediaId: number) => `/productos/${productoId}/media/${mediaId}`,
+}
+
+/**
+ * Normaliza un "Paginated" que a veces llega como:
+ * - productos.data = [{...}, {...}]
+ * o (por el Resource::collection envuelto en 'data'):
+ * - productos.data = { data: [{...}, {...}] }
+ */
+function normalizePaginated(raw: any): Paginated<Producto> {
+  const safe = raw ?? {}
+
+  // data puede venir como array o como objeto { data: [...] }
+  const data = Array.isArray(safe.data) ? safe.data : Array.isArray(safe.data?.data) ? safe.data.data : []
+
+  // links/meta normalmente vienen bien, pero los defendemos
+  const links = Array.isArray(safe.links) ? safe.links : []
+  const meta = safe.meta ?? { current_page: 1, last_page: 1, total: 0 }
+
+  return { data, links, meta }
+}
+
+/** Normaliza arrays que a veces pueden venir como { data: [...] } */
+function normalizeArray<T = any>(raw: any): T[] {
+  if (Array.isArray(raw)) return raw
+  if (Array.isArray(raw?.data)) return raw.data
+  return []
 }
 
 export function useProductosIndex() {
-  const page = usePage<AppPageProps & ProductosExtraProps>()
+  const page = usePage<AppPageProps & Partial<ProductosExtraProps>>()
   const { confirmDelete, toastSuccess, toastError, showInfo } = useSwal()
 
-  const props = computed(() => page.props)
+  /**
+   * Computeds normalizados (evitan TS errors + evitan render crashes)
+   */
+  const filters = computed(() => page.props.filters ?? { q: '', status: 'activo' })
+  const productos = computed(() => normalizePaginated((page.props as any).productos))
+  const marcas = computed<MarcaLite[]>(() => normalizeArray<MarcaLite>((page.props as any).marcas))
+  const categorias = computed<CategoriaLite[]>(() => normalizeArray<CategoriaLite>((page.props as any).categorias))
 
-  // filtros
-  const q = ref(props.value.filters?.q ?? '')
-  const status = ref<(Status | 'todos')>((props.value.filters?.status as any) ?? 'activo')
+  /**
+   * Filtros locales (sin que se vuelvan [object Object])
+   */
+  const q = ref<string>(filters.value.q ?? '')
+  const status = ref<(Status | 'todos')>((filters.value.status as any) ?? 'activo')
+
+  // Si Inertia cambia props por navegación, sincronizamos inputs
+  watch(
+    filters,
+    (f) => {
+      q.value = f?.q ?? ''
+      status.value = (f?.status as any) ?? 'activo'
+    },
+    { immediate: false }
+  )
 
   function applyFilters() {
     router.get(
-      route('productos.index'),
+      endpoints.index,
       { q: q.value, status: status.value },
       { preserveState: true, preserveScroll: true, replace: true }
     )
@@ -36,7 +96,9 @@ export function useProductosIndex() {
     applyFilters()
   }
 
-  // modal create/edit
+  /**
+   * Modal Create/Edit
+   */
   const modalOpen = ref(false)
   const isEditing = ref(false)
   const editingId = ref<number | null>(null)
@@ -54,28 +116,35 @@ export function useProductosIndex() {
   })
 
   function openCreate() {
+    // reset REAL (evita que se quede "Editar")
     isEditing.value = false
     editingId.value = null
     form.reset()
     form.clearErrors()
     form.status = 'activo'
     modalOpen.value = true
+
+    // también reseteamos media para que no "arrastre" del edit anterior
+    resetMediaForm()
   }
 
   function openEdit(p: Producto) {
     isEditing.value = true
     editingId.value = p.id
+
     form.clearErrors()
     form.marca_id = p.marca?.id ?? null
     form.categoria_id = p.categoria?.id ?? null
     form.sku = p.sku
     form.nombre = p.nombre
     form.descripcion = p.descripcion ?? ''
-    form.stock = p.stock
-    form.costo_lista = Number(p.costo_lista)
-    form.precio_venta = Number(p.precio_venta)
+    form.stock = Number(p.stock ?? 0)
+    form.costo_lista = Number(p.costo_lista ?? 0)
+    form.precio_venta = Number(p.precio_venta ?? 0)
     form.status = p.status
+
     modalOpen.value = true
+    resetMediaForm()
   }
 
   function closeModal() {
@@ -84,7 +153,7 @@ export function useProductosIndex() {
 
   function submit() {
     if (isEditing.value && editingId.value) {
-      form.put(route('productos.update', editingId.value), {
+      form.put(endpoints.update(editingId.value), {
         preserveScroll: true,
         onSuccess: async () => {
           modalOpen.value = false
@@ -95,7 +164,7 @@ export function useProductosIndex() {
       return
     }
 
-    form.post(route('productos.store'), {
+    form.post(endpoints.store, {
       preserveScroll: true,
       onSuccess: async () => {
         modalOpen.value = false
@@ -109,7 +178,7 @@ export function useProductosIndex() {
     const ok = await confirmDelete(`${p.sku} — ${p.nombre}`)
     if (!ok) return
 
-    router.delete(route('productos.destroy', p.id), {
+    router.delete(endpoints.destroy(p.id), {
       preserveScroll: true,
       onSuccess: async () => toastSuccess('Producto desactivado'),
       onError: async () => toastError('No se pudo desactivar'),
@@ -135,7 +204,9 @@ export function useProductosIndex() {
     await showInfo('Detalle de producto', html)
   }
 
-  // Media
+  /**
+   * Media (solo habilitar cuando hay producto existente)
+   */
   const mediaForm = useForm({
     tipo: 'imagen' as 'imagen' | 'video',
     url: '',
@@ -153,8 +224,13 @@ export function useProductosIndex() {
     mediaForm.status = 'activo'
   }
 
-  function addMedia(productoId: number) {
-    mediaForm.post(route('productos.media.store', productoId), {
+  const canAddMedia = computed(() => {
+    return Boolean(isEditing.value && editingId.value && !mediaForm.processing)
+  })
+
+  function addMedia() {
+    if (!editingId.value) return
+    mediaForm.post(endpoints.mediaStore(editingId.value), {
       preserveScroll: true,
       onSuccess: async () => {
         resetMediaForm()
@@ -164,11 +240,12 @@ export function useProductosIndex() {
     })
   }
 
-  async function removeMedia(productoId: number, media: ProductoMedia) {
+  async function removeMedia(media: ProductoMedia) {
+    if (!editingId.value) return
     const ok = await confirmDelete(`Media #${media.id}`)
     if (!ok) return
 
-    router.delete(route('productos.media.destroy', { producto: productoId, media: media.id }), {
+    router.delete(endpoints.mediaDestroy(editingId.value, media.id), {
       preserveScroll: true,
       onSuccess: async () => toastSuccess('Media desactivada'),
       onError: async () => toastError('No se pudo desactivar'),
@@ -176,12 +253,18 @@ export function useProductosIndex() {
   }
 
   return {
-    props,
+    // data
+    productos,
+    marcas,
+    categorias,
+
+    // filtros
     q,
     status,
     applyFilters,
     resetFilters,
 
+    // modal + crud
     modalOpen,
     isEditing,
     editingId,
@@ -193,7 +276,9 @@ export function useProductosIndex() {
     remove,
     view,
 
+    // media
     mediaForm,
+    canAddMedia,
     addMedia,
     removeMedia,
     resetMediaForm,

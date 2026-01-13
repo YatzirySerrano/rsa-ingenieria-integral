@@ -16,7 +16,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('/Servicios/cctv', function () {
-    return Inertia::render('Servicios/cctv');
+    return Inertia::render('servicios/cctv');
 })->name('Servicios.cctv');
 
 // Protected (Auth)

@@ -23,7 +23,7 @@ class CotizacionsController extends Controller
             'detalles.servicio',
         ]);
 
-        return Inertia::render('Cotizacions/Show', [
+        return Inertia::render('cotizacions/Show', [
             'cotizacion' => CotizacionResource::make($cotizacion),
         ]);
     }

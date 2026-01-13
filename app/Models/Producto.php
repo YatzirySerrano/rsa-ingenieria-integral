@@ -7,16 +7,16 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Producto extends Model
-{
+class Producto extends Model {
+
     protected $table = 'productos';
 
     protected $fillable = [
         'marca_id','categoria_id',
         'sku','nombre','descripcion',
-        'stock','costo_lista','precio_venta',
-        'created_by','updated_by','deleted_by',
-        'status'
+        'stock','costo_lista','precio_venta'
+        ,'created_by','updated_by',
+        'deleted_by', 'status'
     ];
 
     protected $casts = [
@@ -46,4 +46,5 @@ class Producto extends Model
             ->orderBy('principal', 'desc')
             ->orderBy('orden');
     }
+
 }

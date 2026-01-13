@@ -25,7 +25,7 @@ class ServiciosController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-        return Inertia::render('Servicios/Index', [
+        return Inertia::render('servicios/Index', [
             'filters' => ['q' => $q, 'status' => $status],
             'servicios' => [
                 'data' => ServicioResource::collection($servicios->items()),
