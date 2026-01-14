@@ -2,19 +2,20 @@
 
 namespace App\Http\Resources;
 
-use App\Models\ProductoMedia;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
-class ProductoMediaResource {
+class ProductoMediaResource extends JsonResource {
 
-    public static function make(ProductoMedia $m): array
-    {
+    public function toArray(Request $request): array {
         return [
-            'id' => $m->id,
-            'tipo' => $m->tipo,        // imagen|video
-            'url' => $m->url,
-            'orden' => $m->orden,
-            'principal' => (bool) $m->principal,
-            'status' => $m->status,
+            'id' => $this->id,
+            'producto_id' => $this->producto_id,
+            'tipo' => $this->tipo,
+            'url' => $this->url,
+            'orden' => $this->orden,
+            'principal' => (bool) $this->principal,
+            'status' => $this->status,
         ];
     }
 

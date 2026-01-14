@@ -62,17 +62,17 @@ class CotizacionController extends Controller {
 
     // Metodo para registrar una cotización.
     public function store(CotizacionStoreRequest $request) {
-        // Se crea cotización base en BORRADOR; totales se quedan en 0 hasta agregar detalles.
         $data = $request->validated();
-
         $cotizacion = Cotizacion::create([
             ...$data,
+            'usuario_id' => auth()->id(), // aquí va el dueño real
             'token' => $data['token'] ?? (string) Str::uuid(),
             'folio' => $data['folio'] ?? $this->generateFolio(),
+            'estatus' => $data['estatus'] ?? 'BORRADOR',
             'subtotal' => 0,
             'total' => 0,
+            'status' => $data['status'] ?? 'activo',
         ]);
-
         return redirect()
             ->route('cotizaciones.edit', $cotizacion)
             ->with('success', 'Cotización creada. Se pueden agregar productos/servicios.');

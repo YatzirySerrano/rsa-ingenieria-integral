@@ -1,196 +1,382 @@
 <script setup lang="ts">
     import { Head } from '@inertiajs/vue3'
+    import { computed } from 'vue'
+    
     import AppLayout from '@/layouts/AppLayout.vue'
-    
-    import { useServiciosIndex } from '@/composables/crud/useServiciosIndex'
-    
-    import PrimaryButton from '@/components/ui/PrimaryButton.vue'
-    import SecondaryButton from '@/components/ui/SecondaryButton.vue'
-    import ModalShell from '@/components/ui/ModalShell.vue'
     import PaginationLinks from '@/components/ui/PaginationLinks.vue'
+    import { Button } from '@/components/ui/button'
+    import { Input } from '@/components/ui/input'
+    
+    import type { Paginated } from '@/types/common'
+    import type { Servicio, CategoriaLite } from '@/composables/crud/useServicioCrud'
+    import { useServicioCrud } from '@/composables/crud/useServicioCrud'
+    
+    import { Plus, Pencil, Power, RefreshCw, Search, Filter, Layers, DollarSign, Wrench } from 'lucide-vue-next'
     
     /**
-     * UI state + acciones del CRUD de servicios.
+     * Props desde Inertia:
+     * - items: listado paginado
+     * - filters: q/status/categoria_id
+     * - meta: catálogos para selects
      */
-    const ui = useServiciosIndex()
+    const props = defineProps<{
+      items: Paginated<Servicio>
+      filters: Partial<{ q: string; status: string; categoria_id: string }>
+      meta: {
+        statuses: string[]
+        categorias: { data?: CategoriaLite[] } | CategoriaLite[]
+      }
+    }>()
+    
+    /**
+     * Normalizamos categorías (Resource::collection puede venir como {data:[...]}).
+     */
+    const categorias = computed<CategoriaLite[]>(() => {
+      const v: any = props.meta.categorias
+      return Array.isArray(v) ? v : (v?.data ?? [])
+    })
+    
+    /**
+     * Composable centraliza lógica (filtros + modales + activación).
+     */
+    const crud = useServicioCrud({
+      initialFilters: props.filters,
+      baseUrl: '/servicios',
+    })
+    
+    /**
+     * KPIs rápidos (sin “sección fea”; más claro para usuario).
+     */
+    const kpi = computed(() => {
+      const d = props.items.data ?? []
+      const activos = d.filter((x) => x.status === 'activo').length
+      const inactivos = d.filter((x) => x.status === 'inactivo').length
+      return { page: d.length, activos, inactivos }
+    })
+    
+    function statusPill(status: string) {
+      return status === 'activo'
+        ? 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-200'
+        : 'bg-rose-500/10 text-rose-700 ring-1 ring-rose-500/20 dark:text-rose-200'
+    }
+    
+    function rowDot(status: string) {
+      return status === 'activo'
+        ? 'bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,.12)]'
+        : 'bg-rose-500 shadow-[0_0_0_4px_rgba(244,63,94,.12)]'
+    }
+    
+    function money(v: any) {
+      const n = Number(v)
+      if (!Number.isFinite(n)) return String(v ?? '')
+      return n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
+    }
     </script>
     
     <template>
+      <Head title="Servicios" />
+    
       <AppLayout>
-        <Head title="Servicios" />
+        <div class="px-4 py-5 sm:px-6 lg:px-10 2xl:px-14">
+          <!-- Header: acciones + filtros arriba -->
+          <div
+            class="rounded-3xl border border-slate-200/70 bg-white/80 p-4 shadow-sm backdrop-blur
+                   dark:border-white/10 dark:bg-zinc-950/50"
+          >
+            <div class="flex flex-col gap-4">
+              <!-- Row 1 -->
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div class="min-w-0">
+                  <h1
+                    class="truncate text-lg font-black tracking-tight text-slate-900
+                           sm:text-xl lg:text-2xl dark:text-zinc-100"
+                  >
+                    Servicios
+                  </h1>
+                </div>
     
-        <div class="px-4 sm:px-6 lg:px-8 py-6">
-          <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-            <div>
-              <h1 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
-                Servicios
-              </h1>
-              <p class="mt-1 text-sm text-slate-600 dark:text-neutral-300">
-                Servicios cotizables. Eliminación lógica por status.
-              </p>
-            </div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    class="gap-2 border-slate-200 bg-white/70 text-slate-900 transition hover:bg-slate-50
+                           dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:bg-white/10"
+                    @click="crud.resetFilters"
+                    :disabled="!crud.hasActiveFilters"
+                  >
+                    <RefreshCw class="h-4 w-4" />
+                    <span class="text-sm font-semibold">Reiniciar</span>
+                  </Button>
     
-            <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
-              <div class="flex gap-2">
-                <input
-                  v-model="ui.q"
-                  class="w-full sm:w-72 rounded-xl border border-black/10 dark:border-white/10
-                         bg-white dark:bg-neutral-900 text-slate-900 dark:text-white
-                         px-3 py-2 text-sm outline-none transition"
-                  placeholder="Buscar por nombre"
-                  @keyup.enter="ui.applyFilters"
-                />
-                <select
-                  v-model="ui.status"
-                  class="rounded-xl border border-black/10 dark:border-white/10
-                         bg-white dark:bg-neutral-900 text-slate-900 dark:text-white
-                         px-3 py-2 text-sm transition"
-                  @change="ui.applyFilters"
-                >
-                  <option value="activo">Activos</option>
-                  <option value="inactivo">Inactivos</option>
-                  <option value="todos">Todos</option>
-                </select>
+                  <Button
+                    type="button"
+                    class="gap-2 bg-emerald-600 text-white transition hover:bg-emerald-500 active:scale-[.99]
+                           dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400"
+                    @click="crud.openForm({ categorias: categorias })"
+                  >
+                    <Plus class="h-4 w-4" />
+                    <span class="text-sm font-extrabold">Nuevo</span>
+                  </Button>
+                </div>
               </div>
     
-              <div class="flex gap-2">
-                <SecondaryButton type="button" @click="ui.resetFilters">Limpiar</SecondaryButton>
-                <PrimaryButton type="button" @click="ui.openCreate">Nuevo</PrimaryButton>
+              <!-- Row 3: filtros -->
+              <div class="grid grid-cols-1 gap-2 md:grid-cols-12 md:items-end">
+                <!-- Buscar -->
+                <div class="md:col-span-12 lg:col-span-6">
+                  <label class="mb-1 flex items-center gap-2 text-xs font-extrabold text-slate-700 dark:text-zinc-300">
+                    <Search class="h-4 w-4 opacity-70" />
+                    Buscar (nombre)
+                  </label>
+    
+                  <div class="relative">
+                    <Input
+                      v-model="crud.filters.q"
+                      placeholder="Ej. Instalación, Mantenimiento…"
+                      class="h-10 border-slate-200 bg-white/70 pr-10 text-slate-900 placeholder:text-slate-400
+                             transition focus-visible:ring-emerald-500/30
+                             dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                    />
+                    <span class="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                      <Search class="h-4 w-4 text-slate-400 dark:text-zinc-500" />
+                    </span>
+                  </div>
+                </div>
+    
+                <!-- Categoría -->
+                <div class="md:col-span-6 lg:col-span-4">
+                  <label class="mb-1 flex items-center gap-2 text-xs font-extrabold text-slate-700 dark:text-zinc-300">
+                    <Layers class="h-4 w-4 opacity-70" />
+                    Categoría
+                  </label>
+    
+                  <select
+                    v-model="crud.filters.categoria_id"
+                    class="h-10 w-full rounded-xl border border-slate-200 bg-white/70 px-3 text-sm font-semibold text-slate-900
+                           outline-none transition hover:bg-white focus:border-emerald-500/40 focus:ring-4 focus:ring-emerald-500/15
+                           dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:bg-white/10"
+                  >
+                    <option :value="crud.ALL">Todas</option>
+                    <option v-for="c in categorias" :key="c.id" :value="String(c.id)">{{ c.nombre }}</option>
+                  </select>
+                </div>
+    
+                <!-- Estado -->
+                <div class="md:col-span-6 lg:col-span-2">
+                  <label class="mb-1 flex items-center gap-2 text-xs font-extrabold text-slate-700 dark:text-zinc-300">
+                    <Filter class="h-4 w-4 opacity-70" />
+                    Estado
+                  </label>
+    
+                  <select
+                    v-model="crud.filters.status"
+                    class="h-10 w-full rounded-xl border border-slate-200 bg-white/70 px-3 text-sm font-semibold text-slate-900
+                           outline-none transition hover:bg-white focus:border-emerald-500/40 focus:ring-4 focus:ring-emerald-500/15
+                           dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:bg-white/10"
+                  >
+                    <option :value="crud.ALL">Todos</option>
+                    <option v-for="s in props.meta.statuses" :key="s" :value="s">{{ s }}</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
     
-          <div class="mt-6 rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 shadow-sm overflow-hidden">
-            <div class="overflow-x-auto">
-              <table class="min-w-full text-sm">
-                <thead class="bg-slate-50 dark:bg-neutral-800/60 text-slate-700 dark:text-neutral-200">
-                  <tr>
-                    <th class="text-left px-4 py-3 font-semibold">Nombre</th>
-                    <th class="text-left px-4 py-3 font-semibold hidden lg:table-cell">Categoría</th>
-                    <th class="text-right px-4 py-3 font-semibold">Precio</th>
-                    <th class="text-center px-4 py-3 font-semibold">Status</th>
-                    <th class="text-right px-4 py-3 font-semibold">Acciones</th>
-                  </tr>
-                </thead>
+          <!-- Listado -->
+          <div class="mt-5">
+            <!-- Desktop table -->
+            <div
+              class="hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:block
+                     dark:border-white/10 dark:bg-zinc-950/40"
+            >
+              <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-white/10">
+                <p class="text-sm font-black text-slate-900 dark:text-zinc-100">Listado</p>
+                <p class="text-xs text-slate-500 dark:text-zinc-500">Acciones claras, UI limpia.</p>
+              </div>
     
-                <tbody>
-                  <tr
-                    v-for="s in ui.props.servicios.data"
-                    :key="s.id"
-                    class="border-t border-black/5 dark:border-white/10 hover:bg-slate-50/70 dark:hover:bg-neutral-800/40 transition"
-                  >
-                    <td class="px-4 py-3">
-                      <div class="font-semibold text-slate-900 dark:text-white">{{ s.nombre }}</div>
-                      <div class="text-xs text-slate-500 dark:text-neutral-400 line-clamp-1">{{ s.descripcion ?? '—' }}</div>
-                    </td>
+              <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                  <thead class="bg-slate-50 text-slate-700 dark:bg-white/5 dark:text-zinc-300">
+                    <tr>
+                      <th class="px-5 py-3 text-left font-extrabold">ID</th>
+                      <th class="px-5 py-3 text-left font-extrabold">Servicio</th>
+                      <th class="px-5 py-3 text-left font-extrabold">Categoría</th>
+                      <th class="px-5 py-3 text-right font-extrabold">Precio</th>
+                      <th class="px-5 py-3 text-left font-extrabold">Estado</th>
+                      <th class="px-5 py-3 text-right font-extrabold">Acciones</th>
+                    </tr>
+                  </thead>
     
-                    <td class="px-4 py-3 hidden lg:table-cell text-slate-700 dark:text-neutral-300">
-                      {{ s.categoria?.nombre ?? '—' }}
-                    </td>
+                  <tbody>
+                    <tr
+                      v-for="s in props.items.data"
+                      :key="s.id"
+                      class="border-t border-slate-100 transition hover:bg-slate-50/70 dark:border-white/10 dark:hover:bg-white/[0.06]"
+                    >
+                      <td class="px-5 py-4 text-slate-500 dark:text-zinc-500">#{{ s.id }}</td>
     
-                    <td class="px-4 py-3 text-right font-semibold text-slate-900 dark:text-white">
-                      ${{ s.precio }}
-                    </td>
+                      <td class="px-5 py-4">
+                        <div class="flex items-center gap-3">
+                          <span class="h-2.5 w-2.5 rounded-full" :class="rowDot(s.status)" />
+                          <div class="min-w-0">
+                            <p class="truncate font-extrabold text-slate-900 dark:text-zinc-100">{{ s.nombre }}</p>
+                            <p v-if="s.descripcion" class="truncate text-xs text-slate-500 dark:text-zinc-500">
+                              {{ s.descripcion }}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
     
-                    <td class="px-4 py-3 text-center">
-                      <span
-                        class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold border"
-                        :class="s.status === 'activo'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:border-emerald-500/20'
-                          : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:border-rose-500/20'"
-                      >
+                      <td class="px-5 py-4 text-slate-700 dark:text-zinc-200">
+                        {{ s.categoria?.nombre ?? '—' }}
+                      </td>
+    
+                      <td class="px-5 py-4 text-right text-slate-900 dark:text-zinc-100">
+                        <span class="inline-flex items-center gap-1 font-extrabold">
+                          <DollarSign class="h-4 w-4 text-slate-400 dark:text-zinc-500" />
+                          {{ money(s.precio) }}
+                        </span>
+                      </td>
+    
+                      <td class="px-5 py-4">
+                        <span class="rounded-full px-3 py-1 text-xs font-extrabold" :class="statusPill(s.status)">
+                          {{ s.status }}
+                        </span>
+                      </td>
+    
+                      <td class="px-5 py-4 text-right">
+                        <div class="inline-flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            class="gap-2 border-slate-200 bg-white/70 text-slate-900 transition hover:bg-slate-50 active:scale-[.99]
+                                   dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:bg-white/10"
+                            @click.prevent="crud.openForm({ categorias: categorias }, s)"
+                          >
+                            <Pencil class="h-4 w-4" />
+                            <span class="font-extrabold">Editar</span>
+                          </Button>
+    
+                          <Button
+                            type="button"
+                            size="sm"
+                            class="gap-2 transition active:scale-[.99]"
+                            :class="s.status === 'activo'
+                              ? 'bg-rose-600 text-white hover:bg-rose-500 dark:bg-rose-500 dark:hover:bg-rose-400'
+                              : 'bg-emerald-600 text-white hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400'"
+                            @click.prevent="crud.toggleStatus(s)"
+                          >
+                            <Power class="h-4 w-4" />
+                            <span class="font-extrabold">
+                              {{ s.status === 'activo' ? 'Desactivar' : 'Activar' }}
+                            </span>
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+    
+                    <tr v-if="!props.items.data.length">
+                      <td colspan="6" class="px-5 py-14 text-center text-slate-500 dark:text-zinc-500">
+                        Sin resultados
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+    
+              <div class="border-t border-slate-200 px-5 py-4 dark:border-white/10">
+                <PaginationLinks :links="props.items.links" />
+              </div>
+            </div>
+    
+            <!-- Mobile cards -->
+            <div class="space-y-3 lg:hidden">
+              <div
+                v-for="s in props.items.data"
+                :key="s.id"
+                class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50
+                       dark:border-white/10 dark:bg-zinc-950/40 dark:hover:bg-zinc-950/50"
+              >
+                <div class="flex items-start justify-between gap-4">
+                  <div class="min-w-0">
+                    <p class="text-xs font-bold text-slate-500 dark:text-zinc-500">#{{ s.id }}</p>
+    
+                    <div class="mt-1 flex items-center gap-2">
+                      <span class="h-2.5 w-2.5 rounded-full" :class="rowDot(s.status)" />
+                      <p class="truncate text-base font-black text-slate-900 sm:text-lg dark:text-zinc-100">
+                        {{ s.nombre }}
+                      </p>
+                    </div>
+    
+                    <div class="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <div class="rounded-2xl border border-slate-200 bg-white/60 p-2 dark:border-white/10 dark:bg-white/5">
+                        <p class="font-bold text-slate-500 dark:text-zinc-400">Categoría</p>
+                        <p class="mt-0.5 font-extrabold text-slate-900 dark:text-zinc-100">
+                          {{ s.categoria?.nombre ?? '—' }}
+                        </p>
+                      </div>
+    
+                      <div class="rounded-2xl border border-slate-200 bg-white/60 p-2 dark:border-white/10 dark:bg-white/5">
+                        <p class="font-bold text-slate-500 dark:text-zinc-400">Precio</p>
+                        <p class="mt-0.5 font-extrabold text-slate-900 dark:text-zinc-100">
+                          {{ money(s.precio) }}
+                        </p>
+                      </div>
+                    </div>
+    
+                    <div class="mt-2 flex flex-wrap gap-2">
+                      <span class="rounded-full px-3 py-1 text-xs font-extrabold" :class="statusPill(s.status)">
                         {{ s.status }}
                       </span>
-                    </td>
+                    </div>
+                  </div>
     
-                    <td class="px-4 py-3">
-                      <div class="flex justify-end gap-2">
-                        <SecondaryButton type="button" @click="ui.view(s)">Ver</SecondaryButton>
-                        <SecondaryButton type="button" @click="ui.openEdit(s)">Editar</SecondaryButton>
-                        <button
-                          type="button"
-                          class="rounded-xl px-3 py-2 text-sm font-semibold transition
-                                 bg-rose-600 text-white hover:bg-rose-700 hover:-translate-y-[1px] active:translate-y-0"
-                          @click="ui.remove(s)"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                  <div class="flex flex-col gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      class="gap-2 border-slate-200 bg-white/70 text-slate-900 transition hover:bg-slate-50
+                             dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:bg-white/10"
+                      @click.prevent="crud.openForm({ categorias: categorias }, s)"
+                    >
+                      <Pencil class="h-4 w-4" />
+                      Editar
+                    </Button>
     
-                  <tr v-if="ui.props.servicios.data.length === 0">
-                    <td colspan="5" class="px-4 py-10 text-center text-slate-600 dark:text-neutral-300">
-                      Sin resultados.
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-    
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 py-4">
-              <div class="text-xs text-slate-600 dark:text-neutral-400">
-                Página {{ ui.props.servicios.meta.current_page }} de {{ ui.props.servicios.meta.last_page }} —
-                Total: {{ ui.props.servicios.meta.total }}
+                    <Button
+                      type="button"
+                      size="sm"
+                      class="gap-2 transition"
+                      :class="s.status === 'activo'
+                        ? 'bg-rose-600 text-white hover:bg-rose-500 dark:bg-rose-500 dark:hover:bg-rose-400'
+                        : 'bg-emerald-600 text-white hover:bg-emerald-500 dark:bg-emerald-500 dark:text-zinc-950 dark:hover:bg-emerald-400'"
+                      @click.prevent="crud.toggleStatus(s)"
+                    >
+                      <Power class="h-4 w-4" />
+                      {{ s.status === 'activo' ? 'Desactivar' : 'Activar' }}
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <PaginationLinks :links="ui.props.servicios.links" />
+    
+              <div
+                v-if="!props.items.data.length"
+                class="rounded-3xl border border-dashed border-slate-200 bg-white p-10 text-center text-slate-500
+                       dark:border-white/10 dark:bg-zinc-950/40 dark:text-zinc-500"
+              >
+                Sin resultados
+              </div>
+    
+              <div
+                v-if="props.items.data.length"
+                class="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm dark:border-white/10 dark:bg-zinc-950/40"
+              >
+                <PaginationLinks :links="props.items.links" />
+              </div>
             </div>
           </div>
-    
-          <ModalShell
-            :open="ui.modalOpen"
-            :title="ui.isEditing ? 'Editar servicio' : 'Nuevo servicio'"
-            subtitle="Validación inline. Guardado vía Inertia."
-            @close="ui.closeModal"
-          >
-            <form class="grid grid-cols-1 lg:grid-cols-2 gap-4" @submit.prevent="ui.submit">
-              <div class="lg:col-span-2">
-                <label class="text-xs font-semibold text-slate-700 dark:text-neutral-300">Categoría</label>
-                <select
-                  v-model="ui.form.categoria_id"
-                  class="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 px-3 py-2 text-sm"
-                >
-                  <option :value="null">—</option>
-                  <option v-for="c in ui.props.categorias" :key="c.id" :value="c.id">{{ c.nombre }}</option>
-                </select>
-                <div v-if="ui.form.errors.categoria_id" class="mt-1 text-xs text-rose-600">{{ ui.form.errors.categoria_id }}</div>
-              </div>
-    
-              <div class="lg:col-span-2">
-                <label class="text-xs font-semibold text-slate-700 dark:text-neutral-300">Nombre *</label>
-                <input v-model="ui.form.nombre" class="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 px-3 py-2 text-sm" />
-                <div v-if="ui.form.errors.nombre" class="mt-1 text-xs text-rose-600">{{ ui.form.errors.nombre }}</div>
-              </div>
-    
-              <div class="lg:col-span-2">
-                <label class="text-xs font-semibold text-slate-700 dark:text-neutral-300">Descripción</label>
-                <textarea v-model="ui.form.descripcion" rows="3" class="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 px-3 py-2 text-sm" />
-                <div v-if="ui.form.errors.descripcion" class="mt-1 text-xs text-rose-600">{{ ui.form.errors.descripcion }}</div>
-              </div>
-    
-              <div>
-                <label class="text-xs font-semibold text-slate-700 dark:text-neutral-300">Precio *</label>
-                <input type="number" step="0.01" v-model="ui.form.precio" class="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 px-3 py-2 text-sm" />
-                <div v-if="ui.form.errors.precio" class="mt-1 text-xs text-rose-600">{{ ui.form.errors.precio }}</div>
-              </div>
-    
-              <div>
-                <label class="text-xs font-semibold text-slate-700 dark:text-neutral-300">Status</label>
-                <select v-model="ui.form.status" class="mt-1 w-full rounded-xl border border-black/10 dark:border-white/10 bg-white dark:bg-neutral-900 px-3 py-2 text-sm">
-                  <option value="activo">activo</option>
-                  <option value="inactivo">inactivo</option>
-                </select>
-                <div v-if="ui.form.errors.status" class="mt-1 text-xs text-rose-600">{{ ui.form.errors.status }}</div>
-              </div>
-    
-              <div class="lg:col-span-2 flex justify-end gap-2 pt-2">
-                <SecondaryButton type="button" @click="ui.closeModal">Cancelar</SecondaryButton>
-                <PrimaryButton type="submit" :disabled="ui.form.processing">
-                  {{ ui.form.processing ? 'Guardando...' : 'Guardar' }}
-                </PrimaryButton>
-              </div>
-            </form>
-          </ModalShell>
         </div>
       </AppLayout>
     </template>

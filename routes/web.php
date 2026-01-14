@@ -3,8 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
-use App\Http\Controllers\ProductosController;
-use App\Http\Controllers\ServiciosController;
+use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\CotizacionController;
@@ -46,12 +46,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('personas', PersonaController::class)
     ->except(['show']);
     // Rutas para productos excepto show
-    Route::resource('productos', PrdocutoController::class)
+    Route::resource('productos', ProductoController::class)
         ->except(['show']);
+        // Rutas para usuarios excepto show
+    Route::resource('usuarios', UserController::class)
+    ->except(['show']);
 
     // Media de productos
-    Route::post('/productos/{producto}/media', [ProductosController::class, 'mediaStore'])->name('productos.media.store');
-    Route::delete('/productos/{producto}/media/{media}', [ProductosController::class, 'mediaDestroy'])->name('productos.media.destroy');
+    Route::post('/productos/{producto}/media', [ProductoController::class, 'mediaStore'])->name('productos.media.store');
+    Route::delete('/productos/{producto}/media/{media}', [ProductoController::class, 'mediaDestroy'])->name('productos.media.destroy');
 
     // Ruta para mostrar la cotización
     Route::resource('cotizaciones', CotizacionController::class)

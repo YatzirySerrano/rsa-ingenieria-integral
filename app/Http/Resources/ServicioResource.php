@@ -2,23 +2,26 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Servicio;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
-class ServicioResource {
+class ServicioResource extends JsonResource {
 
-    public static function make(Servicio $s): array {
+    public function toArray(Request $request): array {
         return [
-            'id' => $s->id,
-            'nombre' => $s->nombre,
-            'descripcion' => $s->descripcion,
-            'precio' => (string) $s->precio,
-            'status' => $s->status,
-            'categoria' => $s->categoria ? ['id' => $s->categoria->id, 'nombre' => $s->categoria->nombre] : null,
+            'id' => $this->id,
+            'categoria_id' => $this->categoria_id,
+            'nombre' => $this->nombre,
+            'descripcion' => $this->descripcion,
+            'precio' => (string) $this->precio,
+            'status' => $this->status,
+            'categoria' => $this->whenLoaded('categoria', fn () => [
+                'id' => $this->categoria?->id,
+                'nombre' => $this->categoria?->nombre,
+                'tipo' => $this->categoria?->tipo,
+                'status' => $this->categoria?->status,
+            ]),
         ];
-    }
-
-    public static function collection($items): array {
-        return collect($items)->map(fn($s) => self::make($s))->all();
     }
 
 }

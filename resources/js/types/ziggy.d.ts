@@ -1,16 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-declare global {
-  /**
-   * Ziggy helper global.
-   * Disponible en runtime si tienes Ziggy instalado/configurado.
-   */
-  function route(
-    name?: string,
-    params?: any,
-    absolute?: boolean,
-    config?: any
-  ): any
-}
+declare module 'ziggy-js' {
+    export interface Config {
+        url?: string
+        port?: number | null
+        defaults?: Record<string, any>
+        routes: Record<string, any>
+    }
+    // Ziggy exporta una función `route` (default) para construir URLs
+    const route: (
+        name?: string,
+        params?: any,
+        absolute?: boolean,
+        config?: Config
+    ) => string
 
-export {}
+    export default route
+}

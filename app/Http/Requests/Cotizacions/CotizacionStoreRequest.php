@@ -14,14 +14,12 @@ class CotizacionStoreRequest extends FormRequest {
     // Reglas de validación para guardar una cotización
     public function rules(): array {
         return [
-            // Se liga a usuario y opcionalmente a persona (cliente).
-            'usuario_id' => ['required', 'integer', 'exists:usuarios,id'],
-            'persona_id' => ['nullable', 'integer', 'exists:personas,id'],
+            'usuario_id' => ['prohibited'], // jamás desde el cliente
+            'persona_id' => ['nullable','integer','exists:personas,id'],
             // Folio/token se generan si no vienen (para evitar colisiones y asegurar trazabilidad).
             'folio' => ['nullable', 'string', 'max:50'],
             'token' => ['nullable', 'string', 'max:80'],
-            // Estatus de negocio; inicia BORRADOR.
-            'estatus' => ['nullable', Rule::in(['BORRADOR', 'ENVIADA', 'APROBADA', 'RECHAZADA', 'CANCELADA'])],
+            'estatus' => ['nullable','string'],
             // Datos destino para envío (correo/whatsapp).
             'email_destino' => ['nullable', 'email', 'max:150'],
             'telefono_destino' => ['nullable', 'string', 'max:30'],

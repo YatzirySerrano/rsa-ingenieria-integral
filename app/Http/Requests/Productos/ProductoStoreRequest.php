@@ -11,6 +11,7 @@ class ProductoStoreRequest extends FormRequest {
         return true;
     }
 
+    // Reglas de validacion para registrar producto
     public function rules(): array {
         return [
             // Marca/Categoría obligatorias para mantener catálogo sano.

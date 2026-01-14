@@ -14,7 +14,12 @@ import {
 import { dashboard } from '@/routes';
 import { index as productosIndex } from '@/routes/productos'
 import { index as serviciosIndex } from '@/routes/Servicios'
-import { draft as cotizacionsIndex } from '@/routes/cotizacions'
+import { index as cotizacionsIndex } from '@/routes/cotizaciones'
+import { index as personasIndex } from '@/routes/personas'
+// import { index as logActivityIndex } from '@/routes/logActivity'
+import { index as categoriasIndex } from '@/routes/categorias'
+import { index as marcasIndex } from '@/routes/marcas'
+import { index as usuariosIndex } from '@/routes/usuarios'
 
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
@@ -40,6 +45,26 @@ const mainNavItems = [
     {
         title: 'Cotizaciones',
         href: cotizacionsIndex().url,
+        icon: FileText,
+    },
+    {
+        title: 'Categorias',
+        href: categoriasIndex().url,
+        icon: FileText,
+    },
+    {
+        title: 'Personas',
+        href: personasIndex().url,
+        icon: FileText,
+    },
+    {
+        title: 'Marcas',
+        href: marcasIndex().url,
+        icon: FileText,
+    },
+    {
+        title: 'Usuarios',
+        href: usuariosIndex().url,
         icon: FileText,
     },
 ]

@@ -2,34 +2,43 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Producto;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
-class ProductoResource {
+class ProductoResource extends JsonResource {
     
-    public static function make(Producto $p): array
-    {
+    public function toArray(Request $request): array {
         return [
-            'id' => $p->id,
-            'sku' => $p->sku,
-            'nombre' => $p->nombre,
-            'descripcion' => $p->descripcion,
-            'stock' => $p->stock,
-            'costo_lista' => (string) $p->costo_lista,
-            'precio_venta' => (string) $p->precio_venta,
-            'status' => $p->status,
-            'marca' => $p->marca ? ['id' => $p->marca->id, 'nombre' => $p->marca->nombre] : null,
-            'categoria' => $p->categoria ? ['id' => $p->categoria->id, 'nombre' => $p->categoria->nombre] : null,
-            'medias' => $p->relationLoaded('medias')
-                ? $p->medias->where('status','activo')->values()->map(fn($m) => ProductoMediaResource::make($m))->all()
-                : [],
-            'created_at' => $p->created_at?->toDateTimeString(),
-            'updated_at' => $p->updated_at?->toDateTimeString(),
+            'id' => $this->id,
+            'marca_id' => $this->marca_id,
+            'categoria_id' => $this->categoria_id,
+            'sku' => $this->sku,
+            'nombre' => $this->nombre,
+            'descripcion' => $this->descripcion,
+            'stock' => (int) $this->stock,
+            'costo_lista' => (string) $this->costo_lista,
+            'precio_venta' => (string) $this->precio_venta,
+            'created_by' => $this->created_by,
+            'updated_by' => $this->updated_by,
+            'deleted_by' => $this->deleted_by,
+            'status' => $this->status,
+            'marca' => $this->whenLoaded('marca', fn () => [
+                'id' => $this->marca?->id,
+                'nombre' => $this->marca?->nombre,
+                'status' => $this->marca?->status,
+            ]),
+            'categoria' => $this->whenLoaded('categoria', fn () => [
+                'id' => $this->categoria?->id,
+                'nombre' => $this->categoria?->nombre,
+                'tipo' => $this->categoria?->tipo,
+                'status' => $this->categoria?->status,
+            ]),
+            'medias' => $this->whenLoaded('medias', fn () =>
+                ProductoMediaResource::collection($this->medias)
+            ),
+            'created_at' => optional($this->created_at)->toISOString(),
+            'updated_at' => optional($this->updated_at)->toISOString(),
         ];
     }
 
-    public static function collection($items): array
-    {
-        return collect($items)->map(fn($p) => self::make($p))->all();
-    }
-    
 }

@@ -27,9 +27,9 @@ class Persona extends Model {
         return $q->where('status', 'activo');
     }
 
-    // Relación derl usuario de la persona
+    // Relación del usuario de la persona
     public function usuario(): BelongsTo {
-        return $this->belongsTo(Usuario::class, 'usuario_id');
+        return $this->belongsTo(User::class, 'usuario_id');
     }
 
     // Metodo para obtener nombre completo de la persona.

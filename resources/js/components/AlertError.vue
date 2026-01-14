@@ -1,30 +1,18 @@
 <script setup lang="ts">
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-vue-next';
-import { computed } from 'vue';
-
-interface Props {
-    errors: string[];
-    title?: string;
-}
-
-const props = withDefaults(defineProps<Props>(), {
-    title: 'Something went wrong.',
-});
-
-const uniqueErrors = computed(() => Array.from(new Set(props.errors)));
-</script>
-
-<template>
-    <Alert variant="destructive">
-        <AlertCircle class="size-4" />
-        <AlertTitle>{{ title }}</AlertTitle>
-        <AlertDescription>
-            <ul class="list-inside list-disc text-sm">
-                <li v-for="(error, index) in uniqueErrors" :key="index">
-                    {{ error }}
-                </li>
-            </ul>
-        </AlertDescription>
-    </Alert>
-</template>
+    import type { Flash } from '@/types/common'
+    
+    const props = withDefaults(defineProps<{
+      flash?: Flash
+      errors?: Record<string, any>
+    }>(), {
+      flash: undefined,
+      errors: () => ({}),
+    })
+    </script>
+    
+    <template>
+      <div v-if="props.flash?.error" class="rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-700 dark:border-rose-900/40 dark:bg-rose-950/30 dark:text-rose-200">
+        {{ props.flash.error }}
+      </div>
+    </template>
+    
