@@ -4,12 +4,14 @@ namespace App\Http\Requests\Servicios;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class ServicioUpdateRequest extends FormRequest
-{
-    public function authorize(): bool { return true; }
+class ServicioUpdateRequest extends FormRequest {
 
-    public function rules(): array
-    {
+    public function authorize(): bool {
+        return true;
+    }
+
+    // Reglas de validación para actualizar un servicio
+    public function rules(): array {
         return [
             'categoria_id' => ['nullable','integer','exists:categorias,id'],
             'nombre' => ['required','string','max:200'],
@@ -18,4 +20,5 @@ class ServicioUpdateRequest extends FormRequest
             'status' => ['required','in:activo,inactivo'],
         ];
     }
+
 }

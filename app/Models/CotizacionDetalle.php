@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class CotizacionDetalle extends Model
-{
+class CotizacionDetalle extends Model {
+
     protected $table = 'cotizacion_detalles';
 
+    // Campos del modelo
     protected $fillable = [
         'cotizacion_id','producto_id','servicio_id',
         'cantidad','precio_unitario','total_linea','status'
@@ -21,23 +22,24 @@ class CotizacionDetalle extends Model
         'total_linea' => 'decimal:2',
     ];
 
-    public function scopeActivo(Builder $q): Builder
-    {
+    // Metodo para filtrar por estado activo
+    public function scopeActivo(Builder $q): Builder {
         return $q->where('status', 'activo');
     }
 
-    public function cotizacion(): BelongsTo
-    {
+    // Una cotizacion detalle pertenece a una cotizacion
+    public function cotizacion(): BelongsTo {
         return $this->belongsTo(Cotizacion::class, 'cotizacion_id');
     }
 
-    public function producto(): BelongsTo
-    {
+    // Una cotizacion detalle tiene un producto
+    public function producto(): BelongsTo {
         return $this->belongsTo(Producto::class, 'producto_id');
     }
 
-    public function servicio(): BelongsTo
-    {
+    // Una cotizacion detalle tiene un servicio
+    public function servicio(): BelongsTo {
         return $this->belongsTo(Servicio::class, 'servicio_id');
     }
+
 }

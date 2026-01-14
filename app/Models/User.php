@@ -9,13 +9,11 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable {
-    
+
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
-    /**
-     * Campos asignables
-     */
+    // Campos asignables
     protected $fillable = [
         'name',
         'email',
@@ -24,9 +22,7 @@ class User extends Authenticatable {
         'status',
     ];
 
-    /**
-     * Campos ocultos
-     */
+    // Campos ocultos
     protected $hidden = [
         'password',
         'two_factor_secret',
@@ -34,9 +30,7 @@ class User extends Authenticatable {
         'remember_token',
     ];
 
-    /**
-     * Casts
-     */
+    // Casts
     protected function casts(): array {
         return [
             'email_verified_at' => 'datetime',
@@ -45,16 +39,12 @@ class User extends Authenticatable {
         ];
     }
 
-    /**
-     * Scope: solo usuarios activos
-     */
+    // Scope: solo usuarios activos
     public function scopeActivo(Builder $query): Builder {
         return $query->where('status', 'activo');
     }
 
-    /**
-     * Helpers de rol (opcional pero recomendado)
-     */
+    // Helpers de rol (opcional pero recomendado)
     public function isAdmin(): bool {
         return $this->rol === 'admin';
     }

@@ -6,10 +6,12 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class ProductoMediaStoreRequest extends FormRequest {
 
-    public function authorize(): bool { return true; }
+    public function authorize(): bool {
+        return true;
+    }
 
-    public function rules(): array
-    {
+    // Reglas de validación para guardar un recurso(imagen o video) de un producto
+    public function rules(): array {
         return [
             'tipo' => ['required','in:imagen,video'],
             'url' => ['required','url','max:2048'],

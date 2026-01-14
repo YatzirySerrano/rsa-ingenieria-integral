@@ -5,11 +5,13 @@ namespace App\Http\Requests\Servicios;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ServicioStoreRequest extends FormRequest {
-    
-    public function authorize(): bool { return true; }
 
-    public function rules(): array
-    {
+    public function authorize(): bool {
+        return true;
+    }
+
+    // Reglas de validacion para guardar un servicio
+    public function rules(): array {
         return [
             'categoria_id' => ['nullable','integer','exists:categorias,id'],
             'nombre' => ['required','string','max:200'],
@@ -18,4 +20,5 @@ class ServicioStoreRequest extends FormRequest {
             'status' => ['required','in:activo,inactivo'],
         ];
     }
+
 }

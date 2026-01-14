@@ -6,8 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Servicio extends Model
-{
+class Servicio extends Model {
+
     protected $table = 'servicios';
 
     protected $fillable = [
@@ -18,13 +18,14 @@ class Servicio extends Model
         'precio' => 'decimal:2',
     ];
 
-    public function scopeActivo(Builder $q): Builder
-    {
+    // Scope para filtrar por estado activo
+    public function scopeActivo(Builder $q): Builder {
         return $q->where('status', 'activo');
     }
 
-    public function categoria(): BelongsTo
-    {
+    // Una servicio pertenece a una categoría
+    public function categoria(): BelongsTo {
         return $this->belongsTo(Categoria::class, 'categoria_id');
     }
+
 }

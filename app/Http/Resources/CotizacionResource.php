@@ -2,25 +2,29 @@
 
 namespace App\Http\Resources;
 
-use App\Models\Cotizacion;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
-class CotizacionResource {
-    
-    public static function make(Cotizacion $c): array {
+class CotizacionResource extends JsonResource {
+
+    public function toArray(Request $request): array {
         return [
-            'id' => $c->id,
-            'folio' => $c->folio,
-            'token' => $c->token,
-            'estatus' => $c->estatus,
-            'email_destino' => $c->email_destino,
-            'telefono_destino' => $c->telefono_destino,
-            'subtotal' => (string) $c->subtotal,
-            'total' => (string) $c->total,
-            'status' => $c->status,
-            'detalles' => $c->relationLoaded('detalles')
-                ? CotizacionDetalleResource::collection($c->detalles)
-                : [],
-            'created_at' => $c->created_at?->toDateTimeString(),
+            'id' => $this->id,
+            'usuario_id' => $this->usuario_id,
+            'persona_id' => $this->persona_id,
+            'folio' => $this->folio,
+            'token' => $this->token,
+            'estatus' => $this->estatus,
+            'email_destino' => $this->email_destino,
+            'telefono_destino' => $this->telefono_destino,
+            'subtotal' => (string) $this->subtotal,
+            'total' => (string) $this->total,
+            'status' => $this->status,
+            'created_at' => optional($this->created_at)->toISOString(),
+            'updated_at' => optional($this->updated_at)->toISOString(),
+            'detalles' => $this->whenLoaded('detalles', fn () =>
+                CotizacionDetalleResource::collection($this->detalles)
+            ),
         ];
     }
 

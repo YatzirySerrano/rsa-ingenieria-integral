@@ -7,10 +7,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Cotizacion extends Model
-{
+class Cotizacion extends Model {
+
     protected $table = 'cotizacions';
 
+    // Campos del modelo
     protected $fillable = [
         'usuario_id','persona_id',
         'folio','token','estatus',
@@ -18,31 +19,33 @@ class Cotizacion extends Model
         'subtotal','total','status'
     ];
 
+    // Campos que necesitan casteo
     protected $casts = [
         'token' => 'string',
         'subtotal' => 'decimal:2',
         'total' => 'decimal:2',
     ];
 
-    public function scopeActivo(Builder $q): Builder
-    {
+    // Metodo para filtra por estado activo
+    public function scopeActivo(Builder $q): Builder {
         return $q->where('status', 'activo');
     }
 
-    public function usuario(): BelongsTo
-    {
+    // Una cotizacion tiene un usuario
+    public function usuario(): BelongsTo {
         return $this->belongsTo(Usuario::class, 'usuario_id');
     }
 
-    public function persona(): BelongsTo
-    {
+    // Una cotizacion tiene una persona
+    public function persona(): BelongsTo {
         return $this->belongsTo(Persona::class, 'persona_id');
     }
 
-    public function detalles(): HasMany
-    {
+    // Una cotizacion tiene varios detalles
+    public function detalles(): HasMany {
         return $this->hasMany(CotizacionDetalle::class, 'cotizacion_id')
             ->where('status', 'activo')
             ->latest('id');
     }
+
 }

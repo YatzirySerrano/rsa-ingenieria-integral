@@ -2,33 +2,33 @@
 
 namespace App\Http\Resources;
 
-use App\Models\CotizacionDetalle;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
 
-class CotizacionDetalleResource
-{
-    public static function make(CotizacionDetalle $d): array
-    {
-        $tipo = $d->producto_id ? 'PRODUCTO' : 'SERVICIO';
+class CotizacionDetalleResource extends JsonResource {
 
+    public function toArray(Request $request): array {
         return [
-            'id' => $d->id,
-            'tipo' => $tipo,
-            'cantidad' => (string) $d->cantidad,
-            'precio_unitario' => (string) $d->precio_unitario,
-            'total_linea' => (string) $d->total_linea,
-            'status' => $d->status,
-            'producto' => $d->relationLoaded('producto') && $d->producto
-                ? ['id' => $d->producto->id, 'sku' => $d->producto->sku, 'nombre' => $d->producto->nombre]
-                : null,
-            'servicio' => $d->relationLoaded('servicio') && $d->servicio
-                ? ['id' => $d->servicio->id, 'nombre' => $d->servicio->nombre]
-                : null,
+            'id' => $this->id,
+            'cotizacion_id' => $this->cotizacion_id,
+            'producto_id' => $this->producto_id,
+            'servicio_id' => $this->servicio_id,
+            'cantidad' => (string) $this->cantidad,
+            'precio_unitario' => (string) $this->precio_unitario,
+            'total_linea' => (string) $this->total_linea,
+            'status' => $this->status,
+            // Para UI: mostrar nombre y precio del item sin hacer queries extra en Vue.
+            'producto' => $this->whenLoaded('producto', fn () => [
+                'id' => $this->producto?->id,
+                'nombre' => $this->producto?->nombre,
+                'precio' => $this->producto?->precio ?? null,
+            ]),
+            'servicio' => $this->whenLoaded('servicio', fn () => [
+                'id' => $this->servicio?->id,
+                'nombre' => $this->servicio?->nombre,
+                'precio' => $this->servicio?->precio ?? null,
+            ]),
         ];
     }
 
-    public static function collection($items): array
-    {
-        return collect($items)->map(fn($d) => self::make($d))->all();
-    }
-    
 }
