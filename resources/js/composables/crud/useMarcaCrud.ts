@@ -24,9 +24,7 @@ export type MarcaFilters = {
   status: string
 }
 
-/**
- * Valor sentinela para "Todos" en selects.
- */
+/** Valor sentinela para "Todos" en selects. */
 const ALL = '__all__'
 
 type UseMarcaCrudOptions = {
@@ -36,11 +34,21 @@ type UseMarcaCrudOptions = {
 
 let swalStyled = false
 
+function escapeHtml(s: string) {
+  return s
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
+}
+
 /**
- * Inyecta estilos premium a SweetAlert2 una sola vez.
- * - Por defecto, tema oscuro (consistente con UI dark).
- * - Fallback claro si el sistema está en light (prefers-color-scheme).
- * - Ajuste de <option> para que no se “pierdan” en dropdown nativo.
+ * Tema premium RSA (navy/white/black) inspirado en shadcn.
+ * Cambios:
+ * - Tooltip por HOVER (sin click) como shadcn.
+ * - Evita que el tooltip se corte: overflow visible en contenedores clave.
+ * - Cancel siempre gris.
  */
 function ensureSwalTheme() {
   if (swalStyled) return
@@ -48,80 +56,313 @@ function ensureSwalTheme() {
 
   const style = document.createElement('style')
   style.innerHTML = `
-    .swal2-container{ z-index: 20000 !important; }
-    .swal2-popup{
-      background:#0b0c10 !important;
-      color:#e4e4e7 !important;
-      border:1px solid rgba(0,0,0,.08) !important;
-      border-radius:18px !important;
-      box-shadow:0 25px 90px rgba(0,0,0,.40) !important;
-      padding: 1.25rem 1.25rem 1rem !important;
-    }
-    .swal2-title{ font-weight: 900 !important; letter-spacing: -0.02em !important; }
-    .swal2-html-container{ color: rgba(228,228,231,.85) !important; }
+    :root{
+      --rsa-navy: #0b1f3a;
+      --rsa-navy-2: #0a1830;
 
-    .swal2-input, .swal2-select{
-      background: rgba(255,255,255,.06) !important;
-      color:#e4e4e7 !important;
-      border:1px solid rgba(255,255,255,.14) !important;
-      border-radius: 12px !important;
-      box-shadow: none !important;
-      height: 42px !important;
+      --rsa-muted-dark: rgba(235,235,245,.72);
+      --rsa-muted-light: rgba(15,23,42,.72);
+
+      --rsa-shadow-dark: 0 28px 90px rgba(0,0,0,.48);
+      --rsa-shadow-light: 0 24px 80px rgba(2,6,23,.18);
     }
-    .swal2-input:focus, .swal2-select:focus{
-      border-color: rgba(16,185,129,.55) !important;
-      box-shadow: 0 0 0 4px rgba(16,185,129,.16) !important;
+
+    /* Siempre por encima de header/modales */
+    .swal2-container{ z-index: 999999 !important; }
+
+    /* Popup */
+    .swal2-popup{
+      width: 560px !important;
+      max-width: calc(100vw - 24px) !important;
+      border-radius: 16px !important;
+      padding: 18px 18px 14px !important;
+      box-shadow: var(--rsa-shadow-dark) !important;
+      border: 1px solid rgba(255,255,255,.10) !important;
+      background: linear-gradient(180deg, rgba(11,15,25,.96), rgba(10,12,16,.96)) !important;
+      color: rgba(250,250,252,.92) !important;
+
+      /* CLAVE: permitir que tooltips “salgan” sin cortarse */
+      overflow: visible !important;
+    }
+
+    .swal2-title{
+      font-weight: 900 !important;
+      letter-spacing: -0.02em !important;
+      font-size: 18px !important;
+      margin: 0 0 8px !important;
+    }
+
+    .swal2-html-container{
+      margin: 0 !important;
+      padding: 0 !important;
+      color: var(--rsa-muted-dark) !important;
+
+      /* CLAVE: antes estaba hidden y cortaba el tooltip */
+      overflow: visible !important;
+    }
+
+    /* Contenido compacto */
+    .rsa-form{
+      text-align:left;
+      margin-top: 6px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .rsa-row{
+      display: grid;
+      gap: 6px;
+    }
+
+    .rsa-label-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+
+      /* CLAVE: evitar clipping lateral del bubble */
+      overflow: visible !important;
+    }
+
+    .rsa-label{
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .01em;
+      color: rgba(250,250,252,.92);
+      margin: 0;
+      line-height: 1.2;
+
+      display:flex;
+      align-items:center;
+      gap: 8px;
+
+      /* CLAVE: evitar clipping */
+      overflow: visible !important;
+    }
+
+    /* Tooltip tipo shadcn (hover/focus) */
+    .rsa-tip{
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+
+      /* CLAVE: no recortar bubble */
+      overflow: visible !important;
+    }
+
+    .rsa-tip-btn{
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.14);
+      color: rgba(250,250,252,.86);
+
+      /* no click, solo hover */
+      cursor: help;
+      user-select:none;
+
+      transition: background .12s ease, border-color .12s ease, transform .12s ease;
+    }
+
+    .rsa-tip-btn:hover{
+      background: rgba(255,255,255,.10);
+      border-color: rgba(255,255,255,.18);
+      transform: translateY(-1px);
+    }
+
+    .rsa-tip-btn:focus{
+      outline:none;
+      box-shadow: 0 0 0 4px rgba(11,31,58,.35);
+    }
+
+    .rsa-tip-bubble{
+      position:absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: calc(100% + 10px);
+
+      background: #ffffff;
+      color: #0f172a;
+
+      border-radius: 10px;
+      padding: 8px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+
+      box-shadow: 0 18px 55px rgba(2,6,23,.25);
+      border: 1px solid rgba(2,6,23,.10);
+
+      opacity: 0;
+      pointer-events:none;
+      transition: opacity .12s ease, transform .12s ease;
+
+      /* CLAVE: por encima del modal */
+      z-index: 9999999;
+    }
+
+    .rsa-tip-bubble::after{
+      content:'';
+      position:absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      top: 100%;
+      border: 6px solid transparent;
+      border-top-color: #ffffff;
+    }
+
+    /* HOVER/F0CUS -> muestra bubble */
+    .rsa-tip:hover .rsa-tip-bubble,
+    .rsa-tip:focus-within .rsa-tip-bubble{
+      opacity: 1;
+      transform: translateX(-50%) translateY(-1px);
+    }
+
+    /* Inputs */
+    .swal2-input{
+      height: 40px !important;
+      font-size: 14px !important;
+      border-radius: 12px !important;
+      background: rgba(255,255,255,.06) !important;
+      border: 1px solid rgba(255,255,255,.14) !important;
+      color: rgba(250,250,252,.92) !important;
+      box-shadow: none !important;
+      margin: 0 !important;
+    }
+
+    .swal2-input::placeholder{
+      color: rgba(235,235,245,.45) !important;
+    }
+
+    .swal2-input:focus{
+      border-color: rgba(255,255,255,.20) !important;
+      box-shadow: 0 0 0 4px rgba(11,31,58,.35) !important;
       outline: none !important;
     }
 
+    /* Nota */
+    .rsa-note{
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: rgba(235,235,245,.62);
+    }
+
+    /* Buttons */
+    .swal2-actions{
+      margin-top: 14px !important;
+      gap: 10px !important;
+    }
+
     .swal2-confirm{
-      background:#10b981 !important;
-      color:#050608 !important;
+      background: var(--rsa-navy) !important;
+      color: #fff !important;
+      border: 1px solid rgba(255,255,255,.08) !important;
       border-radius: 12px !important;
       font-weight: 900 !important;
-      padding: 10px 16px !important;
+      padding: 10px 14px !important;
+      box-shadow: 0 10px 28px rgba(11,31,58,.35) !important;
     }
+
+    .swal2-confirm:hover{
+      background: var(--rsa-navy-2) !important;
+    }
+
+    /* CANCELAR GRIS (dark) */
     .swal2-cancel{
+      background: rgba(148,163,184,.18) !important; /* slate-ish */
+      color: rgba(250,250,252,.92) !important;
+      border: 1px solid rgba(148,163,184,.28) !important;
+      border-radius: 12px !important;
+      font-weight: 900 !important;
+      padding: 10px 14px !important;
+      box-shadow: none !important;
+    }
+
+    .swal2-cancel:hover{
+      background: rgba(148,163,184,.24) !important;
+      border-color: rgba(148,163,184,.34) !important;
+    }
+
+    /* Validation */
+    .swal2-validation-message{
       background: rgba(255,255,255,.06) !important;
-      color:#e4e4e7 !important;
-      border:1px solid rgba(255,255,255,.14) !important;
+      color: rgba(250,250,252,.92) !important;
+      border: 1px solid rgba(255,255,255,.14) !important;
       border-radius: 12px !important;
       font-weight: 800 !important;
-      padding: 10px 16px !important;
     }
 
-    /* Dropdown nativo: fuerza contraste de opciones */
-    .swal2-select option{
-      background: #0b0c10 !important;
-      color: #e4e4e7 !important;
-    }
-
-    /* Light mode fallback: si el sistema está en light, SWAL se ve limpio en blanco */
+    /* LIGHT MODE fallback */
     @media (prefers-color-scheme: light){
       .swal2-popup{
-        background:#ffffff !important;
-        color:#0f172a !important;
-        border:1px solid rgba(2,6,23,.10) !important;
-        box-shadow:0 25px 90px rgba(2,6,23,.15) !important;
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid rgba(2,6,23,.10) !important;
+        box-shadow: var(--rsa-shadow-light) !important;
       }
-      .swal2-html-container{ color: rgba(15,23,42,.75) !important; }
-      .swal2-input, .swal2-select{
-        background:#ffffff !important;
-        color:#0f172a !important;
-        border:1px solid rgba(2,6,23,.12) !important;
+
+      .swal2-html-container{
+        color: var(--rsa-muted-light) !important;
       }
+
+      .rsa-label{ color: #0f172a !important; }
+
+      .rsa-tip-btn{
+        background: rgba(2,6,23,.04);
+        border: 1px solid rgba(2,6,23,.12);
+        color: rgba(15,23,42,.82);
+      }
+
+      .rsa-tip-btn:hover{
+        background: rgba(2,6,23,.06);
+        border-color: rgba(2,6,23,.16);
+      }
+
+      .swal2-input{
+        background: #ffffff !important;
+        color: #0f172a !important;
+        border: 1px solid rgba(2,6,23,.12) !important;
+      }
+
+      .swal2-input::placeholder{
+        color: rgba(15,23,42,.40) !important;
+      }
+
+      .swal2-input:focus{
+        border-color: rgba(11,31,58,.35) !important;
+        box-shadow: 0 0 0 4px rgba(11,31,58,.18) !important;
+      }
+
+      /* CANCELAR GRIS (light) */
       .swal2-cancel{
         background: rgba(2,6,23,.04) !important;
-        color:#0f172a !important;
-        border:1px solid rgba(2,6,23,.10) !important;
+        color: #0f172a !important;
+        border: 1px solid rgba(2,6,23,.12) !important;
       }
-      .swal2-select option{
-        background:#ffffff !important;
-        color:#0f172a !important;
+
+      .swal2-cancel:hover{
+        background: rgba(2,6,23,.06) !important;
+        border-color: rgba(2,6,23,.16) !important;
       }
     }
   `
   document.head.appendChild(style)
+}
+
+/** ícono info inline (sin lucide) */
+function infoIconSvg() {
+  return `
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" stroke-width="2"/>
+      <path d="M12 17v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M12 7.5h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+  `
 }
 
 export function useMarcaCrud(options: UseMarcaCrudOptions = {}) {
@@ -129,11 +370,7 @@ export function useMarcaCrud(options: UseMarcaCrudOptions = {}) {
 
   /* =========================
    * Filtros (debounce)
-   * =========================
-   * Objetivo:
-   * - Mantener filtros en URL (Inertia) sin recargar la página
-   * - Debounce para evitar peticiones por cada tecla
-   */
+   * ========================= */
   const filters = reactive<MarcaFilters>({
     q: options.initialFilters?.q ?? '',
     status: options.initialFilters?.status ?? ALL,
@@ -176,12 +413,7 @@ export function useMarcaCrud(options: UseMarcaCrudOptions = {}) {
 
   /* =========================
    * Form (SweetAlert2)
-   * =========================
-   * Regla de negocio:
-   * - Nuevo/Editar NO expone status
-   * - Siempre se guarda como "activo"
-   * - El cambio de estado es solo por Activar/Desactivar
-   */
+   * ========================= */
   async function openForm(marca?: Marca) {
     ensureSwalTheme()
 
@@ -190,38 +422,69 @@ export function useMarcaCrud(options: UseMarcaCrudOptions = {}) {
       ? { id: Number(marca.id), nombre: String(marca.nombre ?? '') }
       : null
 
+    const nombreVal = escapeHtml(current?.nombre ?? '')
+
+    const html = `
+      <div class="rsa-form">
+        <div class="rsa-row">
+          <div class="rsa-label-row">
+            <label class="rsa-label" for="m_nombre">
+              Nombre de la marca
+              <span class="rsa-tip">
+                <span class="rsa-tip-btn" tabindex="0" aria-label="Información del campo nombre">
+                  ${infoIconSvg()}
+                </span>
+                <span class="rsa-tip-bubble">Usa el nombre comercial (ej. Hikvision, Epcom).</span>
+              </span>
+            </label>
+          </div>
+
+          <input
+            id="m_nombre"
+            class="swal2-input"
+            placeholder="Ej. Hikvision, Epcom, AccessPro…"
+            value="${nombreVal}"
+            autocomplete="off"
+          />
+
+          <p class="rsa-note">
+            El estado no se edita aquí. Se gestiona desde el listado (Activar / Desactivar).
+          </p>
+        </div>
+      </div>
+    `
+
     const { value } = await Swal.fire({
       title: isEdit ? 'Editar marca' : 'Nueva marca',
-      html: `
-        <div style="text-align:left; margin-top:.25rem;">
-          <label style="display:block; font-size:12px; font-weight:800; opacity:.85; margin:0 0 .35rem;">
-            Nombre
-          </label>
-          <input id="m_nombre" class="swal2-input" placeholder="Ej. Hikvision, Epcom, AccessPro…" value="${current?.nombre ?? ''}">
-        </div>
-
-        <p style="margin:.75rem 0 0; font-size:12px; opacity:.72;">
-          El estado se gestiona desde el listado (Activar/Desactivar).
-        </p>
-      `,
-      didOpen: () => {
-        const n = document.getElementById('m_nombre') as HTMLInputElement | null
-        n?.focus()
-        n?.select()
-      },
+      html,
       showCancelButton: true,
       confirmButtonText: 'Guardar',
       cancelButtonText: 'Cancelar',
       focusConfirm: false,
+      heightAuto: false,
+      didOpen: () => {
+        const n = document.getElementById('m_nombre') as HTMLInputElement | null
+        n?.focus()
+        n?.select()
+        n?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            Swal.clickConfirm()
+          }
+        })
+      },
       preConfirm: () => {
-        const nombre = (document.getElementById('m_nombre') as HTMLInputElement).value.trim()
+        const nombre = (document.getElementById('m_nombre') as HTMLInputElement | null)?.value?.trim() ?? ''
 
         if (!nombre) {
           Swal.showValidationMessage('El nombre es obligatorio.')
           return
         }
+        if (nombre.length < 2) {
+          Swal.showValidationMessage('El nombre es demasiado corto.')
+          return
+        }
 
-        // status SIEMPRE activo en form
         return { nombre, status: 'activo' as const }
       },
     })
@@ -252,12 +515,13 @@ export function useMarcaCrud(options: UseMarcaCrudOptions = {}) {
 
     const { isConfirmed } = await Swal.fire({
       title: 'Desactivar marca',
-      text: `Se dará de baja "${m.nombre}" (baja lógica).`,
+      text: `Se dará de baja "${m.nombre}". ¿Estás seguro?`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Desactivar',
       cancelButtonText: 'Cancelar',
       reverseButtons: true,
+      heightAuto: false,
     })
     if (!isConfirmed) return
 
@@ -279,10 +543,10 @@ export function useMarcaCrud(options: UseMarcaCrudOptions = {}) {
       confirmButtonText: 'Activar',
       cancelButtonText: 'Cancelar',
       reverseButtons: true,
+      heightAuto: false,
     })
     if (!isConfirmed) return
 
-    // Payload completo por si tu UpdateRequest exige status/nombre
     router.put(
       `${baseUrl}/${m.id}`,
       { nombre: m.nombre, status: 'activo' as const },
@@ -311,6 +575,7 @@ export function useMarcaCrud(options: UseMarcaCrudOptions = {}) {
       showConfirmButton: false,
       timer: 2000,
       timerProgressBar: true,
+      heightAuto: false,
     })
   }
 

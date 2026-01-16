@@ -79,6 +79,7 @@
                   >
                     Marcas
                   </h1>
+                  <p class="text-xs text-slate-500 dark:text-zinc-500">Gestiona los proveedores con los que trabaja RSA</p>
                 </div>
     
                 <div class="flex flex-wrap items-center gap-2">
@@ -91,7 +92,7 @@
                     :disabled="!crud.hasActiveFilters"
                   >
                     <RefreshCw class="h-4 w-4" />
-                    <span class="text-sm font-semibold">Reiniciar</span>
+                    <span class="text-sm font-semibold">Actualizar</span>
                   </Button>
     
                   <Button
@@ -166,7 +167,6 @@
             >
               <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-white/10">
                 <p class="text-sm font-black text-slate-900 dark:text-zinc-100">Listado</p>
-                <p class="text-xs text-slate-500 dark:text-zinc-500">Acciones claras, operación rápida.</p>
               </div>
     
               <div class="overflow-x-auto">
