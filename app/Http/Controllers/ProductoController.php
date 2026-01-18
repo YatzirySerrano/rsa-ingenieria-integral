@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Productos\ProductoStoreRequest;
 use App\Http\Requests\Productos\ProductoUpdateRequest;
-use App\Http\Requests\Productos\ProductoMediaStoreRequest;
+use App\Http\Requests\ProductoMedia\ProductoMediaStoreRequest;
 use App\Http\Resources\ProductoResource;
 use App\Http\Resources\MarcaResource;
 use App\Http\Resources\CategoriaResource;
 use App\Http\Resources\ProductoMediaResource;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\UploadedFile;
 use App\Models\Producto;
 use App\Models\ProductoMedia;
 use App\Models\Marca;
@@ -17,10 +19,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class ProductoController extends Controller {
+class ProductoController extends Controller
+{
 
     // Listado principal de productos con filtros y catálogos para selects.
-    public function index(Request $request): Response {
+    public function index(Request $request): Response
+    {
         $q = trim((string) $request->get('q', ''));
         $status = $request->get('status');
         $marcaId = $request->get('marca_id');
@@ -30,7 +34,7 @@ class ProductoController extends Controller {
             ->when($q !== '', function ($qr) use ($q) {
                 $qr->where(function ($w) use ($q) {
                     $w->where('sku', 'like', "%{$q}%")
-                    ->orWhere('nombre', 'like', "%{$q}%");
+                        ->orWhere('nombre', 'like', "%{$q}%");
                 });
             })
             ->when($status, fn($qr) => $qr->where('status', $status))
@@ -40,8 +44,12 @@ class ProductoController extends Controller {
             ->paginate(15)
             ->withQueryString();
         // Catálogos: solo categorías tipo PRODUCTO.
-        $marcas = Marca::query()->orderBy('nombre')->get();
-        $categorias = Categoria::query()->where('tipo', 'PRODUCTO')->orderBy('nombre')->get();
+        $marcas = Marca::query()->where('status', 'activo')->orderBy('nombre')->get();
+        $categorias = Categoria::query()
+            ->where('tipo', 'PRODUCTO')
+            ->where('status', 'activo')
+            ->orderBy('nombre')
+            ->get();
         return Inertia::render('Productos/Index', [
             'items' => ProductoResource::collection($productos),
             'filters' => [
@@ -59,9 +67,14 @@ class ProductoController extends Controller {
     }
 
     // Pantalla de alta (si se usa página Create).
-    public function create(): Response {
-        $marcas = Marca::query()->orderBy('nombre')->get();
-        $categorias = Categoria::query()->where('tipo', 'PRODUCTO')->orderBy('nombre')->get();
+    public function create(): Response
+    {
+        $marcas = Marca::query()->where('status', 'activo')->orderBy('nombre')->get();
+        $categorias = Categoria::query()
+            ->where('tipo', 'PRODUCTO')
+            ->where('status', 'activo')
+            ->orderBy('nombre')
+            ->get();
         return Inertia::render('Productos/Create', [
             'meta' => [
                 'statuses' => ['activo', 'inactivo'],
@@ -72,7 +85,8 @@ class ProductoController extends Controller {
     }
 
     // Alta: registra y regresa a index.
-    public function store(ProductoStoreRequest $request) {
+    public function store(ProductoStoreRequest $request)
+    {
         $data = $request->validated();
         Producto::create([
             ...$data,
@@ -85,9 +99,14 @@ class ProductoController extends Controller {
     }
 
     // Pantalla de edición (si existe Edit como página).
-    public function edit(Producto $producto): Response {
-        $marcas = Marca::query()->orderBy('nombre')->get();
-        $categorias = Categoria::query()->where('tipo', 'PRODUCTO')->orderBy('nombre')->get();
+    public function edit(Producto $producto): Response
+    {
+        $marcas = Marca::query()->where('status', 'activo')->orderBy('nombre')->get();
+        $categorias = Categoria::query()
+            ->where('tipo', 'PRODUCTO')
+            ->where('status', 'activo')
+            ->orderBy('nombre')
+            ->get();
         $producto->load(['marca', 'categoria', 'medias']);
         return Inertia::render('Productos/Edit', [
             'item' => new ProductoResource($producto),
@@ -101,7 +120,8 @@ class ProductoController extends Controller {
     }
 
     // Edición: actualiza y regresa a index.
-    public function update(ProductoUpdateRequest $request, Producto $producto) {
+    public function update(ProductoUpdateRequest $request, Producto $producto)
+    {
         $data = $request->validated();
         $producto->update([
             ...$data,
@@ -113,7 +133,8 @@ class ProductoController extends Controller {
     }
 
     // Eliminación lógica.
-    public function destroy(Producto $producto) {
+    public function destroy(Producto $producto)
+    {
         $producto->update([
             'status' => 'inactivo',
             'deleted_by' => auth()->id(),
@@ -123,32 +144,120 @@ class ProductoController extends Controller {
             ->with('success', 'Producto desactivado.');
     }
 
-    // Agrega una media al producto (foto/video) y respeta "principal".
-    public function mediaStore(ProductoMediaStoreRequest $request, Producto $producto) {
-        $data = $request->validated();
-        // Si se marca principal, se apaga principal en las demás.
-        if (!empty($data['principal'])) {
-            ProductoMedia::query()
-                ->where('producto_id', $producto->id)
-                ->update(['principal' => false]);
-        }
-        ProductoMedia::create([
-            ...$data,
-            'producto_id' => $producto->id,
+    /**
+     * Subir múltiples imágenes para un producto
+     */
+    public function mediaUpload(Request $request, Producto $producto)
+    {
+        $request->validate([
+            'files.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
-        return redirect()
-            ->back()
-            ->with('success', 'Media agregada.');
+
+        $uploadedFiles = [];
+
+        foreach ($request->file('files') as $file) {
+            // Determinar orden
+            $lastOrder = ProductoMedia::where('producto_id', $producto->id)->max('orden') ?? 0;
+
+            // Guardar archivo
+            $path = $file->store('productos/' . $producto->id, 'public');
+
+            // Crear registro en BD
+            $media = ProductoMedia::create([
+                'producto_id' => $producto->id,
+                'tipo' => 'imagen',
+                'url' => $path,
+                'orden' => $lastOrder + 1,
+                'principal' => false,
+                'status' => 'activo',
+            ]);
+
+            $uploadedFiles[] = $media;
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Imágenes subidas correctamente',
+            'files' => $uploadedFiles,
+        ]);
     }
 
-    // Desactiva una media; valida pertenencia para evitar inconsistencias.
-    public function mediaDestroy(Producto $producto, ProductoMedia $media) {
+    /**
+     * Actualizar orden de imágenes
+     */
+    public function mediaUpdateOrder(Request $request, Producto $producto)
+    {
+        $request->validate([
+            'ordenes' => 'required|array',
+            'ordenes.*.id' => 'required|exists:producto_medias,id',
+            'ordenes.*.orden' => 'required|integer|min:1',
+        ]);
+
+        foreach ($request->ordenes as $item) {
+            ProductoMedia::where('id', $item['id'])
+                ->where('producto_id', $producto->id)
+                ->update(['orden' => $item['orden']]);
+        }
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Establecer imagen como principal
+     */
+    public function mediaSetMain(Producto $producto, ProductoMedia $media)
+    {
+        // Validar que la media pertenezca al producto
+        if ((int) $media->producto_id !== (int) $producto->id) {
+            return response()->json(['error' => 'Media inválida'], 400);
+        }
+
+        // Quitar principal de todas
+        ProductoMedia::where('producto_id', $producto->id)
+            ->update(['principal' => false]);
+
+        // Establecer nueva principal
+        $media->update(['principal' => true]);
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Actualizar información de una media
+     */
+    public function mediaUpdate(Request $request, Producto $producto, ProductoMedia $media)
+    {
+        // Validar pertenencia
+        if ((int) $media->producto_id !== (int) $producto->id) {
+            return response()->json(['error' => 'Media inválida'], 400);
+        }
+
+        $request->validate([
+            'orden' => 'sometimes|integer|min:1',
+            'tipo' => 'sometimes|in:imagen,video',
+        ]);
+
+        $media->update($request->only(['orden', 'tipo']));
+
+        return response()->json(['success' => true]);
+    }
+
+    /**
+     * Eliminar imagen (desactivar)
+     */
+    public function mediaDestroy(Producto $producto, ProductoMedia $media)
+    {
         if ((int) $media->producto_id !== (int) $producto->id) {
             return redirect()
                 ->back()
                 ->with('error', 'Media inválida para este producto.');
         }
+
+        // Opcional: eliminar físicamente el archivo
+        // Storage::disk('public')->delete($media->url);
+
         $media->update(['status' => 'inactivo']);
+
         return redirect()
             ->back()
             ->with('success', 'Media desactivada.');

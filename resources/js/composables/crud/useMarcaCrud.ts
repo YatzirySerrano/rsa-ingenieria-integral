@@ -56,7 +56,7 @@ function ensureSwalTheme() {
 
   const style = document.createElement('style')
   style.innerHTML = `
-    :root{
+    :root {
       --rsa-navy: #0b1f3a;
       --rsa-navy-2: #0a1830;
 
@@ -68,287 +68,230 @@ function ensureSwalTheme() {
     }
 
     /* Siempre por encima de header/modales */
-    .swal2-container{ z-index: 999999 !important; }
+    .swal2-container { z-index: 999999 !important; }
 
-    /* Popup */
-    .swal2-popup{
+    /* =========================================
+       BASE STYLES (LIGHT MODE DEFAULT)
+       ========================================= */
+
+    /* Popup (Light) */
+    .swal2-popup {
       width: 560px !important;
       max-width: calc(100vw - 24px) !important;
       border-radius: 16px !important;
       padding: 18px 18px 14px !important;
-      box-shadow: var(--rsa-shadow-dark) !important;
-      border: 1px solid rgba(255,255,255,.10) !important;
-      background: linear-gradient(180deg, rgba(11,15,25,.96), rgba(10,12,16,.96)) !important;
-      color: rgba(250,250,252,.92) !important;
+      
+      background: #ffffff !important;
+      color: #0f172a !important;
+      border: 1px solid rgba(2,6,23,.10) !important;
+      box-shadow: var(--rsa-shadow-light) !important;
 
-      /* CLAVE: permitir que tooltips “salgan” sin cortarse */
-      overflow: visible !important;
+      overflow: visible !important; /* Tooltips */
     }
 
-    .swal2-title{
+    .swal2-title {
       font-weight: 900 !important;
       letter-spacing: -0.02em !important;
       font-size: 18px !important;
       margin: 0 0 8px !important;
+      color: inherit !important;
     }
 
-    .swal2-html-container{
+    .swal2-html-container {
       margin: 0 !important;
       padding: 0 !important;
-      color: var(--rsa-muted-dark) !important;
-
-      /* CLAVE: antes estaba hidden y cortaba el tooltip */
+      color: var(--rsa-muted-light) !important;
       overflow: visible !important;
     }
 
-    /* Contenido compacto */
-    .rsa-form{
-      text-align:left;
-      margin-top: 6px;
-      display: grid;
-      gap: 12px;
-    }
-
-    .rsa-row{
-      display: grid;
-      gap: 6px;
-    }
-
-    .rsa-label-row{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 10px;
-
-      /* CLAVE: evitar clipping lateral del bubble */
-      overflow: visible !important;
-    }
-
-    .rsa-label{
+    /* Labels (Light) */
+    .rsa-label {
       font-size: 12px;
       font-weight: 900;
       letter-spacing: .01em;
-      color: rgba(250,250,252,.92);
+      color: #0f172a;
       margin: 0;
       line-height: 1.2;
-
-      display:flex;
-      align-items:center;
-      gap: 8px;
-
-      /* CLAVE: evitar clipping */
-      overflow: visible !important;
-    }
-
-    /* Tooltip tipo shadcn (hover/focus) */
-    .rsa-tip{
-      position: relative;
-      display: inline-flex;
+      display: flex;
       align-items: center;
-
-      /* CLAVE: no recortar bubble */
+      gap: 8px;
       overflow: visible !important;
     }
 
-    .rsa-tip-btn{
+    /* Tooltip Btn (Light) */
+    .rsa-tip-btn {
       width: 18px;
       height: 18px;
       border-radius: 999px;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      
+      background: rgba(2,6,23,.04);
+      border: 1px solid rgba(2,6,23,.12);
+      color: rgba(15,23,42,.82);
 
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.14);
-      color: rgba(250,250,252,.86);
-
-      /* no click, solo hover */
       cursor: help;
-      user-select:none;
-
+      user-select: none;
       transition: background .12s ease, border-color .12s ease, transform .12s ease;
     }
-
-    .rsa-tip-btn:hover{
-      background: rgba(255,255,255,.10);
-      border-color: rgba(255,255,255,.18);
+    .rsa-tip-btn:hover {
+      background: rgba(2,6,23,.06);
+      border-color: rgba(2,6,23,.16);
       transform: translateY(-1px);
     }
 
-    .rsa-tip-btn:focus{
-      outline:none;
-      box-shadow: 0 0 0 4px rgba(11,31,58,.35);
-    }
-
-    .rsa-tip-bubble{
-      position:absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      bottom: calc(100% + 10px);
-
-      background: #ffffff;
-      color: #0f172a;
-
-      border-radius: 10px;
-      padding: 8px 10px;
-      font-size: 12px;
-      font-weight: 700;
-      white-space: nowrap;
-
-      box-shadow: 0 18px 55px rgba(2,6,23,.25);
-      border: 1px solid rgba(2,6,23,.10);
-
-      opacity: 0;
-      pointer-events:none;
-      transition: opacity .12s ease, transform .12s ease;
-
-      /* CLAVE: por encima del modal */
-      z-index: 9999999;
-    }
-
-    .rsa-tip-bubble::after{
-      content:'';
-      position:absolute;
-      left: 50%;
-      transform: translateX(-50%);
-      top: 100%;
-      border: 6px solid transparent;
-      border-top-color: #ffffff;
-    }
-
-    /* HOVER/F0CUS -> muestra bubble */
-    .rsa-tip:hover .rsa-tip-bubble,
-    .rsa-tip:focus-within .rsa-tip-bubble{
-      opacity: 1;
-      transform: translateX(-50%) translateY(-1px);
-    }
-
-    /* Inputs */
-    .swal2-input{
+    /* Inputs (Light) */
+    .swal2-input {
       height: 40px !important;
       font-size: 14px !important;
       border-radius: 12px !important;
-      background: rgba(255,255,255,.06) !important;
-      border: 1px solid rgba(255,255,255,.14) !important;
-      color: rgba(250,250,252,.92) !important;
-      box-shadow: none !important;
       margin: 0 !important;
-    }
+      box-shadow: none !important;
 
-    .swal2-input::placeholder{
-      color: rgba(235,235,245,.45) !important;
+      background: #ffffff !important;
+      color: #0f172a !important;
+      border: 1px solid rgba(2,6,23,.12) !important;
     }
-
-    .swal2-input:focus{
-      border-color: rgba(255,255,255,.20) !important;
-      box-shadow: 0 0 0 4px rgba(11,31,58,.35) !important;
+    .swal2-input::placeholder {
+      color: rgba(15,23,42,.40) !important;
+    }
+    .swal2-input:focus {
+      border-color: rgba(11,31,58,.35) !important;
+      box-shadow: 0 0 0 4px rgba(11,31,58,.18) !important;
       outline: none !important;
     }
 
-    /* Nota */
-    .rsa-note{
-      margin: 2px 0 0;
-      font-size: 12px;
-      color: rgba(235,235,245,.62);
-    }
-
-    /* Buttons */
-    .swal2-actions{
-      margin-top: 14px !important;
-      gap: 10px !important;
-    }
-
-    .swal2-confirm{
-      background: var(--rsa-navy) !important;
-      color: #fff !important;
-      border: 1px solid rgba(255,255,255,.08) !important;
-      border-radius: 12px !important;
-      font-weight: 900 !important;
-      padding: 10px 14px !important;
-      box-shadow: 0 10px 28px rgba(11,31,58,.35) !important;
-    }
-
-    .swal2-confirm:hover{
-      background: var(--rsa-navy-2) !important;
-    }
-
-    /* CANCELAR GRIS (dark) */
-    .swal2-cancel{
-      background: rgba(148,163,184,.18) !important; /* slate-ish */
-      color: rgba(250,250,252,.92) !important;
-      border: 1px solid rgba(148,163,184,.28) !important;
+    /* Cancel Button (Light) */
+    .swal2-cancel {
+      background: rgba(2,6,23,.04) !important;
+      color: #0f172a !important;
+      border: 1px solid rgba(2,6,23,.12) !important;
       border-radius: 12px !important;
       font-weight: 900 !important;
       padding: 10px 14px !important;
       box-shadow: none !important;
     }
-
-    .swal2-cancel:hover{
-      background: rgba(148,163,184,.24) !important;
-      border-color: rgba(148,163,184,.34) !important;
+    .swal2-cancel:hover {
+      background: rgba(2,6,23,.06) !important;
+      border-color: rgba(2,6,23,.16) !important;
     }
 
-    /* Validation */
-    .swal2-validation-message{
-      background: rgba(255,255,255,.06) !important;
-      color: rgba(250,250,252,.92) !important;
-      border: 1px solid rgba(255,255,255,.14) !important;
+    /* Generic helpers */
+    .rsa-form { text-align: left; margin-top: 6px; display: grid; gap: 12px; }
+    .rsa-row { display: grid; gap: 6px; }
+    .rsa-label-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; overflow: visible !important; }
+    
+    .rsa-tip { position: relative; display: inline-flex; align-items: center; overflow: visible !important; }
+    .rsa-tip-btn:focus { outline: none; box-shadow: 0 0 0 4px rgba(11,31,58,.35); }
+
+    /* Bubble (Generic - White always) */
+    .rsa-tip-bubble { 
+        position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 10px);
+        background: #ffffff; color: #0f172a; border-radius: 10px; padding: 8px 10px;
+        font-size: 12px; font-weight: 700; white-space: nowrap;
+        box-shadow: 0 18px 55px rgba(2,6,23,.25); border: 1px solid rgba(2,6,23,.10);
+        opacity: 0; pointer-events: none; transition: opacity .12s ease, transform .12s ease;
+        z-index: 9999999;
+    }
+    .rsa-tip-bubble::after {
+        content: ''; position: absolute; left: 50%; transform: translateX(-50%); top: 100%;
+        border: 6px solid transparent; border-top-color: #ffffff;
+    }
+    .rsa-tip:hover .rsa-tip-bubble, .rsa-tip:focus-within .rsa-tip-bubble {
+        opacity: 1; transform: translateX(-50%) translateY(-1px);
+    }
+
+    /* Note (Light) */
+    .rsa-note {
+      margin: 2px 0 0;
+      font-size: 12px;
+      color: rgba(15,23,42,.62);
+    }
+
+    /* Actions & Confirm (Shared) */
+    .swal2-actions { margin-top: 14px !important; gap: 10px !important; }
+    .swal2-confirm {
+      background: var(--rsa-navy) !important; color: #fff !important;
+      border: 1px solid rgba(255,255,255,.08) !important;
+      border-radius: 12px !important; font-weight: 900 !important;
+      padding: 10px 14px !important;
+      box-shadow: 0 10px 28px rgba(11,31,58,.35) !important;
+    }
+    .swal2-confirm:hover { 
+      background: var(--rsa-navy-2) !important; 
+      color: #ffffff !important;
+    }
+    
+    .swal2-validation-message {
+      background: rgba(2,6,23,.04) !important;
+      color: #0f172a !important;
+      border: 1px solid rgba(2,6,23,.12) !important;
       border-radius: 12px !important;
       font-weight: 800 !important;
     }
 
-    /* LIGHT MODE fallback */
-    @media (prefers-color-scheme: light){
-      .swal2-popup{
-        background: #ffffff !important;
-        color: #0f172a !important;
-        border: 1px solid rgba(2,6,23,.10) !important;
-        box-shadow: var(--rsa-shadow-light) !important;
-      }
 
-      .swal2-html-container{
-        color: var(--rsa-muted-light) !important;
-      }
+    /* =========================================
+       DARK MODE OVERRIDES (.dark)
+       ========================================= */
+       
+    :is(html.dark, body.dark) .swal2-popup {
+      background: linear-gradient(180deg, rgba(11,15,25,.96), rgba(10,12,16,.96)) !important;
+      color: rgba(250,250,252,.92) !important;
+      border: 1px solid rgba(255,255,255,.10) !important;
+      box-shadow: var(--rsa-shadow-dark) !important;
+    }
 
-      .rsa-label{ color: #0f172a !important; }
+    :is(html.dark, body.dark) .swal2-html-container {
+       color: var(--rsa-muted-dark) !important;
+    }
 
-      .rsa-tip-btn{
-        background: rgba(2,6,23,.04);
-        border: 1px solid rgba(2,6,23,.12);
-        color: rgba(15,23,42,.82);
-      }
+    :is(html.dark, body.dark) .rsa-label {
+       color: rgba(250,250,252,.92);
+    }
 
-      .rsa-tip-btn:hover{
-        background: rgba(2,6,23,.06);
-        border-color: rgba(2,6,23,.16);
-      }
+    :is(html.dark, body.dark) .rsa-tip-btn {
+       background: rgba(255,255,255,.06);
+       border: 1px solid rgba(255,255,255,.14);
+       color: rgba(250,250,252,.86);
+    }
+    :is(html.dark, body.dark) .rsa-tip-btn:hover {
+       background: rgba(255,255,255,.10);
+       border-color: rgba(255,255,255,.18);
+    }
 
-      .swal2-input{
-        background: #ffffff !important;
-        color: #0f172a !important;
-        border: 1px solid rgba(2,6,23,.12) !important;
-      }
+    :is(html.dark, body.dark) .swal2-input {
+       background: rgba(255,255,255,.06) !important;
+       border: 1px solid rgba(255,255,255,.14) !important;
+       color: rgba(250,250,252,.92) !important;
+    }
+    :is(html.dark, body.dark) .swal2-input::placeholder {
+       color: rgba(235,235,245,.45) !important;
+    }
+    :is(html.dark, body.dark) .swal2-input:focus {
+       border-color: rgba(255,255,255,.20) !important;
+       box-shadow: 0 0 0 4px rgba(11,31,58,.35) !important;
+    }
 
-      .swal2-input::placeholder{
-        color: rgba(15,23,42,.40) !important;
-      }
+    :is(html.dark, body.dark) .swal2-cancel {
+       background: rgba(148,163,184,.18) !important;
+       color: rgba(250,250,252,.92) !important;
+       border: 1px solid rgba(148,163,184,.28) !important;
+    }
+    :is(html.dark, body.dark) .swal2-cancel:hover {
+       background: rgba(148,163,184,.24) !important;
+       border-color: rgba(148,163,184,.34) !important;
+    }
 
-      .swal2-input:focus{
-        border-color: rgba(11,31,58,.35) !important;
-        box-shadow: 0 0 0 4px rgba(11,31,58,.18) !important;
-      }
+    :is(html.dark, body.dark) .rsa-note {
+       color: rgba(235,235,245,.62);
+    }
 
-      /* CANCELAR GRIS (light) */
-      .swal2-cancel{
-        background: rgba(2,6,23,.04) !important;
-        color: #0f172a !important;
-        border: 1px solid rgba(2,6,23,.12) !important;
-      }
-
-      .swal2-cancel:hover{
-        background: rgba(2,6,23,.06) !important;
-        border-color: rgba(2,6,23,.16) !important;
-      }
+    :is(html.dark, body.dark) .swal2-validation-message {
+       background: rgba(255,255,255,.06) !important;
+       color: rgba(250,250,252,.92) !important;
+       border: 1px solid rgba(255,255,255,.14) !important;
     }
   `
   document.head.appendChild(style)

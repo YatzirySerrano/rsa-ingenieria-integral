@@ -59,7 +59,7 @@
     </script>
     
     <template>
-      <Head title="Personas" />
+      <Head title="Empleados" />
     
       <AppLayout>
         <div class="px-4 py-5 sm:px-6 lg:px-10 2xl:px-14">
@@ -75,7 +75,7 @@
                   <h1
                     class="truncate text-lg font-black tracking-tight text-slate-900 sm:text-xl lg:text-2xl dark:text-zinc-100"
                   >
-                    Personas
+                    Empleados
                   </h1>
                 </div>
     

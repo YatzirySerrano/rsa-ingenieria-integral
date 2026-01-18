@@ -196,7 +196,7 @@ export function usePersonaCrud(options: UsePersonaCrudOptions = {}) {
       : null
 
     const { value } = await Swal.fire({
-      title: isEdit ? 'Editar persona' : 'Nueva persona',
+      title: isEdit ? 'Editar persona' : 'Nuevo empleado',
       html: `
         <div style="display:grid; grid-template-columns:1fr; gap:.75rem; text-align:left; margin-top:.25rem;">
           <div style="display:grid; grid-template-columns:1fr; gap:.35rem;">

@@ -243,74 +243,83 @@ function ensureSwalTheme() {
 
       .swal2-container[data-rsa-theme="dark"] .swal2-input,
       .swal2-container[data-rsa-theme="dark"] .swal2-select{
-        height: 40px !important;
-        font-size: 14px !important;
-        border-radius: 12px !important;
-        background: rgba(255,255,255,.06) !important;
-        border: 1px solid rgba(255,255,255,.14) !important;
+        height: 36px !important; /* Minimalista h-9 */
+        font-size: 13px !important; /* Letra más pequeña */
+        border-radius: 8px !important; /* Rounded-md aprox */
+        background: rgba(255,255,255,.04) !important;
+        border: 1px solid rgba(255,255,255,.12) !important;
         color: rgba(250,250,252,.92) !important;
         box-shadow: none !important;
         margin: 0 !important;
+        padding: 0 10px !important;
       }
 
       .swal2-container[data-rsa-theme="dark"] .swal2-input::placeholder{
-        color: rgba(235,235,245,.45) !important;
+        color: rgba(235,235,245,.35) !important;
       }
 
       .swal2-container[data-rsa-theme="dark"] .swal2-input:focus,
       .swal2-container[data-rsa-theme="dark"] .swal2-select:focus{
-        border-color: rgba(255,255,255,.20) !important;
-        box-shadow: 0 0 0 4px rgba(11,31,58,.35) !important;
+        border-color: rgba(255,255,255,.24) !important;
+        box-shadow: 0 0 0 2px rgba(11,31,58,.5) !important; /* Ring más sutil */
         outline: none !important;
       }
 
       .swal2-container[data-rsa-theme="dark"] .swal2-select option{
         background: #0b0c10 !important;
         color: rgba(250,250,252,.92) !important;
+        font-size: 13px !important;
       }
 
       .swal2-container[data-rsa-theme="dark"] .rsa-note{
-        color: rgba(235,235,245,.62);
+        color: rgba(235,235,245,.5);
       }
 
       .swal2-container[data-rsa-theme="dark"] .swal2-confirm{
         background: var(--rsa-navy) !important;
         color: #fff !important;
         border: 1px solid rgba(255,255,255,.08) !important;
-        border-radius: 12px !important;
-        font-weight: 900 !important;
-        padding: 10px 14px !important;
-        box-shadow: 0 10px 28px rgba(11,31,58,.35) !important;
+        border-radius: 8px !important;
+        font-weight: 800 !important;
+        font-size: 13px !important;
+        padding: 8px 12px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,.2) !important;
       }
 
       .swal2-container[data-rsa-theme="dark"] .swal2-confirm:hover{
         background: var(--rsa-navy-2) !important;
+        color: #ffffff !important;
       }
 
       .swal2-container[data-rsa-theme="dark"] .swal2-cancel{
-        background: rgba(148,163,184,.18) !important;
-        color: rgba(250,250,252,.92) !important;
-        border: 1px solid rgba(148,163,184,.28) !important;
+        background: transparent !important;
+        color: rgba(250,250,252,.7) !important;
+        border: 1px solid rgba(148,163,184,.2) !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        border-radius: 8px !important;
+        padding: 8px 12px !important;
       }
 
       .swal2-container[data-rsa-theme="dark"] .swal2-cancel:hover{
-        background: rgba(148,163,184,.24) !important;
-        border-color: rgba(148,163,184,.34) !important;
+        background: rgba(255,255,255,.04) !important;
+        color: #fff !important;
+        border-color: rgba(148,163,184,.3) !important;
       }
 
       .swal2-container[data-rsa-theme="dark"] .swal2-validation-message{
-        background: rgba(255,255,255,.06) !important;
-        color: rgba(250,250,252,.92) !important;
-        border: 1px solid rgba(255,255,255,.14) !important;
-        border-radius: 12px !important;
-        font-weight: 800 !important;
+        background: rgba(255,255,255,.04) !important;
+        color: rgba(250,250,252,.9) !important;
+        border: 1px solid rgba(255,255,255,.1) !important;
+        border-radius: 8px !important;
+        font-size: 12px !important;
       }
 
       /* ======= SKIN LIGHT ======= */
       .swal2-container[data-rsa-theme="light"] .swal2-popup{
         background: #ffffff !important;
         color: #0f172a !important;
-        border: 1px solid rgba(2,6,23,.10) !important;
+        border: 1px solid rgba(2,6,23,.08) !important;
         box-shadow: var(--rsa-shadow-light) !important;
       }
 
@@ -323,25 +332,25 @@ function ensureSwalTheme() {
       }
 
       .swal2-container[data-rsa-theme="light"] .rsa-tip-btn{
-        background: rgba(2,6,23,.04);
-        border: 1px solid rgba(2,6,23,.12);
-        color: rgba(15,23,42,.82);
+        background: rgba(2,6,23,.03);
+        border: 1px solid rgba(2,6,23,.1);
+        color: rgba(15,23,42,.7);
       }
 
       .swal2-container[data-rsa-theme="light"] .rsa-tip-btn:hover{
         background: rgba(2,6,23,.06);
-        border-color: rgba(2,6,23,.16);
+        border-color: rgba(2,6,23,.15);
       }
 
       .swal2-container[data-rsa-theme="light"] .rsa-tip-btn:focus{
-        box-shadow: 0 0 0 4px rgba(11,31,58,.18);
+        box-shadow: 0 0 0 4px rgba(11,31,58,.1);
       }
 
       .swal2-container[data-rsa-theme="light"] .rsa-tip-bubble{
         background: #0f172a;
         color: #ffffff;
-        box-shadow: 0 18px 55px rgba(2,6,23,.22);
-        border: 1px solid rgba(2,6,23,.10);
+        box-shadow: 0 10px 30px rgba(0,0,0,.15);
+        border: none;
       }
 
       .swal2-container[data-rsa-theme="light"] .rsa-tip-bubble::after{
@@ -352,7 +361,11 @@ function ensureSwalTheme() {
       .swal2-container[data-rsa-theme="light"] .swal2-select{
         background: #ffffff !important;
         color: #0f172a !important;
-        border: 1px solid rgba(2,6,23,.12) !important;
+        border: 1px solid rgba(2,6,23,.15) !important;
+        height: 36px !important; /* Minimalista */
+        font-size: 13px !important;
+        border-radius: 8px !important;
+        padding: 0 10px !important;
       }
 
       .swal2-container[data-rsa-theme="light"] .swal2-input::placeholder{
@@ -362,7 +375,7 @@ function ensureSwalTheme() {
       .swal2-container[data-rsa-theme="light"] .swal2-input:focus,
       .swal2-container[data-rsa-theme="light"] .swal2-select:focus{
         border-color: rgba(11,31,58,.35) !important;
-        box-shadow: 0 0 0 4px rgba(11,31,58,.18) !important;
+        box-shadow: 0 0 0 2px rgba(11,31,58,.1) !important;
         outline: none !important;
       }
 
@@ -372,32 +385,38 @@ function ensureSwalTheme() {
       }
 
       .swal2-container[data-rsa-theme="light"] .rsa-note{
-        color: rgba(15,23,42,.62);
+        color: rgba(15,23,42,.6);
       }
 
       .swal2-container[data-rsa-theme="light"] .swal2-confirm{
         background: var(--rsa-navy) !important;
         color: #fff !important;
         border: 1px solid rgba(2,6,23,.08) !important;
-        border-radius: 12px !important;
-        font-weight: 900 !important;
-        padding: 10px 14px !important;
-        box-shadow: 0 10px 28px rgba(11,31,58,.18) !important;
+        border-radius: 8px !important;
+        font-weight: 800 !important;
+        font-size: 13px !important;
+        padding: 8px 12px !important;
+        box-shadow: 0 4px 12px rgba(11,31,58,.15) !important;
       }
 
       .swal2-container[data-rsa-theme="light"] .swal2-confirm:hover{
         background: var(--rsa-navy-2) !important;
+        color: #ffffff !important;
       }
 
       .swal2-container[data-rsa-theme="light"] .swal2-cancel{
-        background: rgba(2,6,23,.04) !important;
+        background: transparent !important;
         color: #0f172a !important;
-        border: 1px solid rgba(2,6,23,.12) !important;
+        border: 1px solid rgba(2,6,23,.15) !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        border-radius: 8px !important;
+        padding: 8px 12px !important;
       }
 
       .swal2-container[data-rsa-theme="light"] .swal2-cancel:hover{
-        background: rgba(2,6,23,.06) !important;
-        border-color: rgba(2,6,23,.16) !important;
+        background: rgba(2,6,23,.04) !important;
+        border-color: rgba(2,6,23,.25) !important;
       }
     `
     document.head.appendChild(style)
@@ -478,10 +497,10 @@ export function useCategoriaCrud(options: UseCategoriaCrudOptions = {}) {
     const isEdit = Boolean(categoria)
     const current = categoria
       ? {
-          id: Number(categoria.id),
-          nombre: String(categoria.nombre ?? ''),
-          tipo: (categoria.tipo as CategoriaTipo) ?? 'PRODUCTO',
-        }
+        id: Number(categoria.id),
+        nombre: String(categoria.nombre ?? ''),
+        tipo: (categoria.tipo as CategoriaTipo) ?? 'PRODUCTO',
+      }
       : null
 
     const nombreVal = escapeHtml(current?.nombre ?? '')
