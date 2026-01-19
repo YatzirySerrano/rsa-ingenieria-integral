@@ -4,46 +4,41 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\Productos\ProductoStoreRequest;
 use App\Http\Requests\Productos\ProductoUpdateRequest;
-use App\Http\Requests\ProductoMedia\ProductoMediaStoreRequest;
 use App\Http\Resources\ProductoResource;
 use App\Http\Resources\MarcaResource;
 use App\Http\Resources\CategoriaResource;
-use App\Http\Resources\ProductoMediaResource;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Http\UploadedFile;
 use App\Models\Producto;
 use App\Models\ProductoMedia;
 use App\Models\Marca;
 use App\Models\Categoria;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
-class ProductoController extends Controller
-{
+class ProductoController extends Controller {
 
-    // Listado principal de productos con filtros y catálogos para selects.
-    public function index(Request $request): Response
-    {
+    public function index(Request $request): Response {
         $q = trim((string) $request->get('q', ''));
         $status = $request->get('status');
         $marcaId = $request->get('marca_id');
         $categoriaId = $request->get('categoria_id');
         $productos = Producto::query()
-            ->with(['marca', 'categoria'])
+            ->with(['marca', 'categoria', 'medias'])
             ->when($q !== '', function ($qr) use ($q) {
                 $qr->where(function ($w) use ($q) {
                     $w->where('sku', 'like', "%{$q}%")
-                        ->orWhere('nombre', 'like', "%{$q}%");
+                    ->orWhere('nombre', 'like', "%{$q}%");
                 });
             })
-            ->when($status, fn($qr) => $qr->where('status', $status))
-            ->when($marcaId, fn($qr) => $qr->where('marca_id', $marcaId))
-            ->when($categoriaId, fn($qr) => $qr->where('categoria_id', $categoriaId))
-            ->orderBy('id', 'desc')
+            ->when($status, fn ($qr) => $qr->where('status', $status))
+            ->when($marcaId, fn ($qr) => $qr->where('marca_id', $marcaId))
+            ->when($categoriaId, fn ($qr) => $qr->where('categoria_id', $categoriaId))
+            ->orderByDesc('id')
             ->paginate(15)
             ->withQueryString();
-        // Catálogos: solo categorías tipo PRODUCTO.
         $marcas = Marca::query()->where('status', 'activo')->orderBy('nombre')->get();
         $categorias = Categoria::query()
             ->where('tipo', 'PRODUCTO')
@@ -66,9 +61,7 @@ class ProductoController extends Controller
         ]);
     }
 
-    // Pantalla de alta (si se usa página Create).
-    public function create(): Response
-    {
+    public function create(): Response {
         $marcas = Marca::query()->where('status', 'activo')->orderBy('nombre')->get();
         $categorias = Categoria::query()
             ->where('tipo', 'PRODUCTO')
@@ -84,10 +77,9 @@ class ProductoController extends Controller
         ]);
     }
 
-    // Alta: registra y regresa a index.
-    public function store(ProductoStoreRequest $request)
-    {
+    public function store(ProductoStoreRequest $request) {
         $data = $request->validated();
+
         Producto::create([
             ...$data,
             'created_by' => auth()->id(),
@@ -98,9 +90,7 @@ class ProductoController extends Controller
             ->with('success', 'Producto creado correctamente.');
     }
 
-    // Pantalla de edición (si existe Edit como página).
-    public function edit(Producto $producto): Response
-    {
+    public function edit(Producto $producto): Response {
         $marcas = Marca::query()->where('status', 'activo')->orderBy('nombre')->get();
         $categorias = Categoria::query()
             ->where('tipo', 'PRODUCTO')
@@ -119,9 +109,7 @@ class ProductoController extends Controller
         ]);
     }
 
-    // Edición: actualiza y regresa a index.
-    public function update(ProductoUpdateRequest $request, Producto $producto)
-    {
+    public function update(ProductoUpdateRequest $request, Producto $producto) {
         $data = $request->validated();
         $producto->update([
             ...$data,
@@ -132,9 +120,7 @@ class ProductoController extends Controller
             ->with('success', 'Producto actualizado correctamente.');
     }
 
-    // Eliminación lógica.
-    public function destroy(Producto $producto)
-    {
+    public function destroy(Producto $producto) {
         $producto->update([
             'status' => 'inactivo',
             'deleted_by' => auth()->id(),
@@ -144,123 +130,122 @@ class ProductoController extends Controller
             ->with('success', 'Producto desactivado.');
     }
 
-    /**
-     * Subir múltiples imágenes para un producto
-     */
-    public function mediaUpload(Request $request, Producto $producto)
-    {
+    // Subir múltiples imágenes para un producto (web + inertia friendly)
+    public function mediaUpload(Request $request, Producto $producto) {
         $request->validate([
+            'files' => 'required|array|min:1',
             'files.*' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
+        $created = DB::transaction(function () use ($request, $producto) {
+            $lastOrder = (int) (ProductoMedia::where('producto_id', $producto->id)->max('orden') ?? 0);
+            $newRows = [];
+            foreach ($request->file('files') as $file) {
+                $lastOrder++;
+                $path = $file->store("productos/{$producto->id}", 'public');
 
-        $uploadedFiles = [];
-
-        foreach ($request->file('files') as $file) {
-            // Determinar orden
-            $lastOrder = ProductoMedia::where('producto_id', $producto->id)->max('orden') ?? 0;
-
-            // Guardar archivo
-            $path = $file->store('productos/' . $producto->id, 'public');
-
-            // Crear registro en BD
-            $media = ProductoMedia::create([
-                'producto_id' => $producto->id,
-                'tipo' => 'imagen',
-                'url' => $path,
-                'orden' => $lastOrder + 1,
-                'principal' => false,
-                'status' => 'activo',
+                $newRows[] = ProductoMedia::create([
+                    'producto_id' => $producto->id,
+                    'tipo' => 'imagen',
+                    'url' => $path,
+                    'orden' => $lastOrder,
+                    'principal' => false,
+                    'status' => 'activo',
+                ]);
+            }
+            return $newRows;
+        });
+        // Respuesta híbrida: JSON si es XHR/AJAX, redirect si es Inertia visit.
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Imágenes subidas correctamente',
+                'files' => $created,
             ]);
-
-            $uploadedFiles[] = $media;
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Imágenes subidas correctamente',
-            'files' => $uploadedFiles,
-        ]);
+        return redirect()
+            ->back()
+            ->with('success', 'Imágenes subidas correctamente.');
     }
 
-    /**
-     * Actualizar orden de imágenes
-     */
-    public function mediaUpdateOrder(Request $request, Producto $producto)
-    {
+    public function mediaUpdateOrder(Request $request, Producto $producto) {
         $request->validate([
-            'ordenes' => 'required|array',
-            'ordenes.*.id' => 'required|exists:producto_medias,id',
+            'ordenes' => 'required|array|min:1',
+            'ordenes.*.id' => 'required|integer|exists:producto_medias,id',
             'ordenes.*.orden' => 'required|integer|min:1',
         ]);
-
-        foreach ($request->ordenes as $item) {
-            ProductoMedia::where('id', $item['id'])
-                ->where('producto_id', $producto->id)
-                ->update(['orden' => $item['orden']]);
+        DB::transaction(function () use ($request, $producto) {
+            foreach ($request->ordenes as $item) {
+                ProductoMedia::where('id', $item['id'])
+                    ->where('producto_id', $producto->id)
+                    ->update(['orden' => (int) $item['orden']]);
+            }
+        });
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
         }
-
-        return response()->json(['success' => true]);
+        return redirect()->back()->with('success', 'Orden actualizado.');
     }
 
-    /**
-     * Establecer imagen como principal
-     */
-    public function mediaSetMain(Producto $producto, ProductoMedia $media)
-    {
-        // Validar que la media pertenezca al producto
+    public function mediaSetMain(Request $request, Producto $producto, ProductoMedia $media) {
         if ((int) $media->producto_id !== (int) $producto->id) {
-            return response()->json(['error' => 'Media inválida'], 400);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Media inválida'], SymfonyResponse::HTTP_BAD_REQUEST);
+            }
+            return redirect()->back()->with('error', 'Media inválida para este producto.');
         }
-
-        // Quitar principal de todas
-        ProductoMedia::where('producto_id', $producto->id)
-            ->update(['principal' => false]);
-
-        // Establecer nueva principal
-        $media->update(['principal' => true]);
-
-        return response()->json(['success' => true]);
+        DB::transaction(function () use ($producto, $media) {
+            ProductoMedia::where('producto_id', $producto->id)->update(['principal' => false]);
+            $media->update(['principal' => true]);
+        });
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
+        return redirect()->back()->with('success', 'Imagen principal actualizada.');
     }
 
-    /**
-     * Actualizar información de una media
-     */
-    public function mediaUpdate(Request $request, Producto $producto, ProductoMedia $media)
-    {
-        // Validar pertenencia
+    public function mediaUpdate(Request $request, Producto $producto, ProductoMedia $media) {
         if ((int) $media->producto_id !== (int) $producto->id) {
-            return response()->json(['error' => 'Media inválida'], 400);
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Media inválida'], SymfonyResponse::HTTP_BAD_REQUEST);
+            }
+            return redirect()->back()->with('error', 'Media inválida para este producto.');
         }
-
         $request->validate([
             'orden' => 'sometimes|integer|min:1',
             'tipo' => 'sometimes|in:imagen,video',
+            'principal' => 'sometimes|boolean',
+            'status' => 'sometimes|in:activo,inactivo',
         ]);
-
-        $media->update($request->only(['orden', 'tipo']));
-
-        return response()->json(['success' => true]);
-    }
-
-    /**
-     * Eliminar imagen (desactivar)
-     */
-    public function mediaDestroy(Producto $producto, ProductoMedia $media)
-    {
-        if ((int) $media->producto_id !== (int) $producto->id) {
-            return redirect()
-                ->back()
-                ->with('error', 'Media inválida para este producto.');
+        DB::transaction(function () use ($request, $producto, $media) {
+            // Si quieren setear principal por aquí, garantizamos unicidad
+            if ($request->has('principal') && (bool) $request->boolean('principal') === true) {
+                ProductoMedia::where('producto_id', $producto->id)->update(['principal' => false]);
+            }
+            $media->update($request->only(['orden', 'tipo', 'principal', 'status']));
+        });
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
         }
 
-        // Opcional: eliminar físicamente el archivo
+        return redirect()->back()->with('success', 'Media actualizada.');
+    }
+
+    public function mediaDestroy(Request $request, Producto $producto, ProductoMedia $media) {
+        if ((int) $media->producto_id !== (int) $producto->id) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Media inválida'], SymfonyResponse::HTTP_BAD_REQUEST);
+            }
+            return redirect()->back()->with('error', 'Media inválida para este producto.');
+        }
+        // Opción: eliminar archivo físico si lo necesitas:
         // Storage::disk('public')->delete($media->url);
+        $media->update(['status' => 'inactivo', 'principal' => false]);
 
-        $media->update(['status' => 'inactivo']);
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true]);
+        }
 
-        return redirect()
-            ->back()
-            ->with('success', 'Media desactivada.');
+        return redirect()->back()->with('success', 'Media desactivada.');
     }
 
 }

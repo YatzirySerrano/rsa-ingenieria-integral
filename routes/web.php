@@ -10,7 +10,7 @@ use App\Http\Controllers\MarcaController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\CotizacionDetalleController;
 use App\Http\Controllers\PersonaController;
-use App\Http\Controllers\UserController;
+use App\Http\Controllers\UsuarioController;
 
 // Index del sitio web
 Route::get('/', function () {
@@ -49,16 +49,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Rutas para productos excepto show
     Route::resource('productos', ProductoController::class)
         ->except(['show']);
-    // Rutas para usuarios excepto show
-    Route::resource('usuarios', UserController::class)
-        ->except(['show']);
+    // Rutas para usuarios
+    Route::get('/admin/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
+    Route::post('/admin/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
+    Route::put('/admin/usuarios/{user}', [UsuarioController::class, 'update'])->name('usuarios.update');
+    Route::delete('/admin/usuarios/{user}', [UsuarioController::class, 'destroy'])->name('usuarios.destroy');
 
-    // Rutas para manejo de imágenes
-    Route::post('productos/{producto}/media', [ProductoController::class, 'mediaUpload'])->name('productos.media.upload');
-    Route::put('productos/{producto}/media/orden', [ProductoController::class, 'mediaUpdateOrder'])->name('productos.media.order');
-    Route::put('productos/{producto}/media/{media}/principal', [ProductoController::class, 'mediaSetMain'])->name('productos.media.set-main');
-    Route::put('productos/{producto}/media/{media}', [ProductoController::class, 'mediaUpdate'])->name('productos.media.update');
-    Route::delete('productos/{producto}/media/{media}', [ProductoController::class, 'mediaDestroy'])->name('productos.media.destroy');
+    // Media de productos (rutas web, no api)
+    Route::post('/productos/{producto}/media', [ProductoController::class, 'mediaUpload'])
+    ->name('productos.media.upload');
+    Route::post('/productos/{producto}/media/order', [ProductoController::class, 'mediaUpdateOrder'])
+        ->name('productos.media.order');
+    Route::post('/productos/{producto}/media/{media}/main', [ProductoController::class, 'mediaSetMain'])
+        ->name('productos.media.main');
+    Route::put('/productos/{producto}/media/{media}', [ProductoController::class, 'mediaUpdate'])
+        ->name('productos.media.update');
+    Route::delete('/productos/{producto}/media/{media}', [ProductoController::class, 'mediaDestroy'])
+        ->name('productos.media.destroy');
 
     // Ruta para mostrar la cotización
     Route::resource('cotizaciones', CotizacionController::class)

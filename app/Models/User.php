@@ -7,13 +7,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class User extends Authenticatable {
-
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+class User extends Authenticatable
+{
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
-    // Campos asignables
     protected $fillable = [
         'name',
         'email',
@@ -22,7 +21,6 @@ class User extends Authenticatable {
         'status',
     ];
 
-    // Campos ocultos
     protected $hidden = [
         'password',
         'two_factor_secret',
@@ -30,8 +28,8 @@ class User extends Authenticatable {
         'remember_token',
     ];
 
-    // Casts
-    protected function casts(): array {
+    protected function casts(): array
+    {
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
@@ -39,22 +37,18 @@ class User extends Authenticatable {
         ];
     }
 
-    // Scope: solo usuarios activos
-    public function scopeActivo(Builder $query): Builder {
+    public function scopeActivo(Builder $query): Builder
+    {
         return $query->where('status', 'activo');
     }
 
-    // Helpers de rol (opcional pero recomendado)
-    public function isAdmin(): bool {
-        return $this->rol === 'admin';
+    public function persona(): HasOne
+    {
+        return $this->hasOne(Persona::class, 'usuario_id');
     }
 
-    public function isVendedor(): bool {
-        return $this->rol === 'vendedor';
-    }
-
-    public function isCliente(): bool {
-        return $this->rol === 'cliente';
-    }
-
+    public function isAdmin(): bool { return $this->rol === 'admin'; }
+    public function isVendedor(): bool { return $this->rol === 'vendedor'; }
+    public function isCliente(): bool { return $this->rol === 'cliente'; }
+    
 }

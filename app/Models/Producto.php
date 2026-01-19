@@ -8,15 +8,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Producto extends Model {
-
+    
     protected $table = 'productos';
 
     protected $fillable = [
-        'marca_id','categoria_id',
-        'sku','nombre','descripcion',
-        'stock','costo_lista','precio_venta',
-        'created_by','updated_by','deleted_by',
-        'status'
+        'marca_id', 'categoria_id',
+        'sku', 'nombre', 'descripcion',
+        'stock', 'costo_lista', 'precio_venta',
+        'created_by', 'updated_by', 'deleted_by',
+        'status',
     ];
 
     protected $casts = [
@@ -25,27 +25,22 @@ class Producto extends Model {
         'precio_venta' => 'decimal:2',
     ];
 
-    // Scope para filtrar por estado activo
-    public function scopeActivo(Builder $q): Builder
-    {
+    public function scopeActivo(Builder $q): Builder {
         return $q->where('status', 'activo');
     }
 
-    // Un producto tiene una marca
     public function marca(): BelongsTo {
         return $this->belongsTo(Marca::class, 'marca_id');
     }
 
-    // Un producto tiene una categoría
     public function categoria(): BelongsTo {
         return $this->belongsTo(Categoria::class, 'categoria_id');
     }
 
-    // Relación con las medias del producto
     public function medias(): HasMany {
         return $this->hasMany(ProductoMedia::class, 'producto_id')
             ->orderBy('principal', 'desc')
-            ->orderBy('orden');
+            ->orderBy('orden', 'asc');
     }
 
 }

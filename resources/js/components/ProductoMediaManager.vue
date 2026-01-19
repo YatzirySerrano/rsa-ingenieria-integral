@@ -1,718 +1,524 @@
-<!-- 
-  COMPONENTE: ProductoMediaManager.vue
-  ====================================
-  
-  Descripción:
-  - Componente para gestionar imágenes de productos
-  - Funcionalidades: Subir, eliminar, establecer como principal, reordenar
-  - Vista previa de imágenes y organización visual
-  
-  Autor: [Tu nombre aquí]
-  Fecha: [Fecha actual]
-  Versión: 1.0
--->
-
-<template>
-  <div class="media-manager">
-    <!-- Encabezado -->
-    <div class="mb-6">
-      <h3 class="text-lg font-bold text-gray-900 dark:text-white">Imágenes del Producto</h3>
-      <p class="text-sm text-gray-500 dark:text-gray-400">
-        Sube y organiza las imágenes del producto. Puedes arrastrar las imágenes para cambiar el orden.
-      </p>
-    </div>
-
-    <!-- Botón para subir imágenes -->
-    <div class="mb-4">
-      <input
-        type="file"
-        ref="fileInput"
-        class="hidden"
-        accept="image/*"
-        multiple
-        @change="handleFileSelect"
-      />
-      <Button
-        type="button"
-        variant="outline"
-        class="gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-        @click="$refs.fileInput.click()"
-      >
-        <Upload class="h-4 w-4" />
-        Subir imágenes
-      </Button>
-      <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-        Formatos permitidos: JPG, PNG, WebP. Máx. 5MB por imagen.
-      </p>
-    </div>
-
-    <!-- Grid de imágenes -->
-    <div v-if="medias.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-      <div
-        v-for="(media, index) in medias"
-        :key="media.id"
-        class="relative group"
-        draggable="true"
-        @dragstart="handleDragStart(index)"
-        @dragover.prevent="handleDragOver(index)"
-        @drop="handleDrop(index)"
-        @dragenter.prevent
-        @dragleave.prevent
-      >
-        <!-- Contenedor de imagen -->
-        <div
-          class="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 transition-all duration-200 hover:border-emerald-500 dark:hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-500/10"
-        >
-          <!-- Imagen -->
-          <img
-            :src="getImageUrl(media.url)"
-            :alt="`Imagen ${index + 1}`"
-            class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-            @error="handleImageError"
-            @click="previewImageModal(media.url)"
-          />
-          
-          <!-- Overlay de acciones -->
-          <div
-            class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center gap-2"
-          >
-            <!-- Botón para establecer como principal -->
-            <Button
-              v-if="!media.principal"
-              type="button"
-              size="sm"
-              variant="secondary"
-              class="bg-white/90 hover:bg-white transition-all duration-200 hover:scale-110"
-              @click.stop="setAsMain(media)"
-              title="Establecer como principal"
-            >
-              <Star class="h-3 w-3" />
-            </Button>
-            
-            <!-- Botón para eliminar -->
-            <Button
-              type="button"
-              size="sm"
-              variant="destructive"
-              class="bg-red-500/90 hover:bg-red-500 text-white transition-all duration-200 hover:scale-110"
-              @click.stop="deleteMedia(media)"
-              title="Eliminar imagen"
-            >
-              <Trash2 class="h-3 w-3" />
-            </Button>
-          </div>
-
-          <!-- Indicador de imagen principal -->
-          <div
-            v-if="media.principal"
-            class="absolute top-2 left-2 px-2 py-1 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold rounded-full shadow-lg shadow-emerald-500/30"
-          >
-            Principal
-          </div>
-
-          <!-- Ícono de arrastre -->
-          <div
-            class="absolute top-2 right-2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
-            title="Arrastrar para reordenar"
-          >
-            <GripVertical class="h-4 w-4" />
-          </div>
-          
-          <!-- Número de orden -->
-          <div
-            class="absolute bottom-2 left-2 bg-black/70 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center"
-          >
-            {{ media.orden }}
-          </div>
-        </div>
-
-        <!-- Controles de orden -->
-        <div class="mt-2">
-          <label class="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 block">
-            Orden
-          </label>
-          <div class="flex items-center gap-2">
-            <Button
-              v-if="index > 0"
-              type="button"
-              size="sm"
-              variant="outline"
-              class="h-6 w-6 p-0"
-              @click="moveUp(index)"
-              title="Mover arriba"
-            >
-              ↑
-            </Button>
-            
-            <input
-              type="number"
-              v-model="media.orden"
-              min="1"
-              :max="medias.length"
-              class="w-full px-2 py-1 text-sm border rounded dark:bg-gray-800 dark:border-gray-700 text-center"
-              @change="updateOrder(media)"
-            />
-            
-            <Button
-              v-if="index < medias.length - 1"
-              type="button"
-              size="sm"
-              variant="outline"
-              class="h-6 w-6 p-0"
-              @click="moveDown(index)"
-              title="Mover abajo"
-            >
-              ↓
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Estado vacío -->
-    <div
-      v-else
-      class="text-center py-12 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg transition-all duration-200 hover:border-emerald-500 dark:hover:border-emerald-500 hover:bg-gray-50 dark:hover:bg-gray-900/50"
-    >
-      <Image class="h-12 w-12 mx-auto text-gray-400 dark:text-gray-600" />
-      <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-        No hay imágenes para este producto
-      </p>
-      <p class="mt-1 text-xs text-gray-400 dark:text-gray-500">
-        Haz clic en "Subir imágenes" para agregar algunas
-      </p>
-    </div>
-
-    <!-- Modal de vista previa -->
-    <div
-      v-if="previewModal"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-      @click.self="previewModal = false"
-    >
-      <div class="relative max-w-4xl max-h-[90vh] w-full">
-        <!-- Botón para cerrar -->
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          class="absolute top-4 right-4 z-10 bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border-white/20"
-          @click="previewModal = false"
-        >
-          <X class="h-4 w-4" />
-        </Button>
-        
-        <!-- Contenedor de imagen -->
-        <div class="bg-black/50 rounded-xl p-2">
-          <img
-            :src="getImageUrl(previewImage)"
-            class="max-w-full max-h-[80vh] object-contain rounded-lg"
-          />
-        </div>
-        
-        <!-- Navegación -->
-        <div class="flex items-center justify-center mt-4 gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            class="text-white border-white/30 hover:bg-white/10"
-            @click="prevImage"
-            :disabled="currentPreviewIndex === 0"
-          >
-            ← Anterior
-          </Button>
-          
-          <span class="text-sm text-white/80">
-            {{ currentPreviewIndex + 1 }} / {{ medias.length }}
-          </span>
-          
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            class="text-white border-white/30 hover:bg-white/10"
-            @click="nextImage"
-            :disabled="currentPreviewIndex === medias.length - 1"
-          >
-            Siguiente →
-          </Button>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
-import { router } from '@inertiajs/vue3'
-import { Upload, Trash2, Star, GripVertical, Image, X } from 'lucide-vue-next'
-import { Button } from '@/components/ui/button'
-import Swal from 'sweetalert2'
-
-interface ProductoMedia {
-  id: number
-  producto_id: number
-  tipo: string
-  url: string
-  orden: number
-  principal: boolean
-  status: string
-}
-
-interface Props {
-  productoId: number
-  initialMedias?: ProductoMedia[]
-}
-
-const props = defineProps<Props>()
-const emit = defineEmits(['media-updated'])
-
-// ============================================================================
-// ESTADOS REACTIVOS
-// ============================================================================
-
-const medias = ref<ProductoMedia[]>(props.initialMedias || [])
-const fileInput = ref<HTMLInputElement>()
-const previewModal = ref(false)
-const previewImage = ref('')
-const currentPreviewIndex = ref(0)
-const draggedItemIndex = ref<number | null>(null)
-
-// ============================================================================
-// FUNCIONES DE UTILIDAD
-// ============================================================================
-
-/**
- * Obtiene la URL completa de una imagen
- */
-const getImageUrl = (path: string): string => {
-  if (path.startsWith('http')) return path
-  return `/storage/${path}`
-}
-
-/**
- * Maneja errores al cargar imágenes
- */
-const handleImageError = (event: Event): void => {
-  const img = event.target as HTMLImageElement
-  img.src = '/images/placeholder.jpg'
-}
-
-// ============================================================================
-// FUNCIONES DE DRAG & DROP (SIMPLE)
-// ============================================================================
-
-/**
- * Inicia el arrastre de un elemento
- */
-const handleDragStart = (index: number): void => {
-  draggedItemIndex.value = index
-}
-
-/**
- * Maneja el evento dragover
- */
-const handleDragOver = (index: number): void => {
-  // Solo para permitir el drop
-}
-
-/**
- * Maneja el evento drop para reordenar
- */
-const handleDrop = (index: number): void => {
-  if (draggedItemIndex.value === null || draggedItemIndex.value === index) return
-  
-  // Mover elemento
-  const movedItem = medias.value.splice(draggedItemIndex.value, 1)[0]
-  medias.value.splice(index, 0, movedItem)
-  
-  // Actualizar órdenes
-  updateAllOrders()
-  
-  // Resetear índice arrastrado
-  draggedItemIndex.value = null
-}
-
-/**
- * Mueve una imagen hacia arriba
- */
-const moveUp = (index: number): void => {
-  if (index <= 0) return
-  
-  const temp = medias.value[index]
-  medias.value[index] = medias.value[index - 1]
-  medias.value[index - 1] = temp
-  
-  updateAllOrders()
-}
-
-/**
- * Mueve una imagen hacia abajo
- */
-const moveDown = (index: number): void => {
-  if (index >= medias.value.length - 1) return
-  
-  const temp = medias.value[index]
-  medias.value[index] = medias.value[index + 1]
-  medias.value[index + 1] = temp
-  
-  updateAllOrders()
-}
-
-/**
- * Actualiza todos los órdenes después de reordenar
- */
-const updateAllOrders = async (): Promise<void> => {
-  medias.value.forEach((media, index) => {
-    media.orden = index + 1
-  })
-  
-  // Enviar al servidor
-  await saveNewOrder()
-}
-
-// ============================================================================
-// FUNCIONES PARA GUARDAR EN SERVIDOR
-// ============================================================================
-
-/**
- * Guarda el nuevo orden en el servidor
- */
-const saveNewOrder = async (): Promise<void> => {
-  try {
-    const ordenes = medias.value.map(m => ({ id: m.id, orden: m.orden }))
+    /*
+      ProductoMediaManager.vue
+      ------------------------
+      - NO Ziggy.
+      - Web routes con Inertia router.* (NO API).
+      - UI: drag&drop, orden, principal, desactivar.
+      - Actualiza UI al momento (optimistic) para no cerrar modal.
+    */
     
-    await router.put(`/productos/${props.productoId}/media/orden`, { ordenes }, {
-      preserveScroll: true,
-      onSuccess: () => {
-        emit('media-updated')
+    import { computed, ref, watch } from 'vue'
+    import { router } from '@inertiajs/vue3'
+    import Swal from 'sweetalert2'
+    
+    import type { ProductoMedia } from '@/types/producto'
+    import {
+      Upload,
+      Star,
+      Trash2,
+      GripVertical,
+      EyeOff,
+      ArrowUp,
+      ArrowDown,
+      Loader2,
+      Image as ImageIcon,
+    } from 'lucide-vue-next'
+    
+    const props = defineProps<{
+      productoId: number
+      initialMedias: ProductoMedia[]
+    }>()
+    
+    const emit = defineEmits<{
+      (e: 'media-updated'): void
+    }>()
+    
+    /* -----------------------------
+       State
+    ------------------------------ */
+    const medias = ref<ProductoMedia[]>(props.initialMedias || [])
+    const isUploading = ref(false)
+    const isBusy = ref(false) // para orden/principal/delete
+    const draggingIndex = ref<number | null>(null)
+    const fileInputRef = ref<HTMLInputElement | null>(null)
+    const isDragActive = ref(false)
+    
+    /*
+      Mantener sincronía cuando el padre sí refresca props
+    */
+    watch(
+      () => props.initialMedias,
+      (newMedias) => {
+        medias.value = (newMedias || []).slice()
       },
-      onError: () => {
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudo actualizar el orden de las imágenes',
-          icon: 'error',
-          confirmButtonText: 'OK'
+      { deep: true }
+    )
+    
+    /* -----------------------------
+       Computeds
+    ------------------------------ */
+    const activeMedias = computed(() =>
+      medias.value
+        .filter((m) => m.status === 'activo')
+        .slice()
+        // Orden consistente en UI: principal arriba, luego orden
+        .sort((a, b) => {
+          if (a.principal !== b.principal) return a.principal ? -1 : 1
+          return (a.orden ?? 999999) - (b.orden ?? 999999)
         })
-      }
-    })
-  } catch (error) {
-    console.error('Error saving order:', error)
-    Swal.fire({
-      title: 'Error',
-      text: 'Error al guardar el orden',
-      icon: 'error',
-      confirmButtonText: 'OK'
-    })
-  }
-}
-
-// ============================================================================
-// FUNCIONES DE SUBIDA DE ARCHIVOS
-// ============================================================================
-
-/**
- * Maneja la selección de archivos
- */
-const handleFileSelect = async (event: Event): Promise<void> => {
-  const input = event.target as HTMLInputElement
-  if (!input.files || input.files.length === 0) return
-
-  const formData = new FormData()
-  Array.from(input.files).forEach(file => {
-    // Validar tipo de archivo
-    if (isValidImageFile(file)) {
-      formData.append('files[]', file)
+    )
+    
+    const inactiveCount = computed(() => medias.value.filter((m) => m.status !== 'activo').length)
+    
+    /* -----------------------------
+       Helpers
+    ------------------------------ */
+    function getImageUrl(media: ProductoMedia): string {
+      if (!media?.url) return ''
+      if (media.url.startsWith('http')) return media.url
+      return `/storage/${media.url.replace(/^storage\//, '')}`
     }
-  })
-
-  try {
-    await router.post(`/productos/${props.productoId}/media`, formData, {
-      preserveScroll: true,
-      onSuccess: () => {
-        emit('media-updated')
-        Swal.fire({
-          title: 'Éxito',
-          text: 'Imágenes subidas correctamente',
-          icon: 'success',
-          confirmButtonText: 'OK'
-        })
-        input.value = ''
-      },
-      onError: () => {
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudieron subir las imágenes',
-          icon: 'error',
-          confirmButtonText: 'OK'
-        })
-      }
-    })
-  } catch (error) {
-    console.error('Upload error:', error)
-    Swal.fire({
-      title: 'Error',
-      text: 'Error al subir las imágenes',
-      icon: 'error',
-      confirmButtonText: 'OK'
-    })
-  }
-}
-
-/**
- * Valida si un archivo es una imagen válida
- */
-const isValidImageFile = (file: File): boolean => {
-  const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp']
-  const maxSize = 5 * 1024 * 1024 // 5MB
-  
-  if (!validTypes.includes(file.type)) {
-    Swal.fire({
-      title: 'Tipo no válido',
-      text: `El archivo ${file.name} no es una imagen válida`,
-      icon: 'warning',
-      confirmButtonText: 'OK'
-    })
-    return false
-  }
-  
-  if (file.size > maxSize) {
-    Swal.fire({
-      title: 'Archivo muy grande',
-      text: `El archivo ${file.name} excede el tamaño máximo de 5MB`,
-      icon: 'warning',
-      confirmButtonText: 'OK'
-    })
-    return false
-  }
-  
-  return true
-}
-
-// ============================================================================
-// FUNCIONES DE GESTIÓN DE IMÁGENES
-// ============================================================================
-
-/**
- * Elimina una imagen
- */
-const deleteMedia = async (media: ProductoMedia): Promise<void> => {
-  const result = await Swal.fire({
-    title: '¿Eliminar imagen?',
-    text: 'Esta acción no se puede deshacer',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Sí, eliminar',
-    cancelButtonText: 'Cancelar',
-    confirmButtonColor: '#ef4444',
-    reverseButtons: true
-  })
-
-  if (!result.isConfirmed) return
-
-  try {
-    await router.delete(`/productos/${props.productoId}/media/${media.id}`, {
-      preserveScroll: true,
-      onSuccess: () => {
-        // Eliminar localmente
-        const index = medias.value.findIndex(m => m.id === media.id)
-        if (index !== -1) {
-          medias.value.splice(index, 1)
-          // Recalcular órdenes
-          updateAllOrders()
+    
+    function openPicker(): void {
+      if (isUploading.value || isBusy.value) return
+      fileInputRef.value?.click()
+    }
+    
+    function toastOk(title: string, text?: string) {
+      Swal.fire({
+        icon: 'success',
+        title,
+        text,
+        timer: 1400,
+        showConfirmButton: false,
+      })
+    }
+    
+    function toastErr(title: string, text?: string) {
+      Swal.fire({
+        icon: 'error',
+        title,
+        text,
+      })
+    }
+    
+    /* -----------------------------
+       Upload (este es tu “truco”, intacto)
+    ------------------------------ */
+    function handleFileSelect(e: Event): void {
+      const input = e.target as HTMLInputElement
+      if (!input.files || input.files.length === 0) return
+      uploadFiles(input.files)
+      input.value = ''
+    }
+    
+    function uploadFiles(files: FileList): void {
+      const formData = new FormData()
+      Array.from(files).forEach((file) => formData.append('files[]', file))
+    
+      isUploading.value = true
+    
+      router.post(`/productos/${props.productoId}/media`, formData, {
+        preserveScroll: true,
+        preserveState: true,
+        forceFormData: true,
+        onSuccess: () => {
+          toastOk('Listo', 'Imágenes subidas correctamente.')
+          emit('media-updated') // el padre debe refrescar el producto si quiere
+        },
+        onError: (errors: any) => {
+          // si backend manda errores de validación, acá cae
+          const msg =
+            (errors && (errors.message || errors.error)) ||
+            'No se pudieron subir las imágenes. Revisa formato/tamaño.'
+          toastErr('Error', msg)
+        },
+        onFinish: () => {
+          isUploading.value = false
+          isDragActive.value = false
+        },
+      })
+    }
+    
+    /* -----------------------------
+       Orden
+    ------------------------------ */
+    function updateOrderOptimistic(list: ProductoMedia[]) {
+      // Aplica orden local sin esperar backend
+      const ids = new Set(list.map((m) => m.id))
+      medias.value = medias.value.map((m) => {
+        if (m.status !== 'activo' || !ids.has(m.id)) return m
+        const idx = list.findIndex((x) => x.id === m.id)
+        return idx >= 0 ? { ...m, orden: idx + 1 } : m
+      })
+    }
+    
+    function updateOrder(): void {
+      if (isUploading.value || isBusy.value) return
+    
+      // ordenes SOLO de activas (ya ordenadas)
+      const ordenes = activeMedias.value.map((media, index) => ({
+        id: media.id,
+        orden: index + 1,
+      }))
+    
+      isBusy.value = true
+    
+      router.post(
+        `/productos/${props.productoId}/media/order`,
+        { ordenes },
+        {
+          preserveScroll: true,
+          preserveState: true,
+          onSuccess: () => {
+            toastOk('OK', 'Orden actualizado.')
+            emit('media-updated')
+          },
+          onError: () => toastErr('Error', 'No se pudo actualizar el orden.'),
+          onFinish: () => (isBusy.value = false),
         }
-        emit('media-updated')
-        Swal.fire({
-          title: 'Eliminada',
-          text: 'Imagen eliminada correctamente',
-          icon: 'success',
-          confirmButtonText: 'OK'
-        })
-      },
-      onError: () => {
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudo eliminar la imagen',
-          icon: 'error',
-          confirmButtonText: 'OK'
-        })
-      }
-    })
-  } catch (error) {
-    console.error('Delete error:', error)
-    Swal.fire({
-      title: 'Error',
-      text: 'Error al eliminar la imagen',
-      icon: 'error',
-      confirmButtonText: 'OK'
-    })
-  }
-}
-
-/**
- * Establece una imagen como principal
- */
-const setAsMain = async (media: ProductoMedia): Promise<void> => {
-  try {
-    await router.put(`/productos/${props.productoId}/media/${media.id}/principal`, {}, {
-      preserveScroll: true,
-      onSuccess: () => {
-        // Actualizar localmente
-        medias.value.forEach(m => {
-          m.principal = m.id === media.id
-        })
-        emit('media-updated')
-        Swal.fire({
-          title: 'Éxito',
-          text: 'Imagen principal actualizada',
-          icon: 'success',
-          confirmButtonText: 'OK'
-        })
-      },
-      onError: () => {
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudo actualizar la imagen principal',
-          icon: 'error',
-          confirmButtonText: 'OK'
-        })
-      }
-    })
-  } catch (error) {
-    console.error('Set main error:', error)
-    Swal.fire({
-      title: 'Error',
-      text: 'Error al actualizar la imagen principal',
-      icon: 'error',
-      confirmButtonText: 'OK'
-    })
-  }
-}
-
-/**
- * Actualiza el orden de una imagen individual
- */
-const updateOrder = async (media: ProductoMedia): Promise<void> => {
-  // Validar que el orden esté en rango
-  if (media.orden < 1) media.orden = 1
-  if (media.orden > medias.value.length) media.orden = medias.value.length
-  
-  // Ordenar array por orden
-  medias.value.sort((a, b) => a.orden - b.orden)
-  
-  try {
-    await router.put(`/productos/${props.productoId}/media/${media.id}`, {
-      orden: media.orden
-    }, {
-      preserveScroll: true,
-      onSuccess: () => {
-        emit('media-updated')
-      },
-      onError: () => {
-        Swal.fire({
-          title: 'Error',
-          text: 'No se pudo actualizar el orden',
-          icon: 'error',
-          confirmButtonText: 'OK'
-        })
-      }
-    })
-  } catch (error) {
-    console.error('Update order error:', error)
-    Swal.fire({
-      title: 'Error',
-      text: 'Error al actualizar el orden',
-      icon: 'error',
-      confirmButtonText: 'OK'
-    })
-  }
-}
-
-// ============================================================================
-// FUNCIONES DE VISTA PREVIA
-// ============================================================================
-
-/**
- * Abre el modal de vista previa
- */
-const previewImageModal = (url: string): void => {
-  const index = medias.value.findIndex(m => m.url === url)
-  if (index !== -1) {
-    currentPreviewIndex.value = index
-    previewImage.value = url
-    previewModal.value = true
-  }
-}
-
-/**
- * Muestra la imagen anterior en el preview
- */
-const prevImage = (): void => {
-  if (currentPreviewIndex.value > 0) {
-    currentPreviewIndex.value--
-    previewImage.value = medias.value[currentPreviewIndex.value].url
-  }
-}
-
-/**
- * Muestra la siguiente imagen en el preview
- */
-const nextImage = (): void => {
-  if (currentPreviewIndex.value < medias.value.length - 1) {
-    currentPreviewIndex.value++
-    previewImage.value = medias.value[currentPreviewIndex.value].url
-  }
-}
-
-// ============================================================================
-// CICLO DE VIDA
-// ============================================================================
-
-onMounted(() => {
-  nextTick(() => {
-    // Ordenar imágenes por orden inicial
-    medias.value.sort((a, b) => a.orden - b.orden)
-  })
-})
-</script>
-
-<style scoped>
-/* Estilos para el efecto de arrastre */
-.dragging {
-  opacity: 0.5;
-  transform: scale(0.95);
-}
-
-.drag-over {
-  border: 2px dashed #10b981 !important;
-  background-color: rgba(16, 185, 129, 0.1) !important;
-}
-
-/* Transiciones suaves */
-.media-item {
-  transition: all 0.2s ease;
-}
-
-.media-item:hover {
-  transform: translateY(-2px);
-}
-
-/* Estilos para scrollbar en modales */
-.preview-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
-}
-
-.preview-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.preview-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.preview-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.3);
-  border-radius: 20px;
-}
-</style>
+      )
+    }
+    
+    /* -----------------------------
+       Principal
+    ------------------------------ */
+    function setMain(mediaId: number): void {
+      if (isUploading.value || isBusy.value) return
+      isBusy.value = true
+    
+      // Optimistic UI: marcamos principal local
+      medias.value = medias.value.map((m) => ({ ...m, principal: m.id === mediaId }))
+    
+      router.post(
+        `/productos/${props.productoId}/media/${mediaId}/main`,
+        {},
+        {
+          preserveScroll: true,
+          preserveState: true,
+          onSuccess: () => {
+            toastOk('OK', 'Imagen principal actualizada.')
+            emit('media-updated')
+          },
+          onError: () => {
+            toastErr('Error', 'No se pudo establecer la imagen principal.')
+            // rollback básico: pedimos refresh al padre
+            emit('media-updated')
+          },
+          onFinish: () => (isBusy.value = false),
+        }
+      )
+    }
+    
+    /* -----------------------------
+       Delete (soft)
+    ------------------------------ */
+    async function deleteMedia(mediaId: number): Promise<void> {
+      if (isUploading.value || isBusy.value) return
+    
+      const result = await Swal.fire({
+        title: 'Desactivar imagen',
+        text: 'La imagen se marcará como inactiva.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, desactivar',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+      })
+    
+      if (!result.isConfirmed) return
+    
+      isBusy.value = true
+    
+      // Optimistic UI: la quitamos del grid de activas sin cerrar modal
+      medias.value = medias.value.map((m) =>
+        m.id === mediaId ? { ...m, status: 'inactivo', principal: false } : m
+      )
+    
+      router.delete(`/productos/${props.productoId}/media/${mediaId}`, {
+        preserveScroll: true,
+        preserveState: true,
+        onSuccess: () => {
+          toastOk('Hecho', 'Imagen desactivada.')
+          emit('media-updated')
+        },
+        onError: () => {
+          toastErr('Error', 'No se pudo desactivar la imagen.')
+          // rollback: refrescamos desde padre para rehacer estado real
+          emit('media-updated')
+        },
+        onFinish: () => (isBusy.value = false),
+      })
+    }
+    
+    /* -----------------------------
+       Drag & Drop (solo activas)
+    ------------------------------ */
+    function onDragStart(index: number): void {
+      if (isUploading.value || isBusy.value) return
+      draggingIndex.value = index
+    }
+    
+    function onDragOver(event: DragEvent): void {
+      event.preventDefault()
+    }
+    
+    function onDrop(index: number): void {
+      if (draggingIndex.value === null) return
+    
+      const list = activeMedias.value.slice()
+      const dragged = list[draggingIndex.value]
+      if (!dragged) return
+    
+      list.splice(draggingIndex.value, 1)
+      list.splice(index, 0, dragged)
+    
+      // reconstruir medias: activas en nuevo orden + inactivas
+      const inactive = medias.value.filter((m) => m.status !== 'activo')
+      medias.value = [...list.map((m, idx) => ({ ...m, orden: idx + 1 })), ...inactive]
+    
+      draggingIndex.value = null
+    
+      // Optimistic + persist
+      updateOrder()
+    }
+    
+    /* -----------------------------
+       Move up/down
+    ------------------------------ */
+    function moveUp(index: number): void {
+      if (index <= 0) return
+      const list = activeMedias.value.slice()
+      ;[list[index - 1], list[index]] = [list[index], list[index - 1]]
+    
+      const inactive = medias.value.filter((m) => m.status !== 'activo')
+      medias.value = [...list.map((m, idx) => ({ ...m, orden: idx + 1 })), ...inactive]
+    
+      updateOrder()
+    }
+    
+    function moveDown(index: number): void {
+      const list = activeMedias.value.slice()
+      if (index >= list.length - 1) return
+      ;[list[index], list[index + 1]] = [list[index + 1], list[index]]
+    
+      const inactive = medias.value.filter((m) => m.status !== 'activo')
+      medias.value = [...list.map((m, idx) => ({ ...m, orden: idx + 1 })), ...inactive]
+    
+      updateOrder()
+    }
+    
+    /* -----------------------------
+       Drag & drop upload (zona)
+    ------------------------------ */
+    function onDropFiles(ev: DragEvent): void {
+      ev.preventDefault()
+      isDragActive.value = false
+      if (isUploading.value || isBusy.value) return
+      const files = ev.dataTransfer?.files
+      if (!files || files.length === 0) return
+      uploadFiles(files)
+    }
+    
+    function onDragEnter(ev: DragEvent): void {
+      ev.preventDefault()
+      if (isUploading.value || isBusy.value) return
+      isDragActive.value = true
+    }
+    
+    function onDragLeave(ev: DragEvent): void {
+      ev.preventDefault()
+      isDragActive.value = false
+    }
+    </script>
+    
+    <template>
+      <div class="space-y-6">
+        <!-- Zona upload -->
+        <div
+          class="rounded-2xl border-2 border-dashed p-6 sm:p-8 transition-all"
+          :class="isDragActive
+            ? 'border-emerald-400 bg-emerald-50/70 dark:bg-emerald-500/10'
+            : 'border-slate-300 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/50'"
+          @dragenter="onDragEnter"
+          @dragover="onDragOver"
+          @dragleave="onDragLeave"
+          @drop="onDropFiles"
+        >
+          <input
+            ref="fileInputRef"
+            type="file"
+            class="hidden"
+            multiple
+            accept="image/*"
+            :disabled="isUploading || isBusy"
+            @change="handleFileSelect"
+          />
+    
+          <div class="flex flex-col items-center justify-center gap-4 text-center">
+            <div
+              class="h-14 w-14 sm:h-16 sm:w-16 rounded-full flex items-center justify-center"
+              :class="isUploading ? 'bg-slate-200 dark:bg-slate-800' : 'bg-emerald-100 dark:bg-emerald-900/30'"
+            >
+              <Loader2 v-if="isUploading" class="h-7 w-7 animate-spin text-slate-700 dark:text-slate-300" />
+              <Upload v-else class="h-7 w-7 sm:h-8 sm:w-8 text-emerald-600 dark:text-emerald-400" />
+            </div>
+    
+            <div class="space-y-1">
+              <p class="text-base sm:text-lg font-black text-slate-900 dark:text-slate-100">
+                Arrastra y suelta imágenes aquí
+              </p>
+              <p class="text-sm text-slate-600 dark:text-slate-400">
+                O selecciona archivos desde tu equipo
+              </p>
+              <p class="text-xs text-slate-500 dark:text-slate-500">
+                JPEG, PNG, JPG, GIF, WEBP. Máx 5MB
+              </p>
+              <p v-if="inactiveCount" class="text-xs text-slate-500 dark:text-slate-400">
+                Inactivas: {{ inactiveCount }} (no se muestran)
+              </p>
+            </div>
+    
+            <button
+              type="button"
+              class="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-extrabold text-white
+                     bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed
+                     transition-all active:scale-[0.98]"
+              :disabled="isUploading || isBusy"
+              @click="openPicker"
+            >
+              <Upload class="h-4 w-4" />
+              <span>{{ isUploading ? 'Subiendo...' : 'Seleccionar imágenes' }}</span>
+            </button>
+          </div>
+        </div>
+    
+        <!-- Grid activas -->
+        <div v-if="activeMedias.length" class="space-y-4">
+          <div class="flex items-end justify-between gap-3">
+            <h3 class="text-lg font-black text-slate-900 dark:text-slate-100">
+              Imágenes activas ({{ activeMedias.length }})
+            </h3>
+          </div>
+    
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div
+              v-for="(media, index) in activeMedias"
+              :key="media.id"
+              class="relative group overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950/40
+                     hover:shadow-2xl hover:border-emerald-200 dark:hover:border-emerald-700 transition-all"
+              draggable="true"
+              @dragstart="onDragStart(index)"
+              @dragover="onDragOver"
+              @drop="onDrop(index)"
+            >
+              <div class="aspect-square bg-slate-100 dark:bg-slate-800 overflow-hidden relative">
+                <img
+                  :src="getImageUrl(media)"
+                  :alt="`Imagen ${index + 1}`"
+                  class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  @error="(e: any) => { if (e?.target) e.target.style.display = 'none' }"
+                />
+    
+                <div
+                  v-if="media.principal"
+                  class="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-emerald-500 text-white px-2 py-1 text-xs font-extrabold"
+                >
+                  <Star class="h-3 w-3" />
+                  Principal
+                </div>
+    
+                <div class="absolute top-3 right-3 h-7 w-7 rounded-full bg-slate-900/70 text-white text-xs font-extrabold flex items-center justify-center">
+                  {{ index + 1 }}
+                </div>
+              </div>
+    
+              <div class="p-3 border-t border-slate-100 dark:border-slate-800">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      class="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-move"
+                      title="Arrastrar para reordenar"
+                    >
+                      <GripVertical class="h-4 w-4" />
+                    </button>
+    
+                    <button
+                      v-if="!media.principal"
+                      type="button"
+                      class="p-1 text-slate-400 hover:text-yellow-500 disabled:opacity-40"
+                      :disabled="isUploading || isBusy"
+                      title="Establecer como principal"
+                      @click="setMain(media.id)"
+                    >
+                      <Star class="h-4 w-4" />
+                    </button>
+    
+                    <div class="flex items-center gap-1">
+                      <button
+                        type="button"
+                        class="p-1 text-slate-400 hover:text-emerald-600 disabled:opacity-30"
+                        :disabled="index === 0 || isUploading || isBusy"
+                        title="Subir"
+                        @click="moveUp(index)"
+                      >
+                        <ArrowUp class="h-4 w-4" />
+                      </button>
+    
+                      <button
+                        type="button"
+                        class="p-1 text-slate-400 hover:text-emerald-600 disabled:opacity-30"
+                        :disabled="index === activeMedias.length - 1 || isUploading || isBusy"
+                        title="Bajar"
+                        @click="moveDown(index)"
+                      >
+                        <ArrowDown class="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+    
+                  <button
+                    type="button"
+                    class="p-1 text-slate-400 hover:text-rose-500 disabled:opacity-40"
+                    :disabled="isUploading || isBusy"
+                    title="Desactivar"
+                    @click="deleteMedia(media.id)"
+                  >
+                    <Trash2 class="h-4 w-4" />
+                  </button>
+                </div>
+    
+                <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                  <span class="capitalize inline-flex items-center gap-1">
+                    <ImageIcon class="h-3.5 w-3.5" />
+                    {{ media.tipo }}
+                  </span>
+                  <span>Orden: {{ media.orden }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+    
+        <!-- Empty -->
+        <div v-else class="text-center py-10 sm:py-12">
+          <div class="h-16 w-16 sm:h-20 sm:w-20 mx-auto mb-4 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+            <EyeOff class="h-8 w-8 sm:h-10 sm:w-10 text-slate-400" />
+          </div>
+          <p class="text-base sm:text-lg font-extrabold text-slate-700 dark:text-slate-200">
+            No hay imágenes activas
+          </p>
+          <p class="text-sm text-slate-500 dark:text-slate-500">
+            Sube imágenes usando el panel superior.
+          </p>
+        </div>
+      </div>
+    </template>
+    
+    <style scoped>
+    [draggable="true"] { cursor: grab; }
+    [draggable="true"]:active { cursor: grabbing; }
+    </style>
+    

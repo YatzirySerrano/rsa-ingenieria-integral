@@ -25,7 +25,7 @@ export type Producto = {
     status: Status
     marca?: { id: number; nombre: string; status?: Status }
     categoria?: { id: number; nombre: string; tipo?: string; status?: Status }
-    medias?: ProductoMedia[]
+    medias: ProductoMedia[]
 }
 
 export type ProductoPayload = {
