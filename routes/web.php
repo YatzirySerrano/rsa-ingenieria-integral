@@ -11,6 +11,7 @@ use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\CotizacionDetalleController;
 use App\Http\Controllers\PersonaController;
 use App\Http\Controllers\UsuarioController;
+use App\Http\Controllers\PublicProductoController;
 
 // Index del sitio web
 Route::get('/', function () {
@@ -24,6 +25,8 @@ Route::get('/servicios/cctv', function () {
     return Inertia::render('servicios/cctv');
 })->name('Servicios.cctv');
 
+Route::get('/catalogo', [PublicProductoController::class, 'index'])
+    ->name('catalogo.publico');
 
 // -------------------------
 // Protected (Auth)
@@ -54,6 +57,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/admin/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
     Route::put('/admin/usuarios/{user}', [UsuarioController::class, 'update'])->name('usuarios.update');
     Route::delete('/admin/usuarios/{user}', [UsuarioController::class, 'destroy'])->name('usuarios.destroy');
+    Route::get('/admin/usuarios/personas-lookup', [UsuarioController::class, 'personasLookup'])
+  ->name('usuarios.personasLookup');
 
     // Media de productos (rutas web, no api)
     Route::post('/productos/{producto}/media', [ProductoController::class, 'mediaUpload'])

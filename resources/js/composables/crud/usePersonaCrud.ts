@@ -1,13 +1,7 @@
-import Swal from 'sweetalert2'
-import { computed, reactive, watch } from 'vue'
+// resources/js/composables/crud/usePersonaCrud.ts
+import { computed, reactive, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
-
-/**
- * Personas:
- * - status se gestiona SOLO desde el listado (activar/desactivar)
- * - en Nuevo/Editar SIEMPRE mandamos status=activo
- * - filtros con debounce para UX fluida en tablas Inertia
- */
+import Swal from 'sweetalert2'
 
 export type PersonaStatus = 'activo' | 'inactivo'
 
@@ -22,111 +16,70 @@ export type Persona = {
   rfc?: string | null
   direccion?: string | null
   status: PersonaStatus
-
-  // si lo mandas en PersonaResource:
   nombre_completo?: string | null
 }
 
 export type PersonaFilters = {
   q: string
-  status: string
+  status: string // 'activo' | 'inactivo' | '__all__'
 }
 
-const ALL = '__all__'
+export const PERSONA_ALL = '__all__'
+const DEFAULT_STATUS: PersonaStatus = 'activo'
 
 type UsePersonaCrudOptions = {
   initialFilters?: Partial<PersonaFilters>
   baseUrl?: string
 }
 
+export type PersonaForm = {
+  nombre: string
+  apellido_paterno: string
+  apellido_materno: string
+  telefono: string
+  empresa: string
+  rfc: string
+  direccion: string
+}
+
+export type PersonaFormPayload = {
+  nombre: string
+  apellido_paterno: string | null
+  apellido_materno: string | null
+  telefono: string | null
+  empresa: string | null
+  rfc: string | null
+  direccion: string | null
+  status: 'activo'
+}
+
+export type PersonaFormErrors = Partial<Record<keyof PersonaForm, string>> & {
+  form?: string
+}
+
+/* =========================
+ * SweetAlert helpers
+ * ========================= */
 let swalStyled = false
-
-/**
- * SweetAlert2 theme:
- * - default dark
- * - fallback light por prefers-color-scheme
- * - incluye estilos de option para selects cuando aplique (consistencia)
- */
-function ensureSwalTheme() {
+function ensureSwalTop() {
   if (swalStyled) return
-  swalStyled = true
-
   const style = document.createElement('style')
-  style.innerHTML = `
-    .swal2-container{ z-index: 20000 !important; }
-
-    .swal2-popup{
-      background:#0b0c10 !important;
-      color:#e4e4e7 !important;
-      border:1px solid rgba(0,0,0,.08) !important;
-      border-radius:18px !important;
-      box-shadow:0 25px 90px rgba(0,0,0,.40) !important;
-      padding: 1.25rem 1.25rem 1rem !important;
-    }
-
-    .swal2-title{ font-weight: 900 !important; letter-spacing: -0.02em !important; }
-    .swal2-html-container{ color: rgba(228,228,231,.85) !important; }
-
-    .swal2-input, .swal2-select, .swal2-textarea{
-      background: rgba(255,255,255,.06) !important;
-      color:#e4e4e7 !important;
-      border:1px solid rgba(255,255,255,.14) !important;
-      border-radius: 12px !important;
-      box-shadow: none !important;
-      height: 42px !important;
-    }
-
-    .swal2-textarea{
-      height: auto !important;
-      min-height: 86px !important;
-      padding-top: 10px !important;
-      padding-bottom: 10px !important;
-    }
-
-    .swal2-input:focus, .swal2-select:focus, .swal2-textarea:focus{
-      border-color: rgba(16,185,129,.55) !important;
-      box-shadow: 0 0 0 4px rgba(16,185,129,.16) !important;
-      outline: none !important;
-    }
-
-    .swal2-confirm{
-      background:#10b981 !important;
-      color:#050608 !important;
-      border-radius: 12px !important;
-      font-weight: 900 !important;
-      padding: 10px 16px !important;
-    }
-
-    .swal2-cancel{
-      background: rgba(255,255,255,.06) !important;
-      color:#e4e4e7 !important;
-      border:1px solid rgba(255,255,255,.14) !important;
-      border-radius: 12px !important;
-      font-weight: 800 !important;
-      padding: 10px 16px !important;
-    }
-
-    @media (prefers-color-scheme: light){
-      .swal2-popup{
-        background:#ffffff !important;
-        color:#0f172a !important;
-        border:1px solid rgba(2,6,23,.10) !important;
-        box-shadow:0 25px 90px rgba(2,6,23,.15) !important;
-      }
-      .swal2-html-container{ color: rgba(15,23,42,.75) !important; }
-      .swal2-input, .swal2-select, .swal2-textarea{
-        background:#ffffff !important;
-        color:#0f172a !important;
-        border:1px solid rgba(2,6,23,.12) !important;
-      }
-      .swal2-cancel{
-        background: rgba(2,6,23,.04) !important;
-        color:#0f172a !important;
-        border:1px solid rgba(2,6,23,.10) !important;
-      }
-    }
-  `
+  style.innerHTML = `.swal2-container{z-index:20000 !important;}`
   document.head.appendChild(style)
+  swalStyled = true
+}
+
+function toast(icon: 'success' | 'error' | 'info' | 'warning', title: string) {
+  ensureSwalTop()
+  return Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon,
+    title,
+    showConfirmButton: false,
+    timer: icon === 'error' ? 2600 : 2200,
+    timerProgressBar: true,
+  })
 }
 
 export function usePersonaCrud(options: UsePersonaCrudOptions = {}) {
@@ -137,13 +90,20 @@ export function usePersonaCrud(options: UsePersonaCrudOptions = {}) {
    * ========================= */
   const filters = reactive<PersonaFilters>({
     q: options.initialFilters?.q ?? '',
-    status: options.initialFilters?.status ?? ALL,
+    // DEFAULT: activo
+    status: options.initialFilters?.status ?? DEFAULT_STATUS,
   })
 
   function buildParams() {
     const params: Record<string, string> = {}
     if (filters.q.trim()) params.q = filters.q.trim()
-    if (filters.status !== ALL) params.status = filters.status
+
+    // Si está en "Todos" mandamos status=__all__ (para que el backend NO filtre)
+    if (filters.status && filters.status !== DEFAULT_STATUS) {
+      // Ojo: si vuelve a activo (default), no lo mandamos.
+      params.status = filters.status
+    }
+
     return params
   }
 
@@ -157,7 +117,7 @@ export function usePersonaCrud(options: UsePersonaCrudOptions = {}) {
 
   function resetFilters() {
     filters.q = ''
-    filters.status = ALL
+    filters.status = DEFAULT_STATUS
     applyFilters()
   }
 
@@ -171,169 +131,236 @@ export function usePersonaCrud(options: UsePersonaCrudOptions = {}) {
     { deep: true }
   )
 
-  const hasActiveFilters = computed(() => Boolean(filters.q.trim()) || filters.status !== ALL)
+  // Activo solo si:
+  // - hay q, o
+  // - status diferente al default activo (incluye __all__ o inactivo)
+  const hasActiveFilters = computed(() => Boolean(filters.q.trim()) || filters.status !== DEFAULT_STATUS)
 
   /* =========================
-   * CRUD (SweetAlert2)
-   * - Nuevo/Editar NO maneja status
-   * - Siempre guarda activo
+   * Modal + Form State
    * ========================= */
-  async function openForm(persona?: Persona) {
-    ensureSwalTheme()
+  const modalOpen = ref(false)
+  const mode = ref<'create' | 'edit'>('create')
+  const editingId = ref<number | null>(null)
+  const busy = ref(false)
 
-    const isEdit = Boolean(persona)
-    const current = persona
-      ? {
-          id: Number(persona.id),
-          nombre: String(persona.nombre ?? ''),
-          apellido_paterno: String(persona.apellido_paterno ?? ''),
-          apellido_materno: String(persona.apellido_materno ?? ''),
-          telefono: String(persona.telefono ?? ''),
-          empresa: String(persona.empresa ?? ''),
-          rfc: String(persona.rfc ?? ''),
-          direccion: String(persona.direccion ?? ''),
-        }
-      : null
+  const form = reactive<PersonaForm>({
+    nombre: '',
+    apellido_paterno: '',
+    apellido_materno: '',
+    telefono: '',
+    empresa: '',
+    rfc: '',
+    direccion: '',
+  })
 
-    const { value } = await Swal.fire({
-      title: isEdit ? 'Editar persona' : 'Nuevo empleado',
-      html: `
-        <div style="display:grid; grid-template-columns:1fr; gap:.75rem; text-align:left; margin-top:.25rem;">
-          <div style="display:grid; grid-template-columns:1fr; gap:.35rem;">
-            <label style="font-size:12px; font-weight:900; opacity:.85;">Nombre(s)</label>
-            <input id="p_nombre" class="swal2-input" placeholder="Ej. Juan Carlos" value="${current?.nombre ?? ''}">
-          </div>
+  const errors = reactive<PersonaFormErrors>({})
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
-            <div style="display:grid; grid-template-columns:1fr; gap:.35rem;">
-              <label style="font-size:12px; font-weight:900; opacity:.85;">Apellido paterno</label>
-              <input id="p_ap" class="swal2-input" placeholder="Ej. Pérez" value="${current?.apellido_paterno ?? ''}">
-            </div>
-            <div style="display:grid; grid-template-columns:1fr; gap:.35rem;">
-              <label style="font-size:12px; font-weight:900; opacity:.85;">Apellido materno</label>
-              <input id="p_am" class="swal2-input" placeholder="Ej. López" value="${current?.apellido_materno ?? ''}">
-            </div>
-          </div>
+  function clearErrors() {
+    Object.keys(errors).forEach((k) => delete (errors as any)[k])
+  }
 
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem;">
-            <div style="display:grid; grid-template-columns:1fr; gap:.35rem;">
-              <label style="font-size:12px; font-weight:900; opacity:.85;">Teléfono</label>
-              <input id="p_tel" class="swal2-input" inputmode="tel" placeholder="Ej. 7771234567" value="${current?.telefono ?? ''}">
-            </div>
-            <div style="display:grid; grid-template-columns:1fr; gap:.35rem;">
-              <label style="font-size:12px; font-weight:900; opacity:.85;">RFC</label>
-              <input id="p_rfc" class="swal2-input" placeholder="Ej. XAXX010101000" value="${current?.rfc ?? ''}">
-            </div>
-          </div>
+  function setFormFromPersona(p: Persona) {
+    form.nombre = String(p.nombre ?? '')
+    form.apellido_paterno = String(p.apellido_paterno ?? '')
+    form.apellido_materno = String(p.apellido_materno ?? '')
+    form.telefono = String(p.telefono ?? '')
+    form.empresa = String(p.empresa ?? '')
+    form.rfc = String(p.rfc ?? '')
+    form.direccion = String(p.direccion ?? '')
+  }
 
-          <div style="display:grid; grid-template-columns:1fr; gap:.35rem;">
-            <label style="font-size:12px; font-weight:900; opacity:.85;">Empresa (opcional)</label>
-            <input id="p_emp" class="swal2-input" placeholder="Ej. RSA Ingeniería Integral" value="${current?.empresa ?? ''}">
-          </div>
+  function resetForm() {
+    form.nombre = ''
+    form.apellido_paterno = ''
+    form.apellido_materno = ''
+    form.telefono = ''
+    form.empresa = ''
+    form.rfc = ''
+    form.direccion = ''
+    clearErrors()
+  }
 
-          <div style="display:grid; grid-template-columns:1fr; gap:.35rem;">
-            <label style="font-size:12px; font-weight:900; opacity:.85;">Dirección (opcional)</label>
-            <textarea id="p_dir" class="swal2-textarea" placeholder="Calle, número, colonia, ciudad...">${current?.direccion ?? ''}</textarea>
-          </div>
+  function openCreate() {
+    mode.value = 'create'
+    editingId.value = null
+    resetForm()
+    modalOpen.value = true
+  }
 
-          <p style="margin:.1rem 0 0; font-size:12px; opacity:.72;">
-            El estado se gestiona desde el listado (Activar/Desactivar).
-          </p>
-        </div>
-      `,
-      didOpen: () => {
-        const el = document.getElementById('p_nombre') as HTMLInputElement | null
-        el?.focus()
-        el?.select?.()
-      },
-      showCancelButton: true,
-      confirmButtonText: 'Guardar',
-      cancelButtonText: 'Cancelar',
-      focusConfirm: false,
-      preConfirm: () => {
-        const nombre = (document.getElementById('p_nombre') as HTMLInputElement).value.trim()
-        const apellido_paterno = (document.getElementById('p_ap') as HTMLInputElement).value.trim()
-        const apellido_materno = (document.getElementById('p_am') as HTMLInputElement).value.trim()
-        const telefono = (document.getElementById('p_tel') as HTMLInputElement).value.trim()
-        const rfc = (document.getElementById('p_rfc') as HTMLInputElement).value.trim().toUpperCase()
-        const empresa = (document.getElementById('p_emp') as HTMLInputElement).value.trim()
-        const direccion = (document.getElementById('p_dir') as HTMLTextAreaElement).value.trim()
+  function openEdit(p: Persona) {
+    mode.value = 'edit'
+    editingId.value = Number(p.id)
+    resetForm()
+    setFormFromPersona(p)
+    modalOpen.value = true
+  }
 
-        if (!nombre) {
-          Swal.showValidationMessage('El nombre es obligatorio.')
-          return
-        }
+  function closeModal() {
+    if (busy.value) return
+    modalOpen.value = false
+  }
 
-        return {
-          nombre,
-          apellido_paterno: apellido_paterno || null,
-          apellido_materno: apellido_materno || null,
-          telefono: telefono || null,
-          rfc: rfc || null,
-          empresa: empresa || null,
-          direccion: direccion || null,
-          status: 'activo' as const, // SIEMPRE activo al guardar desde form
-        }
-      },
-    })
+  /* =========================
+   * Validación
+   * ========================= */
+  function normalizeText(v: unknown) {
+    return String(v ?? '').trim().replace(/\s+/g, ' ')
+  }
 
-    if (!value) return
+  function normalizePhone(v: unknown) {
+    return String(v ?? '').replace(/\D+/g, '').trim()
+  }
 
-    if (isEdit && persona) {
-      router.put(`${baseUrl}/${persona.id}`, value, {
+  function normalizeRfc(v: unknown) {
+    return String(v ?? '').trim().toUpperCase().replace(/\s+/g, '')
+  }
+
+  function isValidPhoneMxDigits(phoneDigits: string) {
+    return phoneDigits.length === 0 || phoneDigits.length === 10
+  }
+
+  function isValidRfcBasic(rfc: string) {
+    if (!rfc) return true
+    if (rfc.length < 12 || rfc.length > 18) return false
+    return /^[A-Z0-9Ñ&]+$/.test(rfc)
+  }
+
+  function validate(): { ok: true; payload: PersonaFormPayload } | { ok: false } {
+    clearErrors()
+
+    const nombre = normalizeText(form.nombre)
+    const apellido_paterno = normalizeText(form.apellido_paterno)
+    const apellido_materno = normalizeText(form.apellido_materno)
+    const empresa = normalizeText(form.empresa)
+    const direccion = normalizeText(form.direccion)
+
+    const telefonoDigits = normalizePhone(form.telefono)
+    const rfc = normalizeRfc(form.rfc)
+
+    if (!nombre) errors.nombre = 'El nombre es obligatorio.'
+    else if (nombre.length < 2) errors.nombre = 'El nombre es demasiado corto.'
+    else if (nombre.length > 120) errors.nombre = 'Máximo 120 caracteres.'
+
+    if (!apellido_paterno) errors.apellido_paterno = 'El apellido paterno es obligatorio.'
+    else if (apellido_paterno.length < 2) errors.apellido_paterno = 'El apellido paterno es demasiado corto.'
+    else if (apellido_paterno.length > 120) errors.apellido_paterno = 'Máximo 120 caracteres.'
+
+    if (apellido_materno && apellido_materno.length > 120) errors.apellido_materno = 'Máximo 120 caracteres.'
+    if (!isValidPhoneMxDigits(telefonoDigits)) errors.telefono = 'El teléfono debe tener 10 dígitos.'
+    if (!isValidRfcBasic(rfc)) errors.rfc = 'RFC inválido.'
+
+    if (!telefonoDigits && !rfc) {
+      errors.form = 'Captura al menos Teléfono o RFC para poder guardar.'
+    }
+
+    if (empresa && empresa.length > 160) errors.empresa = 'Máximo 160 caracteres.'
+    if (direccion && direccion.length > 300) errors.direccion = 'Máximo 300 caracteres.'
+
+    if (Object.keys(errors).length) return { ok: false }
+
+    const payload: PersonaFormPayload = {
+      nombre,
+      apellido_paterno: apellido_paterno || null,
+      apellido_materno: apellido_materno || null,
+      telefono: telefonoDigits || null,
+      empresa: empresa || null,
+      rfc: rfc || null,
+      direccion: direccion || null,
+      status: 'activo',
+    }
+
+    return { ok: true, payload }
+  }
+
+  /* =========================
+   * Persistencia + Swal feedback
+   * ========================= */
+  async function submit() {
+    if (busy.value) return
+
+    const v = validate()
+    if (!v.ok) {
+      toast('error', 'Revisa los campos')
+      return
+    }
+
+    busy.value = true
+    const done = () => (busy.value = false)
+
+    if (mode.value === 'edit' && editingId.value) {
+      router.put(`${baseUrl}/${editingId.value}`, v.payload, {
         preserveScroll: true,
-        onSuccess: () => toast('Persona actualizada', 'success'),
-        onError: () => toast('Revisa los campos', 'error'),
+        onSuccess: () => {
+          toast('success', 'Persona actualizada')
+          modalOpen.value = false
+        },
+        onError: () => toast('error', 'No se pudo actualizar'),
+        onFinish: done,
       })
       return
     }
 
-    router.post(baseUrl, value, {
+    router.post(baseUrl, v.payload, {
       preserveScroll: true,
-      onSuccess: () => toast('Persona creada', 'success'),
-      onError: () => toast('Revisa los campos', 'error'),
+      onSuccess: () => {
+        toast('success', 'Persona creada')
+        modalOpen.value = false
+      },
+      onError: () => toast('error', 'No se pudo crear'),
+      onFinish: done,
     })
   }
 
   /* =========================
-   * Status: baja lógica / activar
+   * Eliminar (soft) / Activar
    * ========================= */
-  async function deactivate(p: Persona) {
-    ensureSwalTheme()
+  function displayName(p: Persona) {
+    const fromResource = String(p.nombre_completo ?? '').trim()
+    if (fromResource) return fromResource
+    const parts = [p.nombre, p.apellido_paterno ?? '', p.apellido_materno ?? '']
+      .map((x) => String(x ?? '').trim())
+      .filter(Boolean)
+    return parts.join(' ') || `#${p.id}`
+  }
 
-    const { isConfirmed } = await Swal.fire({
-      title: 'Desactivar persona',
-      text: `Se dará de baja "${displayName(p)}" (baja lógica).`,
+  async function confirmDelete(p: Persona) {
+    ensureSwalTop()
+    const name = displayName(p)
+
+    const res = await Swal.fire({
       icon: 'warning',
+      title: 'Confirmar eliminación',
+      html: `¿Deseas eliminar a <b>${name}</b>?<br/><span style="font-size:12px;opacity:.8">Podrás activarlo nuevamente después.</span>`,
       showCancelButton: true,
-      confirmButtonText: 'Desactivar',
+      confirmButtonText: 'Eliminar',
       cancelButtonText: 'Cancelar',
       reverseButtons: true,
+      focusCancel: true,
     })
-    if (!isConfirmed) return
 
+    return res.isConfirmed
+  }
+
+  async function deactivate(p: Persona) {
+    if (busy.value) return
+
+    const ok = await confirmDelete(p)
+    if (!ok) return
+
+    busy.value = true
     router.delete(`${baseUrl}/${p.id}`, {
       preserveScroll: true,
-      onSuccess: () => toast('Persona desactivada', 'success'),
-      onError: () => toast('No se pudo desactivar', 'error'),
+      onSuccess: () => toast('success', 'Persona eliminada'),
+      onError: () => toast('error', 'No se pudo eliminar'),
+      onFinish: () => (busy.value = false),
     })
   }
 
-  async function activate(p: Persona) {
-    ensureSwalTheme()
+  function activate(p: Persona) {
+    if (busy.value) return
+    busy.value = true
 
-    const { isConfirmed } = await Swal.fire({
-      title: 'Activar persona',
-      text: `Se activará "${displayName(p)}".`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Activar',
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true,
-    })
-    if (!isConfirmed) return
-
-    // payload completo por si UpdateRequest es estricto
     router.put(
       `${baseUrl}/${p.id}`,
       {
@@ -342,14 +369,15 @@ export function usePersonaCrud(options: UsePersonaCrudOptions = {}) {
         apellido_materno: p.apellido_materno ?? null,
         telefono: p.telefono ?? null,
         empresa: p.empresa ?? null,
-        rfc: (p.rfc ?? null) as any,
+        rfc: p.rfc ?? null,
         direccion: p.direccion ?? null,
         status: 'activo' as const,
       },
       {
         preserveScroll: true,
-        onSuccess: () => toast('Persona activada', 'success'),
-        onError: () => toast('No se pudo activar', 'error'),
+        onSuccess: () => toast('success', 'Persona activada'),
+        onError: () => toast('error', 'No se pudo activar'),
+        onFinish: () => (busy.value = false),
       }
     )
   }
@@ -358,40 +386,25 @@ export function usePersonaCrud(options: UsePersonaCrudOptions = {}) {
     return p.status === 'activo' ? deactivate(p) : activate(p)
   }
 
-  /* =========================
-   * Helpers UI
-   * ========================= */
-  function displayName(p: Persona) {
-    const fromResource = String(p.nombre_completo ?? '').trim()
-    if (fromResource) return fromResource
-
-    const parts = [p.nombre, p.apellido_paterno ?? '', p.apellido_materno ?? '']
-      .map((x) => String(x ?? '').trim())
-      .filter(Boolean)
-    return parts.join(' ') || `#${p.id}`
-  }
-
-  function toast(title: string, icon: 'success' | 'error' | 'info' | 'warning' = 'info') {
-    ensureSwalTheme()
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon,
-      title,
-      showConfirmButton: false,
-      timer: 2000,
-      timerProgressBar: true,
-    })
-  }
-
   return {
-    ALL,
+    ALL: PERSONA_ALL,
     filters,
     hasActiveFilters,
     applyFilters,
     resetFilters,
 
-    openForm,
+    modalOpen,
+    mode,
+    editingId,
+    busy,
+    form,
+    errors,
+
+    openCreate,
+    openEdit,
+    closeModal,
+    submit,
+
     toggleStatus,
     activate,
     deactivate,

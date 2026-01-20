@@ -330,19 +330,6 @@
                               {{ getActiveMediaCount(p) }}
                             </div>
                           </div>
-    
-                          <div class="min-w-0">
-                            <button
-                              type="button"
-                              class="text-xs font-extrabold text-emerald-700 dark:text-emerald-300 hover:underline"
-                              @click.prevent="openMediaModal(p)"
-                            >
-                              Gestionar imágenes
-                            </button>
-                            <p class="text-[11px] text-slate-500 dark:text-zinc-500">
-                              Cuenta solo activas
-                            </p>
-                          </div>
                         </div>
                       </td>
     

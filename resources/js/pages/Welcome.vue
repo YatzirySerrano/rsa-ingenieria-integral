@@ -700,7 +700,7 @@ onBeforeUnmount(() => {
             </div>
 
             <a
-              href="/productos"
+              href="/catalogo"
               class="inline-flex h-11 items-center justify-center rounded-xl bg-blue-950 px-5 text-sm font-semibold text-white shadow-sm
                      transition-all duration-300 ease-out hover:bg-blue-900 hover:shadow-md
                      focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
@@ -759,7 +759,7 @@ onBeforeUnmount(() => {
 
                 <div class="mt-5">
                   <a
-                    href="/productos"
+                    href="/catalogo"
                     class="inline-flex h-10 items-center justify-center rounded-full border border-white/20 bg-white/10 px-4 text-xs font-semibold text-white backdrop-blur
                            transition hover:bg-white/16 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
                   >
