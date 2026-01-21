@@ -12,6 +12,7 @@ use App\Http\Controllers\CotizacionDetalleController;
 use App\Http\Controllers\PersonaController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\PublicProductoController;
+use App\Http\Controllers\Panel\CotizacionPanelController;
 
 // Index del sitio web
 Route::get('/', function () {
@@ -72,19 +73,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/productos/{producto}/media/{media}', [ProductoController::class, 'mediaDestroy'])
         ->name('productos.media.destroy');
 
-    // Ruta para mostrar la cotización
-    Route::resource('cotizaciones', CotizacionController::class)
-        ->except(['show']);
-    // Ruta para agregar items(productos o servicios) a la cotizacion
-    Route::post('cotizaciones/{cotizacion}/add-item', [CotizacionController::class, 'addItem'])
-        ->name('cotizaciones.addItem');
-    // Ruta para enviar la cotizacion
-    Route::post('cotizaciones/{cotizacion}/send', [CotizacionController::class, 'send'])
-        ->name('cotizaciones.send');
-    // Ruta para mostrar los detalles de una cotización
-    Route::resource('cotizacion-detalles', CotizacionDetalleController::class)
-        ->only(['index', 'edit', 'update', 'destroy']);
-
+    Route::get('/cotizaciones', [CotizacionPanelController::class, 'index'])
+        ->name('cotizaciones.index');
+    Route::get('/cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'show'])
+        ->name('cotizaciones.show');
+    Route::put('/cotizaciones/{cotizacion}/reply', [CotizacionPanelController::class, 'reply'])
+        ->name('cotizaciones.reply');
+    Route::post('/cotizaciones/{cotizacion}/send-email', [CotizacionPanelController::class, 'sendEmail'])
+        ->name('cotizaciones.sendEmail');
+    Route::post('/cotizaciones/{cotizacion}/send-whatsapp', [CotizacionPanelController::class, 'sendWhatsapp'])
+        ->name('cotizaciones.sendWhatsapp');
 });
 
 require __DIR__ . '/settings.php';
