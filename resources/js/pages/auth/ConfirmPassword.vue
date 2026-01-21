@@ -11,8 +11,8 @@ import { Form, Head } from '@inertiajs/vue3';
 
 <template>
     <AuthLayout
-        title="Confirm your password"
-        description="This is a secure area of the application. Please confirm your password before continuing."
+        title="Confirmar contraseña"
+        description="Este es un área segura de la aplicación. Por favor, confirme su contraseña antes de continuar."
     >
         <Head title="Confirm password" />
 
@@ -23,7 +23,7 @@ import { Form, Head } from '@inertiajs/vue3';
         >
             <div class="space-y-6">
                 <div class="grid gap-2">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">Contraseña</Label>
                     <Input
                         id="password"
                         type="password"
@@ -44,7 +44,7 @@ import { Form, Head } from '@inertiajs/vue3';
                         data-test="confirm-password-button"
                     >
                         <Spinner v-if="processing" />
-                        Confirm Password
+                        Confirmar Contraseña
                     </Button>
                 </div>
             </div>
