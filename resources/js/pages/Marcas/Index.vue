@@ -73,13 +73,10 @@
               <!-- Row 1 -->
               <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                 <div class="min-w-0">
-                  <h1
-                    class="truncate text-lg font-black tracking-tight text-slate-900
+                  <h1 class="truncate text-lg font-black tracking-tight text-slate-900
                            sm:text-xl lg:text-2xl dark:text-zinc-100"
-                  >
-                    Marcas
+                  >  Marcas
                   </h1>
-                  <p class="text-xs text-slate-500 dark:text-zinc-500">Gestiona los proveedores con los que trabaja RSA</p>
                 </div>
     
                 <div class="flex flex-wrap items-center gap-2">

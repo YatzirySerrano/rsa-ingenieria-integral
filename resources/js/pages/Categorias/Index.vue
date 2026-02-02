@@ -81,7 +81,6 @@
                   >
                     Categorías
                   </h1>
-                  <p class="text-xs text-slate-500 dark:text-zinc-500">Esta sección te ayuda a clasificar los productos y servicios.</p>
                 </div>
     
                 <div class="flex flex-wrap items-center gap-2">

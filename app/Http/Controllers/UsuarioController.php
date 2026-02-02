@@ -60,7 +60,7 @@ class UsuarioController extends Controller
 
     /**
      * Lookup de Personas (modal Usuarios)
-     * GET /admin/users/personas-lookup?q=jesus&user_id=2&limit=10
+     * GET /admin/usuarios/personas-lookup?q=jesus&user_id=2&limit=10
      *
      * Reglas:
      * - q vacío => regresa lista limitada (personas SIN usuario) + si user_id viene, incluye su persona actual
@@ -71,7 +71,20 @@ class UsuarioController extends Controller
     {
         $q = trim((string) $request->get('q', ''));
         $userId = $request->integer('user_id'); // opcional (modo editar)
-        $limit = min(max((int) $request->get('limit', 10), 1), 20);
+
+        //  Si NO escribió nada, queremos "todas" las personas disponibles
+        //  Si escribió, seguimos limitando para performance
+        $isEmptyQuery = ($q === '');
+
+        // Limites sanos
+        $limit = (int) $request->get('limit', $isEmptyQuery ? 5000 : 20);
+        $limit = max(1, $limit);
+        $limit = min($limit, $isEmptyQuery ? 5000 : 50); // cap diferente por caso
+
+        // Si q tiene 1 letra => vacío (evita spam)
+        if ($q !== '' && mb_strlen($q) < 2) {
+            return response()->json(['data' => []]);
+        }
 
         $query = Persona::query()
             ->select([
@@ -86,42 +99,36 @@ class UsuarioController extends Controller
                 'direccion',
                 'status',
             ])
-            ->when($q !== '' && mb_strlen($q) >= 2, function ($qq) use ($q) {
-                $qq->where(function ($w) use ($q) {
-                    $w->where('nombre', 'like', "%{$q}%")
-                        ->orWhere('apellido_paterno', 'like', "%{$q}%")
-                        ->orWhere('apellido_materno', 'like', "%{$q}%");
-                });
-            })
+            ->activo()
+            ->orderBy('nombre')
+            ->orderBy('apellido_paterno')
+            ->orderBy('apellido_materno')
             ->orderByDesc('id');
+
+        // Filtro por texto (2+)
+        if ($q !== '' && mb_strlen($q) >= 2) {
+            $query->where(function ($w) use ($q) {
+                $w->where('nombre', 'like', "%{$q}%")
+                ->orWhere('apellido_paterno', 'like', "%{$q}%")
+                ->orWhere('apellido_materno', 'like', "%{$q}%");
+            });
+        }
 
         // Disponibilidad: solo NULL, pero en editar permitir la actual del user
         $query->where(function ($w) use ($userId) {
             $w->whereNull('usuario_id');
-            if ($userId) {
-                $w->orWhere('usuario_id', $userId);
-            }
+            if ($userId) $w->orWhere('usuario_id', $userId);
         });
 
-        // Si quieres solo personas activas, descomenta:
-        // $query->where('status', 'activo');
-
-        // Si q tiene 1 letra => regresa vacío (para no spamear)
-        if ($q !== '' && mb_strlen($q) < 2) {
-            return response()->json(['data' => []]);
-        }
+        // Si quieres SOLO activas, descomenta:
+        // $query->activo();
 
         $items = $query->limit($limit)->get()->map(function ($p) {
-            $nombreCompleto = trim(implode(' ', array_filter([
-                $p->nombre,
-                $p->apellido_paterno,
-                $p->apellido_materno,
-            ])));
-
             return [
                 'id' => $p->id,
                 'usuario_id' => $p->usuario_id,
-                'nombre_completo' => $nombreCompleto !== '' ? $nombreCompleto : ('#' . $p->id),
+                //  ya tienes accessor en el modelo Persona
+                'nombre_completo' => $p->nombre_completo !== '' ? $p->nombre_completo : ('#' . $p->id),
                 'telefono' => $p->telefono,
                 'empresa' => $p->empresa,
                 'rfc' => $p->rfc,

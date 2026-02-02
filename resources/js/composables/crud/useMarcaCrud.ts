@@ -389,10 +389,6 @@ export function useMarcaCrud(options: UseMarcaCrudOptions = {}) {
             value="${nombreVal}"
             autocomplete="off"
           />
-
-          <p class="rsa-note">
-            El estado no se edita aquí. Se gestiona desde el listado (Activar / Desactivar).
-          </p>
         </div>
       </div>
     `

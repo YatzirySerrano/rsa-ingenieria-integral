@@ -20,12 +20,36 @@ use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class ProductoController extends Controller {
 
-    public function index(Request $request): Response {
+    public function index(Request $request): Response
+    {
         $q = trim((string) $request->get('q', ''));
+
+        // Normaliza filtros (si llega "__ALL__" o vacío, lo tratamos como null)
         $status = $request->get('status');
         $marcaId = $request->get('marca_id');
         $categoriaId = $request->get('categoria_id');
-        $productos = Producto::query()
+
+        $normalizeAll = function ($v) {
+            $v = is_string($v) ? trim($v) : $v;
+            if ($v === '' || $v === null) return null;
+            if ($v === '__ALL__') return null;
+            return $v;
+        };
+
+        $status = $normalizeAll($status);
+        $marcaId = $normalizeAll($marcaId);
+        $categoriaId = $normalizeAll($categoriaId);
+
+        // per_page: allowlist + soporte para 0 = "Todos"
+        $rawPerPage = $request->get('per_page', 15);
+        $perPage = is_numeric($rawPerPage) ? (int) $rawPerPage : 15;
+
+        $allowedPerPage = [10, 15, 20, 30, 50, 100, 0]; // ajusta a tu UI
+        if (!in_array($perPage, $allowedPerPage, true)) {
+            $perPage = 15;
+        }
+
+        $query = Producto::query()
             ->with(['marca', 'categoria', 'medias'])
             ->when($q !== '', function ($qr) use ($q) {
                 $qr->where(function ($w) use ($q) {
@@ -36,22 +60,43 @@ class ProductoController extends Controller {
             ->when($status, fn ($qr) => $qr->where('status', $status))
             ->when($marcaId, fn ($qr) => $qr->where('marca_id', $marcaId))
             ->when($categoriaId, fn ($qr) => $qr->where('categoria_id', $categoriaId))
-            ->orderByDesc('id')
-            ->paginate(15)
-            ->withQueryString();
+            ->orderByDesc('id');
+
+        // Si per_page = 0 => "Todos": no paginar
+        if ($perPage === 0) {
+            $productos = $query->get();
+
+            // Si NO quieres tocar tu componente, esto evita que reviente:
+            // Creamos un paginator "fake" de 1 página.
+            $productosPaginator = new \Illuminate\Pagination\LengthAwarePaginator(
+                $productos,
+                $productos->count(),
+                $productos->count() > 0 ? $productos->count() : 1,
+                1,
+                [
+                    'path' => $request->url(),
+                    'query' => $request->query(),
+                ]
+            );
+        } else {
+            $productosPaginator = $query->paginate($perPage)->withQueryString();
+        }
+
         $marcas = Marca::query()->where('status', 'activo')->orderBy('nombre')->get();
         $categorias = Categoria::query()
             ->where('tipo', 'PRODUCTO')
             ->where('status', 'activo')
             ->orderBy('nombre')
             ->get();
+
         return Inertia::render('Productos/Index', [
-            'items' => ProductoResource::collection($productos),
+            'items' => ProductoResource::collection($productosPaginator),
             'filters' => [
                 'q' => $q,
-                'status' => $status,
-                'marca_id' => $marcaId,
-                'categoria_id' => $categoriaId,
+                'status' => $status ?? '__ALL__',
+                'marca_id' => $marcaId ?? '__ALL__',
+                'categoria_id' => $categoriaId ?? '__ALL__',
+                'per_page' => $perPage, // clave para que el front lo refleje siempre
             ],
             'meta' => [
                 'statuses' => ['activo', 'inactivo'],

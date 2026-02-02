@@ -2,26 +2,11 @@
 import { computed } from 'vue'
 import { router } from '@inertiajs/vue3'
 
-type LinkItem = { url: string | null; label: string; active: boolean }
-
-const props = withDefaults(
-  defineProps<{
-    meta?: any | null
-    links?: LinkItem[] | null
-    perPage?: number | null
-    hidePerPage?: boolean
-    preserveScroll?: boolean
-    preserveState?: boolean
-  }>(),
-  {
-    meta: null,
-    links: () => [],
-    perPage: null,
-    hidePerPage: false,
-    preserveScroll: true,
-    preserveState: true,
-  }
-)
+const props = defineProps<{
+  meta: any
+  links: any[]
+  perPage: number
+}>()
 
 const emit = defineEmits<{
   (e: 'change-per-page', value: number): void
@@ -32,11 +17,11 @@ const perPageOptions = [
   { label: '15', value: 15 },
   { label: '20', value: 20 },
   { label: 'Todos', value: 0 },
-] as const
+]
 
 function go(url: string | null) {
   if (!url) return
-  router.get(url, {}, { preserveScroll: props.preserveScroll, preserveState: props.preserveState })
+  router.get(url, {}, { preserveScroll: true, preserveState: true })
 }
 
 function onPerPageChange(e: Event) {
@@ -44,31 +29,21 @@ function onPerPageChange(e: Event) {
   emit('change-per-page', v)
 }
 
-const hasMetaRange = computed(() => Boolean(props.meta?.from && props.meta?.to && props.meta?.total))
-
 const showingText = computed(() => {
-  if (hasMetaRange.value) return `Mostrando ${props.meta.from}–${props.meta.to} de ${props.meta.total}`
-  // sin meta: copy neutro para modo “lite”
-  return 'Mostrando resultados'
-})
-
-const showPerPageSelect = computed(() => {
-  if (props.hidePerPage) return false
-  // Solo mostrar selector si perPage viene definido (modo enterprise)
-  return typeof props.perPage === 'number'
+  if (!props.meta?.from) return 'Mostrando todos los registros'
+  return `Mostrando ${props.meta.from}–${props.meta.to} de ${props.meta.total}`
 })
 </script>
 
 <template>
-  <div v-if="(links && links.length) || showPerPageSelect" class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+  <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
       <span class="text-sm text-slate-600 dark:text-slate-400">
         {{ showingText }}
       </span>
 
       <select
-        v-if="showPerPageSelect"
-        :value="perPage as number"
+        :value="perPage"
         @change="onPerPageChange"
         class="w-36 rounded-2xl border-2 border-slate-200/70 dark:border-white/10
                bg-white/90 dark:bg-white/5 px-3 py-2 text-sm font-semibold
@@ -82,11 +57,10 @@ const showPerPageSelect = computed(() => {
       </select>
     </div>
 
-    <div v-if="links && links.length" class="flex flex-wrap items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <button
         v-for="link in links"
         :key="link.label"
-        type="button"
         @click="go(link.url)"
         v-html="link.label"
         :disabled="!link.url"

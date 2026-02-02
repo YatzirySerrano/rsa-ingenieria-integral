@@ -546,8 +546,6 @@ export function useCategoriaCrud(options: UseCategoriaCrudOptions = {}) {
             <option value="PRODUCTO" ${current?.tipo === 'PRODUCTO' ? 'selected' : ''}>PRODUCTO</option>
             <option value="SERVICIO" ${current?.tipo === 'SERVICIO' ? 'selected' : ''}>SERVICIO</option>
           </select>
-
-          <p class="rsa-note">El estado se gestiona desde el listado (Activar / Desactivar).</p>
         </div>
       </div>
     `

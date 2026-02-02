@@ -331,7 +331,7 @@ export function usePersonaCrud(options: UsePersonaCrudOptions = {}) {
     const res = await Swal.fire({
       icon: 'warning',
       title: 'Confirmar eliminación',
-      html: `¿Deseas eliminar a <b>${name}</b>?<br/><span style="font-size:12px;opacity:.8">Podrás activarlo nuevamente después.</span>`,
+      html: `¿Deseas eliminar a <b>${name}</b>?<br/><span style="font-size:12px;opacity:.8"></span>`,
       showCancelButton: true,
       confirmButtonText: 'Eliminar',
       cancelButtonText: 'Cancelar',

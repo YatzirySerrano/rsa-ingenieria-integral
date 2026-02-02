@@ -1,7 +1,7 @@
 // resources/js/composables/crud/useUserCrud.ts
-import Swal from 'sweetalert2'
 import { computed, reactive, ref, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
+import { swalConfirm, swalNotify, swalErr } from '@/lib/swal'
 
 export type UserRol = 'admin' | 'vendedor' | 'cliente'
 export type UserStatus = 'activo' | 'inactivo'
@@ -37,6 +37,7 @@ export type UserFilters = {
   q: string
   rol: string
   status: string
+  per_page?: number | null
 }
 
 const ALL = '__all__'
@@ -45,6 +46,8 @@ type Options = {
   baseUrl?: string
   lookupUrl?: string
   initialFilters?: Partial<UserFilters>
+  // “Todos” en selector por página usa 0
+  initialPerPage?: number | null
 }
 
 export type UserForm = {
@@ -58,28 +61,6 @@ export type UserForm = {
 
 export type UserFormErrors = Partial<Record<keyof UserForm, string>> & {
   form?: string
-}
-
-let swalStyled = false
-function ensureSwalZIndex() {
-  if (swalStyled) return
-  const style = document.createElement('style')
-  style.innerHTML = `.swal2-container{z-index:20000!important;}`
-  document.head.appendChild(style)
-  swalStyled = true
-}
-
-function toast(title: string, icon: 'success' | 'error' | 'info' | 'warning' = 'info') {
-  ensureSwalZIndex()
-  void Swal.fire({
-    toast: true,
-    position: 'top-end',
-    icon,
-    title,
-    showConfirmButton: false,
-    timer: 2200,
-    timerProgressBar: true,
-  })
 }
 
 function escapeHtml(s: string) {
@@ -100,7 +81,7 @@ function normalizeBaseUrl(url: string) {
 
 export function useUserCrud(opts: Options = {}) {
   const baseUrl = normalizeBaseUrl(opts.baseUrl ?? '/admin/usuarios')
-  const lookupUrl = normalizeBaseUrl(opts.lookupUrl ?? '/admin/users/personas-lookup')
+  const lookupUrl = normalizeBaseUrl(opts.lookupUrl ?? '/admin/usuarios/personas-lookup')
 
   /* ======================
    * Filters (Inertia)
@@ -109,6 +90,7 @@ export function useUserCrud(opts: Options = {}) {
     q: opts.initialFilters?.q ?? '',
     rol: opts.initialFilters?.rol ?? ALL,
     status: opts.initialFilters?.status ?? ALL,
+    per_page: typeof opts.initialPerPage === 'number' ? opts.initialPerPage : (opts.initialFilters?.per_page ?? null),
   })
 
   let t: number | null = null
@@ -126,15 +108,27 @@ export function useUserCrud(opts: Options = {}) {
       )
     }, 260)
   }
-  watch(() => [filters.q, filters.rol, filters.status], debouncedSync)
 
-  const hasFilters = computed(() => !!filters.q.trim() || filters.rol !== ALL || filters.status !== ALL)
+  watch(() => [filters.q, filters.rol, filters.status, filters.per_page], debouncedSync)
+
+  const hasFilters = computed(() => {
+    const hasText = !!filters.q.trim()
+    const hasRol = filters.rol !== ALL
+    const hasStatus = filters.status !== ALL
+    return hasText || hasRol || hasStatus
+  })
 
   const resetFilters = () => {
     filters.q = ''
     filters.rol = ALL
     filters.status = ALL
     router.get(baseUrl, { ...filters }, { preserveScroll: true, replace: true, preserveState: false })
+  }
+
+  function changePerPage(v: number) {
+    // 0 = Todos
+    filters.per_page = v
+    // el watch ya dispara router.get con debounce
   }
 
   /* ======================
@@ -145,10 +139,7 @@ export function useUserCrud(opts: Options = {}) {
   const editingId = ref<number | null>(null)
   const busy = ref(false)
 
-  // Persona picker UI state
-  const pickerOpen = ref(false)
-
-  const personaQuery = ref<string>('') // string SIEMPRE
+  // Personas (para SearchSelect)
   const personaLoading = ref(false)
   const personaResults = ref<PersonaPick[]>([])
   const selectedPersona = ref<PersonaPick | null>(null)
@@ -168,9 +159,7 @@ export function useUserCrud(opts: Options = {}) {
     Object.keys(errors).forEach((k) => delete (errors as any)[k])
   }
 
-  function resetPicker() {
-    pickerOpen.value = false
-    personaQuery.value = ''
+  function resetPersonaState() {
     personaResults.value = []
     personaLoading.value = false
     selectedPersona.value = null
@@ -180,20 +169,18 @@ export function useUserCrud(opts: Options = {}) {
   function setSelectedPersona(p: PersonaPick | null) {
     selectedPersona.value = p
     form.persona_id = p?.id ?? null
-    personaQuery.value = p?.nombre_completo ?? ''
-    personaResults.value = []
-    pickerOpen.value = false
   }
 
   /* ======================
    * Personas lookup (cache + abort)
+   * - clave: cargar “todas” las disponibles (sin usuario)
+   * - el filtrado lo hace SearchSelect en cliente
    * ====================== */
   const cache = new Map<string, PersonaPick[]>()
   let aborter: AbortController | null = null
 
-  async function searchPersonas(qRaw: string) {
-    const q = String(qRaw ?? '').trim()
-    const key = `${mode.value}:${editingId.value ?? ''}:${q}`
+  async function fetchPersonasAllAvailable() {
+    const key = `${mode.value}:${editingId.value ?? ''}:__all__`
 
     if (cache.has(key)) {
       personaResults.value = cache.get(key) ?? []
@@ -202,15 +189,15 @@ export function useUserCrud(opts: Options = {}) {
     }
 
     personaLoading.value = true
-
     if (aborter) aborter.abort()
     aborter = new AbortController()
 
     try {
       const params = new URLSearchParams()
-      // VACÍO => backend regresa lista limitada
-      if (q.length) params.set('q', q)
-      params.set('limit', '10')
+      // q vacío => backend regresa lista de disponibles
+      // IMPORTANTE: aquí pedimos “muchas” para que SearchSelect filtre cliente.
+      // (si tu controller todavía limita a 20, sube el cap. Si no, no habrá magia.)
+      params.set('limit', '5000')
       if (mode.value === 'edit' && editingId.value) params.set('user_id', String(editingId.value))
 
       const res = await fetch(`${lookupUrl}?${params.toString()}`, {
@@ -235,20 +222,6 @@ export function useUserCrud(opts: Options = {}) {
     }
   }
 
-  function openPicker() {
-    if (selectedPersona.value) return
-    pickerOpen.value = true
-    // si está vacío, trae lista
-    if (!personaLoading.value) void searchPersonas(personaQuery.value)
-  }
-
-  function closePickerSoon() {
-    // delay para permitir click en +
-    window.setTimeout(() => {
-      pickerOpen.value = false
-    }, 120)
-  }
-
   function openCreate() {
     mode.value = 'create'
     editingId.value = null
@@ -263,9 +236,8 @@ export function useUserCrud(opts: Options = {}) {
     form.status = 'activo'
     form.password = ''
 
-    resetPicker()
-    pickerOpen.value = true
-    void searchPersonas('')
+    resetPersonaState()
+    void fetchPersonasAllAvailable()
   }
 
   function openEdit(user: UserRow) {
@@ -281,7 +253,7 @@ export function useUserCrud(opts: Options = {}) {
     form.status = (user.status ?? 'activo') as UserStatus
     form.password = ''
 
-    // ✅ Precargar persona actual (si viene con id)
+    // Precargar persona actual si viene
     const p = user.persona?.id
       ? ({
           id: Number(user.persona.id),
@@ -291,59 +263,40 @@ export function useUserCrud(opts: Options = {}) {
         } as PersonaPick)
       : null
 
-    if (p?.id) {
-      setSelectedPersona(p)
-    } else {
-      resetPicker()
-      pickerOpen.value = true
-      void searchPersonas('')
-    }
+    resetPersonaState()
+    if (p?.id) setSelectedPersona(p)
+
+    void fetchPersonasAllAvailable()
   }
 
   function closeModal() {
     if (busy.value) return
     modalOpen.value = false
-    pickerOpen.value = false
-  }
-
-  function selectPersona(p: PersonaPick) {
-    setSelectedPersona(p)
-
-    if (mode.value === 'create' || !form.name.trim()) {
-      form.name = p.nombre_completo
-    }
   }
 
   function clearPersonaSelection() {
     setSelectedPersona(null)
-    pickerOpen.value = true
-    void searchPersonas('')
   }
 
-  let personaTimer: number | null = null
+  // Con SearchSelect: cuando cambia persona_id, sincroniza selectedPersona
   watch(
-    () => personaQuery.value,
-    (v) => {
-      const q = String(v ?? '').trim()
-      if (personaTimer) window.clearTimeout(personaTimer)
+    () => form.persona_id,
+    (id) => {
+      if (!id) {
+        selectedPersona.value = null
+        return
+      }
+      const found =
+        personaResults.value.find((x) => Number(x.id) === Number(id)) ||
+        (selectedPersona.value?.id === Number(id) ? selectedPersona.value : null)
 
-      // si hay seleccionada y no cambió, no busques
-      if (selectedPersona.value && q === selectedPersona.value.nombre_completo) return
-
-      personaTimer = window.setTimeout(() => {
-        if (!pickerOpen.value) pickerOpen.value = true
-
-        if (q.length === 0) {
-          void searchPersonas('')
-          return
+      if (found) {
+        selectedPersona.value = found
+        // auto-fill name en create o si está vacío
+        if (mode.value === 'create' || !form.name.trim()) {
+          form.name = found.nombre_completo
         }
-        if (q.length < 2) {
-          personaResults.value = []
-          personaLoading.value = false
-          return
-        }
-        void searchPersonas(q)
-      }, 180)
+      }
     }
   )
 
@@ -374,7 +327,7 @@ export function useUserCrud(opts: Options = {}) {
   function submit() {
     if (busy.value) return
     if (!validate()) {
-      toast('Revisa los campos', 'error')
+      void swalNotify('Revisa los campos', 'error')
       return
     }
 
@@ -397,12 +350,15 @@ export function useUserCrud(opts: Options = {}) {
         preserveScroll: true,
         preserveState: false,
         onFinish: done,
-        onError: () => {
+        onError: (e) => {
           errors.form = 'No se pudo guardar. Revisa validaciones del backend.'
-          toast('No se pudo guardar', 'error')
+          void swalNotify('No se pudo guardar', 'error')
+          // si backend devuelve fields, se pintan en el form desde tu página (si ya lo haces),
+          // aquí dejamos el mensaje enterprise.
+          console.error(e)
         },
         onSuccess: () => {
-          toast(successMsg, 'success')
+          void swalNotify(successMsg, 'success')
           closeModal()
         },
       })
@@ -413,12 +369,13 @@ export function useUserCrud(opts: Options = {}) {
       preserveScroll: true,
       preserveState: false,
       onFinish: done,
-      onError: () => {
+      onError: (e) => {
         errors.form = 'No se pudo crear. Revisa validaciones del backend.'
-        toast('No se pudo crear', 'error')
+        void swalNotify('No se pudo crear', 'error')
+        console.error(e)
       },
       onSuccess: () => {
-        toast(successMsg, 'success')
+        void swalNotify(successMsg, 'success')
         closeModal()
       },
     })
@@ -428,30 +385,25 @@ export function useUserCrud(opts: Options = {}) {
    * Delete => baja lógica
    * ====================== */
   async function deleteUser(user: UserRow) {
-    ensureSwalZIndex()
+    if (user.status !== 'activo') {
+      void swalNotify('Este usuario ya está inactivo', 'info')
+      return
+    }
 
-    const res = await Swal.fire({
-      title: user.status === 'activo' ? 'Desactivar usuario' : 'Usuario ya inactivo',
-      html:
-        user.status === 'activo'
-          ? `Vas a desactivar a <b>${escapeHtml(user.name)}</b> (${escapeHtml(user.email)}).<br/>La persona quedará libre para reasignar.`
-          : `Este usuario ya está inactivo.`,
-      icon: user.status === 'activo' ? 'warning' : 'info',
-      showCancelButton: user.status === 'activo',
-      confirmButtonText: user.status === 'activo' ? 'Desactivar' : 'OK',
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true,
-      focusCancel: true,
+    const res = await swalConfirm('La persona quedará libre para reasignar.', {
+      title: `Desactivar a ${user.name}`,
+      confirmText: 'Desactivar',
+      cancelText: 'Cancelar',
+      icon: 'warning',
     })
 
-    if (user.status !== 'activo') return
     if (!res.isConfirmed) return
 
     router.delete(`${baseUrl}/${user.id}`, {
       preserveScroll: true,
       preserveState: false,
-      onSuccess: () => toast('Usuario desactivado', 'success'),
-      onError: () => toast('No se pudo desactivar', 'error'),
+      onSuccess: () => void swalNotify('Usuario desactivado', 'success'),
+      onError: () => void swalErr('No se pudo desactivar. Intenta de nuevo.'),
     })
   }
 
@@ -460,6 +412,7 @@ export function useUserCrud(opts: Options = {}) {
     filters,
     hasFilters,
     resetFilters,
+    changePerPage,
 
     // modal / form
     modalOpen,
@@ -469,15 +422,10 @@ export function useUserCrud(opts: Options = {}) {
     form,
     errors,
 
-    // persona lookup
-    personaQuery,
+    // personas (SearchSelect)
     personaLoading,
     personaResults,
     selectedPersona,
-    pickerOpen,
-    openPicker,
-    closePickerSoon,
-    selectPersona,
     clearPersonaSelection,
 
     // actions

@@ -33,7 +33,7 @@ class Cotizacion extends Model {
 
     // Una cotizacion tiene un usuario
     public function usuario(): BelongsTo {
-        return $this->belongsTo(Usuario::class, 'usuario_id');
+        return $this->belongsTo(User::class, 'usuario_id');
     }
 
     // Una cotizacion tiene una persona
