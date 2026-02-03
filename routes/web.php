@@ -58,8 +58,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/admin/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
     Route::put('/admin/usuarios/{user}', [UsuarioController::class, 'update'])->name('usuarios.update');
     Route::delete('/admin/usuarios/{user}', [UsuarioController::class, 'destroy'])->name('usuarios.destroy');
-    Route::get('/admin/usuarios/personas-lookup', [UsuarioController::class, 'personasLookup'])
-  ->name('usuarios.personasLookup');
+    // Lookup de personas
+    Route::get('/admin/usuarios/personas-lookup', [UsuarioController::class, 'personasLookup']);
+
+    // Activar usuario (para el botón “Activar”)
+    Route::patch('/admin/usuarios/{usuario}/activar', [UsuarioController::class, 'activar']);
 
     // Media de productos (rutas web, no api)
     Route::post('/productos/{producto}/media', [ProductoController::class, 'mediaUpload'])

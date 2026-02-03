@@ -6,90 +6,80 @@ use App\Models\User;
 use App\Models\Persona;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
-use Illuminate\Support\Facades\DB;
-use Inertia\Inertia;
-use Inertia\Response;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+
+// Importa tu Mailable (NO lo incluyo porque me pediste no mandarlo aquí)
+// use App\Mail\UsuarioCreadoMail;
 
 class UsuarioController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request)
     {
-        $q = trim((string) $request->get('q', ''));
-        $rol = (string) $request->get('rol', '__all__');
-        $status = (string) $request->get('status', '__all__');
+        // NOTA: estos filtros deben ser baratos y no romper la UX.
+        $q       = trim((string) $request->get('q', ''));
+        $rol     = (string) $request->get('rol', '__all__');
+        $status  = (string) $request->get('status', '__all__');
+        $perPage = (int) $request->get('per_page', 10);
 
-        $users = User::query()
-            ->with(['persona:id,usuario_id,nombre,apellido_paterno,apellido_materno,telefono,empresa,rfc,direccion,status'])
-            ->when($q !== '', function ($query) use ($q) {
-                $query->where(function ($qq) use ($q) {
-                    $qq->where('name', 'like', "%{$q}%")
-                        ->orWhere('email', 'like', "%{$q}%");
+        // “Todos” en el front suele venir como 0. Aquí lo convertimos a un número grande
+        // para seguir usando paginate() y no romper el componente de paginación.
+        if ($perPage <= 0) $perPage = 100000;
+
+        $query = User::query()
+            ->with(['persona:id,nombre,apellido_paterno,apellido_materno,telefono,empresa'])
+            ->when($q !== '', function ($qq) use ($q) {
+                $qq->where(function ($w) use ($q) {
+                    $w->where('name', 'like', "%{$q}%")
+                      ->orWhere('email', 'like', "%{$q}%");
                 });
             })
-            ->when($rol !== '__all__' && $rol !== '', fn ($query) => $query->where('rol', $rol))
-            ->when($status !== '__all__' && $status !== '', fn ($query) => $query->where('status', $status))
-            ->orderByDesc('id')
-            ->paginate(10)
-            ->withQueryString();
+            ->when($rol !== '__all__', fn($qq) => $qq->where('rol', $rol))
+            ->when($status !== '__all__', fn($qq) => $qq->where('status', $status))
+            ->orderByDesc('id');
 
-        // Asegurar nombre_completo para front (sin tocar modelo)
-        $users->getCollection()->transform(function ($u) {
-            if ($u->persona) {
-                $u->persona->nombre_completo = trim(implode(' ', array_filter([
-                    $u->persona->nombre,
-                    $u->persona->apellido_paterno,
-                    $u->persona->apellido_materno,
-                ])));
-            }
-            return $u;
-        });
+        $users = $query->paginate($perPage)->withQueryString();
 
-        return Inertia::render('Usuarios/Index', [
-            'users' => $users,
+        // IMPORTANTE:
+        // - Quitamos "cliente" del FRONT (catálogo), pero si existen usuarios cliente en BD, igual se listan.
+        // - Esto solo controla lo que se muestra en selects.
+        return inertia('Usuarios/Index', [
+            'users'   => $users,
             'filters' => [
-                'q' => $q,
-                'rol' => $rol,
-                'status' => $status,
+                'q'        => $q,
+                'rol'      => $rol,
+                'status'   => $status,
+                'per_page' => $request->get('per_page', 10),
             ],
             'catalogs' => [
-                'roles' => ['admin', 'vendedor', 'cliente'],
+                'roles'    => ['admin', 'vendedor'],
                 'statuses' => ['activo', 'inactivo'],
             ],
         ]);
     }
 
     /**
-     * Lookup de Personas (modal Usuarios)
-     * GET /admin/usuarios/personas-lookup?q=jesus&user_id=2&limit=10
+     * Lookup para SearchSelect:
+     * - Si q viene vacío: regresa TODAS las personas ACTIVAS sin usuario (con límite alto por seguridad).
+     * - Si q tiene < 2 letras: regresa [] (evita consultas inútiles).
+     * - Si q >= 2: filtra por nombre/apellidos.
      *
-     * Reglas:
-     * - q vacío => regresa lista limitada (personas SIN usuario) + si user_id viene, incluye su persona actual
-     * - q 2+ => filtra por nombre/apellidos (mismas reglas de disponibilidad)
-     * - nunca sugiere personas ligadas a OTRO usuario
+     * Importante: NO tocamos nada de usuarios aquí, solo lectura.
      */
     public function personasLookup(Request $request)
     {
-        $q = trim((string) $request->get('q', ''));
-        $userId = $request->integer('user_id'); // opcional (modo editar)
+        $q     = trim((string) $request->get('q', ''));
+        $limit = (int) $request->get('limit', 5000);
 
-        //  Si NO escribió nada, queremos "todas" las personas disponibles
-        //  Si escribió, seguimos limitando para performance
-        $isEmptyQuery = ($q === '');
+        // límite duro por si alguien manda 200000
+        $limit = max(1, min($limit, 5000));
 
-        // Limites sanos
-        $limit = (int) $request->get('limit', $isEmptyQuery ? 5000 : 20);
-        $limit = max(1, $limit);
-        $limit = min($limit, $isEmptyQuery ? 5000 : 50); // cap diferente por caso
-
-        // Si q tiene 1 letra => vacío (evita spam)
-        if ($q !== '' && mb_strlen($q) < 2) {
-            return response()->json(['data' => []]);
-        }
-
-        $query = Persona::query()
+        $base = Persona::query()
+            ->where('status', 'activo')
+            ->whereNull('usuario_id')
             ->select([
                 'id',
-                'usuario_id',
                 'nombre',
                 'apellido_paterno',
                 'apellido_materno',
@@ -97,141 +87,203 @@ class UsuarioController extends Controller
                 'empresa',
                 'rfc',
                 'direccion',
-                'status',
+                'usuario_id',
+                'status'
             ])
-            ->activo()
+            ->selectRaw("CONCAT(nombre,' ',apellido_paterno,' ',apellido_materno) AS nombre_completo")
             ->orderBy('nombre')
             ->orderBy('apellido_paterno')
-            ->orderBy('apellido_materno')
-            ->orderByDesc('id');
+            ->orderBy('apellido_materno');
 
-        // Filtro por texto (2+)
-        if ($q !== '' && mb_strlen($q) >= 2) {
-            $query->where(function ($w) use ($q) {
-                $w->where('nombre', 'like', "%{$q}%")
-                ->orWhere('apellido_paterno', 'like', "%{$q}%")
-                ->orWhere('apellido_materno', 'like', "%{$q}%");
-            });
+        // Si viene vacío => lista completa (limitada por $limit, pero alta)
+        if ($q === '') {
+            return response()->json([
+                'data' => $base->limit($limit)->get(),
+            ]);
         }
 
-        // Disponibilidad: solo NULL, pero en editar permitir la actual del user
-        $query->where(function ($w) use ($userId) {
-            $w->whereNull('usuario_id');
-            if ($userId) $w->orWhere('usuario_id', $userId);
+        // Si tiene 1 letra => no hacemos query (mejor UX)
+        if (mb_strlen($q) < 2) {
+            return response()->json(['data' => []]);
+        }
+
+        // Filtrado por 2+ letras
+        $base->where(function ($w) use ($q) {
+            $w->where('nombre', 'like', "%{$q}%")
+              ->orWhere('apellido_paterno', 'like', "%{$q}%")
+              ->orWhere('apellido_materno', 'like', "%{$q}%");
         });
 
-        // Si quieres SOLO activas, descomenta:
-        // $query->activo();
-
-        $items = $query->limit($limit)->get()->map(function ($p) {
-            return [
-                'id' => $p->id,
-                'usuario_id' => $p->usuario_id,
-                //  ya tienes accessor en el modelo Persona
-                'nombre_completo' => $p->nombre_completo !== '' ? $p->nombre_completo : ('#' . $p->id),
-                'telefono' => $p->telefono,
-                'empresa' => $p->empresa,
-                'rfc' => $p->rfc,
-                'direccion' => $p->direccion,
-                'status' => $p->status,
-            ];
-        });
-
-        return response()->json(['data' => $items]);
-    }
-
-    public function store(Request $request)
-    {
-        $data = $request->validate([
-            'persona_id' => ['required', 'integer', 'exists:personas,id'],
-            'name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:190', 'unique:users,email'],
-            'rol' => ['required', Rule::in(['admin', 'vendedor', 'cliente'])],
-            'status' => ['required', Rule::in(['activo', 'inactivo'])],
-            'password' => ['required', 'string', 'min:8', 'max:72'],
+        return response()->json([
+            'data' => $base->limit($limit)->get(),
         ]);
-
-        DB::transaction(function () use ($data) {
-            $persona = Persona::lockForUpdate()->findOrFail($data['persona_id']);
-
-            if (!is_null($persona->usuario_id)) {
-                abort(422, 'La persona seleccionada ya está vinculada a otro usuario.');
-            }
-
-            $user = User::create([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'rol' => $data['rol'],
-                'status' => $data['status'],
-                'password' => $data['password'],
-            ]);
-
-            $persona->update(['usuario_id' => $user->id]);
-        });
-
-        return redirect()->route('usuarios.index')->with('success', 'Usuario creado correctamente.');
-    }
-
-    public function update(Request $request, User $user)
-    {
-        $data = $request->validate([
-            'persona_id' => ['required', 'integer', 'exists:personas,id'],
-            'name' => ['required', 'string', 'max:120'],
-            'email' => ['required', 'email', 'max:190', Rule::unique('users', 'email')->ignore($user->id)],
-            'rol' => ['required', Rule::in(['admin', 'vendedor', 'cliente'])],
-            'status' => ['required', Rule::in(['activo', 'inactivo'])],
-            'password' => ['nullable', 'string', 'min:8', 'max:72'],
-        ]);
-
-        DB::transaction(function () use ($data, $user) {
-            $personaNueva = Persona::lockForUpdate()->findOrFail($data['persona_id']);
-
-            // Si la persona ya pertenece a otro usuario (no el actual), bloquear
-            if (!is_null($personaNueva->usuario_id) && (int) $personaNueva->usuario_id !== (int) $user->id) {
-                abort(422, 'La persona seleccionada ya está vinculada a otro usuario.');
-            }
-
-            // Solo si cambia de persona, liberar anterior
-            $personaActual = Persona::lockForUpdate()->where('usuario_id', $user->id)->first();
-            if ($personaActual && (int) $personaActual->id !== (int) $personaNueva->id) {
-                $personaActual->update(['usuario_id' => null]);
-            }
-
-            // Asignar la nueva al user (si ya era suya, esto no rompe nada)
-            $personaNueva->update(['usuario_id' => $user->id]);
-
-            $update = [
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'rol' => $data['rol'],
-                'status' => $data['status'],
-            ];
-
-            if (!empty($data['password'])) {
-                $update['password'] = $data['password'];
-            }
-
-            $user->update($update);
-        });
-
-        return redirect()->route('usuarios.index')->with('success', 'Usuario actualizado correctamente.');
     }
 
     /**
-     * Baja lógica: status=inactivo (NO delete físico)
-     * Libera persona para reasignar.
+     * Registrar usuario:
+     * - NO permitimos seleccionar status en el front: siempre "activo" al crear.
+     * - Password se genera AUTOMÁTICA (8 chars: mayus/minus/número, sin especiales).
+     * - Nombre se arma SIEMPRE desde la persona (no editable).
+     * - Se enlaza persona.usuario_id = user.id (relación).
+     * - Se manda correo con credenciales (gancho, mailable NO incluido aquí).
      */
-    public function destroy(User $user)
+    public function store(Request $request)
     {
-        if (auth()->id() === $user->id) {
-            return back()->with('error', 'No puedes desactivar tu propio usuario.');
+        $data = $request->validate([
+            'persona_id' => [
+                'required',
+                'integer',
+                Rule::exists('personas', 'id')->where(fn($q) => $q->where('status', 'activo')->whereNull('usuario_id')),
+            ],
+            'email' => ['required', 'email', 'max:190', 'unique:users,email'],
+            'rol'   => ['required', Rule::in(['admin', 'vendedor'])],
+        ], [
+            'persona_id.exists' => 'La persona no está disponible (ya tiene usuario o está inactiva).',
+        ]);
+
+        $persona = Persona::findOrFail($data['persona_id']);
+
+        // Nombre SIEMPRE desde persona
+        $name = $this->buildUserNameFromPersona($persona);
+
+        // Password auto
+        $plainPassword = $this->generatePassword8();
+
+        $user = User::create([
+            'persona_id' => $persona->id,
+            'name'       => $name,
+            'email'      => $data['email'],
+            'rol'        => $data['rol'],
+            'status'     => 'activo',
+            // Si tu User model tiene cast "password" => "hashed", Laravel lo hashea solo.
+            // Si no, dejamos Hash::make para asegurar.
+            'password'   => Hash::make($plainPassword),
+        ]);
+
+        // Relación inversa (tu BD la usa)
+        $persona->usuario_id = $user->id;
+        $persona->save();
+
+        // Gancho para correo (NO incluyo mail ni blade porque lo pediste)
+        // Mail::to($user->email)->send(new UsuarioCreadoMail($user, $plainPassword));
+
+        return redirect()
+            ->route('admin.usuarios.index')
+            ->with('success', 'Usuario creado correctamente.');
+    }
+
+    /**
+     * Editar usuario:
+     * - NO se puede cambiar persona (si intentan mandar persona_id distinto => 422).
+     * - NO se puede cambiar status desde aquí (eso se hace con “Eliminar/Activar”).
+     * - El name se mantiene ligado a persona (si cambiaste datos de persona, aquí se puede re-sincronizar).
+     */
+    public function update(Request $request, User $usuario)
+    {
+        $data = $request->validate([
+            // persona_id puede venir en el payload por UI, pero si viene no debe ser distinto.
+            'persona_id' => ['nullable', 'integer'],
+            'email'      => ['required', 'email', 'max:190', Rule::unique('users', 'email')->ignore($usuario->id)],
+            'rol'        => ['required', Rule::in(['admin', 'vendedor', 'cliente'])],
+            'password'   => ['nullable', 'string', 'min:8'],
+        ]);
+
+        // Seguridad: NO permitir cambio de persona
+        if (array_key_exists('persona_id', $data) && (int)$data['persona_id'] !== (int)$usuario->persona_id) {
+            return back()->withErrors([
+                'persona_id' => 'No puedes cambiar la persona de un usuario ya registrado.',
+            ]);
         }
 
-        DB::transaction(function () use ($user) {
-            Persona::where('usuario_id', $user->id)->update(['usuario_id' => null]);
-            $user->update(['status' => 'inactivo']);
-        });
+        // Re-sincronizo nombre por si se editaron nombres de persona
+        $persona = $usuario->persona;
+        if ($persona) {
+            $usuario->name = $this->buildUserNameFromPersona($persona);
+        }
 
-        return redirect()->route('usuarios.index')->with('success', 'Usuario desactivado correctamente.');
+        $usuario->email = $data['email'];
+        $usuario->rol   = $data['rol'];
+
+        // Password opcional (solo si lo mandan)
+        if (!empty($data['password'])) {
+            $usuario->password = Hash::make($data['password']);
+        }
+
+        $usuario->save();
+
+        return redirect()
+            ->route('admin.usuarios.index')
+            ->with('success', 'Usuario actualizado correctamente.');
+    }
+
+    /**
+     * Eliminación lógica:
+     * - SOLO cambia status.
+     * - NO desconecta persona.
+     */
+    public function destroy(User $usuario)
+    {
+        $usuario->status = 'inactivo';
+        $usuario->save();
+
+        return redirect()
+            ->route('admin.usuarios.index')
+            ->with('success', 'Usuario eliminado (lógico).');
+    }
+
+    /**
+     * Activar usuario (lógico):
+     * - SOLO cambia status.
+     * - NO desconecta persona.
+     *
+     * Ruta sugerida: PATCH /admin/usuarios/{usuario}/activar
+     */
+    public function activar(User $usuario)
+    {
+        $usuario->status = 'activo';
+        $usuario->save();
+
+        return redirect()
+            ->route('admin.usuarios.index')
+            ->with('success', 'Usuario activado correctamente.');
+    }
+
+    /* =========================
+     * Helpers “para mi yo futuro”
+     * ========================= */
+
+    private function buildUserNameFromPersona(Persona $p): string
+    {
+        // Siempre concateno en el mismo orden para evitar nombres raros.
+        // trim() para cuando algún campo venga null/vacío.
+        return trim(implode(' ', array_filter([
+            (string) $p->nombre,
+            (string) $p->apellido_paterno,
+            (string) $p->apellido_materno,
+        ])));
+    }
+
+    private function generatePassword8(): string
+    {
+        // Reglas: 8 chars, al menos 1 mayus, 1 minus, 1 número, sin especiales.
+        // Evito caracteres confusos (0/O, 1/l) para que el usuario no se equivoque.
+        $upper  = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        $lower  = 'abcdefghijkmnopqrstuvwxyz';
+        $digits = '23456789';
+        $all    = $upper . $lower . $digits;
+
+        $pwd = [];
+        $pwd[] = $upper[random_int(0, strlen($upper) - 1)];
+        $pwd[] = $lower[random_int(0, strlen($lower) - 1)];
+        $pwd[] = $digits[random_int(0, strlen($digits) - 1)];
+
+        while (count($pwd) < 8) {
+            $pwd[] = $all[random_int(0, strlen($all) - 1)];
+        }
+
+        // Mezclo para que no siempre empiece con Mayus+minus+num
+        shuffle($pwd);
+
+        return implode('', $pwd);
     }
 }
