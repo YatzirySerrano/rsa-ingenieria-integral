@@ -6,16 +6,18 @@ export type CategoriaTipo = 'PRODUCTO' | 'SERVICIO'
 export type CategoriaStatus = 'activo' | 'inactivo'
 
 export type Categoria = {
-  id: number
-  nombre: string
-  tipo: CategoriaTipo
-  status: CategoriaStatus
+    id: number
+    nombre: string
+    tipo: CategoriaTipo
+    status: CategoriaStatus
+    created_at: string
+    updated_at: string
 }
 
 export type CategoriaFilters = {
-  q: string
-  tipo: string
-  status: string
+    q: string
+    tipo: string
+    status: string
 }
 
 const ALL = '__all__'
@@ -24,8 +26,6 @@ type UseCategoriaCrudOptions = {
   initialFilters?: Partial<CategoriaFilters>
   baseUrl?: string
 }
-
-let swalStyled = false
 
 function escapeHtml(s: string) {
   return s
@@ -36,405 +36,82 @@ function escapeHtml(s: string) {
     .replaceAll("'", '&#039;')
 }
 
-function isAppDark() {
-  // Laravel + Tailwind: el tema cambia con la clase "dark" en <html>
-  return document.documentElement.classList.contains('dark')
+function firstError(errors: Record<string, any> | undefined) {
+  if (!errors) return null
+  const k = Object.keys(errors)[0]
+  const v = (errors as any)[k]
+  if (!v) return null
+  return Array.isArray(v) ? v[0] : String(v)
 }
 
 /**
- * Tema premium RSA (navy/white/black) inspirado en shadcn.
- * - Respeta dark/light de la app (NO del sistema).
- * - Tooltips por hover/focus (sin click).
- * - Cancel gris.
- * - Evita que tooltips se corten (overflow visible).
+ * Base visual Tailwind para SweetAlert2 (sin CSS custom, sin inyección).
+ * Usamos `!` para ganarle al CSS oficial de sweetalert2.
  */
-function ensureSwalTheme() {
-  const dark = isAppDark()
-
-  // Inyectamos una sola vez el "esqueleto" + ambas skins y alternamos por data-theme
-  if (!swalStyled) {
-    swalStyled = true
-
-    const style = document.createElement('style')
-    style.innerHTML = `
-      :root{
-        --rsa-navy: #0b1f3a;
-        --rsa-navy-2: #0a1830;
-        --rsa-shadow-dark: 0 28px 90px rgba(0,0,0,.48);
-        --rsa-shadow-light: 0 24px 80px rgba(2,6,23,.18);
-      }
-
-      .swal2-container{ z-index: 999999 !important; }
-
-      /* Base */
-      .swal2-popup{
-        width: 560px !important;
-        max-width: calc(100vw - 24px) !important;
-        border-radius: 16px !important;
-        padding: 18px 18px 14px !important;
-        overflow: visible !important;
-      }
-
-      .swal2-title{
-        font-weight: 900 !important;
-        letter-spacing: -0.02em !important;
-        font-size: 18px !important;
-        margin: 0 0 8px !important;
-      }
-
-      .swal2-html-container{
-        margin: 0 !important;
-        padding: 0 !important;
-        overflow: visible !important;
-      }
-
-      .rsa-form{
-        text-align:left;
-        margin-top: 6px;
-        display: grid;
-        gap: 12px;
-      }
-
-      .rsa-row{
-        display: grid;
-        gap: 6px;
-      }
-
-      .rsa-label-row{
-        display:flex;
-        align-items:center;
-        justify-content:space-between;
-        gap: 10px;
-        overflow: visible !important;
-      }
-
-      .rsa-label{
-        font-size: 12px;
-        font-weight: 900;
-        letter-spacing: .01em;
-        margin: 0;
-        line-height: 1.2;
-        display:flex;
-        align-items:center;
-        gap: 8px;
-        overflow: visible !important;
-      }
-
-      /* Tooltip tipo shadcn (hover/focus) */
-      .rsa-tip{
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        overflow: visible !important;
-      }
-
-      .rsa-tip-btn{
-        width: 18px;
-        height: 18px;
-        border-radius: 999px;
-        display:inline-flex;
-        align-items:center;
-        justify-content:center;
-        cursor: help;
-        user-select:none;
-        transition: background .12s ease, border-color .12s ease, transform .12s ease;
-      }
-
-      .rsa-tip-btn:hover{
-        transform: translateY(-1px);
-      }
-
-      .rsa-tip-btn:focus{
-        outline:none;
-      }
-
-      .rsa-tip-bubble{
-        position:absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        bottom: calc(100% + 10px);
-        border-radius: 10px;
-        padding: 8px 10px;
-        font-size: 12px;
-        font-weight: 700;
-        white-space: nowrap;
-        opacity: 0;
-        pointer-events:none;
-        transition: opacity .12s ease, transform .12s ease;
-        z-index: 9999999;
-      }
-
-      .rsa-tip-bubble::after{
-        content:'';
-        position:absolute;
-        left: 50%;
-        transform: translateX(-50%);
-        top: 100%;
-        border: 6px solid transparent;
-      }
-
-      .rsa-tip:hover .rsa-tip-bubble,
-      .rsa-tip:focus-within .rsa-tip-bubble{
-        opacity: 1;
-        transform: translateX(-50%) translateY(-1px);
-      }
-
-      .rsa-note{
-        margin: 2px 0 0;
-        font-size: 12px;
-      }
-
-      .swal2-actions{
-        margin-top: 14px !important;
-        gap: 10px !important;
-      }
-
-      /* Cancel gris (aplica a ambos temas) */
-      .swal2-cancel{
-        border-radius: 12px !important;
-        font-weight: 900 !important;
-        padding: 10px 14px !important;
-        box-shadow: none !important;
-      }
-
-      /* ======= SKIN DARK ======= */
-      .swal2-container[data-rsa-theme="dark"] .swal2-popup{
-        box-shadow: var(--rsa-shadow-dark) !important;
-        border: 1px solid rgba(255,255,255,.10) !important;
-        background: linear-gradient(180deg, rgba(11,15,25,.96), rgba(10,12,16,.96)) !important;
-        color: rgba(250,250,252,.92) !important;
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .swal2-html-container{
-        color: rgba(235,235,245,.72) !important;
-      }
-
-      /* ✅ CAMBIO: labels blancos SOLO en dark (forzado) */
-      .swal2-container[data-rsa-theme="dark"] .rsa-label,
-      .swal2-container[data-rsa-theme="dark"] .rsa-label-row{
-        color: #ffffff !important;
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .rsa-tip-btn{
-        background: rgba(255,255,255,.06);
-        border: 1px solid rgba(255,255,255,.14);
-        color: rgba(250,250,252,.86);
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .rsa-tip-btn:hover{
-        background: rgba(255,255,255,.10);
-        border-color: rgba(255,255,255,.18);
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .rsa-tip-btn:focus{
-        box-shadow: 0 0 0 4px rgba(11,31,58,.35);
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .rsa-tip-bubble{
-        background: #ffffff;
-        color: #0f172a;
-        box-shadow: 0 18px 55px rgba(2,6,23,.25);
-        border: 1px solid rgba(2,6,23,.10);
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .rsa-tip-bubble::after{
-        border-top-color: #ffffff;
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .swal2-input,
-      .swal2-container[data-rsa-theme="dark"] .swal2-select{
-        height: 36px !important; /* Minimalista h-9 */
-        font-size: 13px !important; /* Letra más pequeña */
-        border-radius: 8px !important; /* Rounded-md aprox */
-        background: rgba(255,255,255,.04) !important;
-        border: 1px solid rgba(255,255,255,.12) !important;
-        color: rgba(250,250,252,.92) !important;
-        box-shadow: none !important;
-        margin: 0 !important;
-        padding: 0 10px !important;
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .swal2-input::placeholder{
-        color: rgba(235,235,245,.35) !important;
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .swal2-input:focus,
-      .swal2-container[data-rsa-theme="dark"] .swal2-select:focus{
-        border-color: rgba(255,255,255,.24) !important;
-        box-shadow: 0 0 0 2px rgba(11,31,58,.5) !important; /* Ring más sutil */
-        outline: none !important;
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .swal2-select option{
-        background: #0b0c10 !important;
-        color: rgba(250,250,252,.92) !important;
-        font-size: 13px !important;
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .rsa-note{
-        color: rgba(235,235,245,.5);
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .swal2-confirm{
-        background: var(--rsa-navy) !important;
-        color: #fff !important;
-        border: 1px solid rgba(255,255,255,.08) !important;
-        border-radius: 8px !important;
-        font-weight: 800 !important;
-        font-size: 13px !important;
-        padding: 8px 12px !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,.2) !important;
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .swal2-confirm:hover{
-        background: var(--rsa-navy-2) !important;
-        color: #ffffff !important;
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .swal2-cancel{
-        background: transparent !important;
-        color: rgba(250,250,252,.7) !important;
-        border: 1px solid rgba(148,163,184,.2) !important;
-        font-weight: 600 !important;
-        font-size: 13px !important;
-        border-radius: 8px !important;
-        padding: 8px 12px !important;
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .swal2-cancel:hover{
-        background: rgba(255,255,255,.04) !important;
-        color: #fff !important;
-        border-color: rgba(148,163,184,.3) !important;
-      }
-
-      .swal2-container[data-rsa-theme="dark"] .swal2-validation-message{
-        background: rgba(255,255,255,.04) !important;
-        color: rgba(250,250,252,.9) !important;
-        border: 1px solid rgba(255,255,255,.1) !important;
-        border-radius: 8px !important;
-        font-size: 12px !important;
-      }
-
-      /* ======= SKIN LIGHT ======= */
-      .swal2-container[data-rsa-theme="light"] .swal2-popup{
-        background: #ffffff !important;
-        color: #0f172a !important;
-        border: 1px solid rgba(2,6,23,.08) !important;
-        box-shadow: var(--rsa-shadow-light) !important;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .swal2-html-container{
-        color: rgba(15,23,42,.72) !important;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .rsa-label{
-        color: #0f172a !important;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .rsa-tip-btn{
-        background: rgba(2,6,23,.03);
-        border: 1px solid rgba(2,6,23,.1);
-        color: rgba(15,23,42,.7);
-      }
-
-      .swal2-container[data-rsa-theme="light"] .rsa-tip-btn:hover{
-        background: rgba(2,6,23,.06);
-        border-color: rgba(2,6,23,.15);
-      }
-
-      .swal2-container[data-rsa-theme="light"] .rsa-tip-btn:focus{
-        box-shadow: 0 0 0 4px rgba(11,31,58,.1);
-      }
-
-      .swal2-container[data-rsa-theme="light"] .rsa-tip-bubble{
-        background: #0f172a;
-        color: #ffffff;
-        box-shadow: 0 10px 30px rgba(0,0,0,.15);
-        border: none;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .rsa-tip-bubble::after{
-        border-top-color: #0f172a;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .swal2-input,
-      .swal2-container[data-rsa-theme="light"] .swal2-select{
-        background: #ffffff !important;
-        color: #0f172a !important;
-        border: 1px solid rgba(2,6,23,.15) !important;
-        height: 36px !important; /* Minimalista */
-        font-size: 13px !important;
-        border-radius: 8px !important;
-        padding: 0 10px !important;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .swal2-input::placeholder{
-        color: rgba(15,23,42,.40) !important;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .swal2-input:focus,
-      .swal2-container[data-rsa-theme="light"] .swal2-select:focus{
-        border-color: rgba(11,31,58,.35) !important;
-        box-shadow: 0 0 0 2px rgba(11,31,58,.1) !important;
-        outline: none !important;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .swal2-select option{
-        background: #ffffff !important;
-        color: #0f172a !important;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .rsa-note{
-        color: rgba(15,23,42,.6);
-      }
-
-      .swal2-container[data-rsa-theme="light"] .swal2-confirm{
-        background: var(--rsa-navy) !important;
-        color: #fff !important;
-        border: 1px solid rgba(2,6,23,.08) !important;
-        border-radius: 8px !important;
-        font-weight: 800 !important;
-        font-size: 13px !important;
-        padding: 8px 12px !important;
-        box-shadow: 0 4px 12px rgba(11,31,58,.15) !important;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .swal2-confirm:hover{
-        background: var(--rsa-navy-2) !important;
-        color: #ffffff !important;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .swal2-cancel{
-        background: transparent !important;
-        color: #0f172a !important;
-        border: 1px solid rgba(2,6,23,.15) !important;
-        font-weight: 600 !important;
-        font-size: 13px !important;
-        border-radius: 8px !important;
-        padding: 8px 12px !important;
-      }
-
-      .swal2-container[data-rsa-theme="light"] .swal2-cancel:hover{
-        background: rgba(2,6,23,.04) !important;
-        border-color: rgba(2,6,23,.25) !important;
-      }
-    `
-    document.head.appendChild(style)
+function swalModalClasses() {
+  return {
+    container: 'z-[20000]',
+    popup:
+      '!w-full !max-w-[680px] !rounded-3xl !border !border-slate-200/80 !bg-white !p-6 !text-left !shadow-2xl ' +
+      'dark:!border-white/10 dark:!bg-zinc-950/95 dark:!text-zinc-100',
+    title:
+      '!m-0 !mb-3 !p-0 !text-center !text-2xl !font-black !tracking-tight !text-slate-900 dark:!text-zinc-100',
+    htmlContainer:
+      '!m-0 !p-0 !text-left !overflow-visible !max-h-none !text-slate-700 dark:!text-zinc-300',
+    actions: '!mt-6 !gap-3 !p-0',
+    confirmButton:
+      '!inline-flex !items-center !justify-center !rounded-xl !px-4 !py-2.5 !text-sm !font-extrabold ' +
+      '!bg-emerald-600 !text-white hover:!bg-emerald-500 active:scale-[.99] ' +
+      'dark:!bg-emerald-500 dark:!text-zinc-950 dark:hover:!bg-emerald-400',
+    cancelButton:
+      '!inline-flex !items-center !justify-center !rounded-xl !px-4 !py-2.5 !text-sm !font-extrabold ' +
+      '!bg-transparent !text-slate-700 !border !border-slate-200 hover:!bg-slate-50 active:scale-[.99] ' +
+      'dark:!text-zinc-200 dark:!border-white/10 dark:hover:!bg-white/5',
+    validationMessage:
+      '!mt-3 !rounded-2xl !border !border-rose-500/20 !bg-rose-500/10 !px-3 !py-2 !text-sm !font-semibold ' +
+      '!text-rose-700 dark:!text-rose-200',
   }
-
-  // Siempre actualiza el tema del container según el estado actual de la app
-  const c = document.querySelector('.swal2-container') as HTMLElement | null
-  if (c) c.setAttribute('data-rsa-theme', dark ? 'dark' : 'light')
 }
 
-function infoIconSvg() {
-  return `
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" stroke-width="2"/>
-      <path d="M12 17v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-      <path d="M12 7.5h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-    </svg>
-  `
+function swalToastClasses() {
+  return {
+    container: 'z-[20000]',
+    popup:
+      '!rounded-2xl !border !border-slate-200/80 !bg-white !px-3 !py-2 !shadow-xl ' +
+      'dark:!border-white/10 dark:!bg-zinc-950/95',
+    title: '!text-sm !font-extrabold !text-slate-900 dark:!text-zinc-100',
+  }
+}
+
+function fireModal(opts: Swal.SweetAlertOptions) {
+  return Swal.fire({
+    heightAuto: false,
+    buttonsStyling: false,
+    showClass: { popup: '' },
+    hideClass: { popup: '' },
+    ...opts,
+    customClass: {
+      ...swalModalClasses(),
+      ...(opts.customClass ?? {}),
+    },
+  })
+}
+
+function toast(title: string, icon: 'success' | 'error' | 'info' | 'warning' = 'info') {
+  return Swal.fire({
+    toast: true,
+    position: 'top-end',
+    icon,
+    title,
+    showConfirmButton: false,
+    timer: 2200,
+    timerProgressBar: true,
+    heightAuto: false,
+    buttonsStyling: false,
+    showClass: { popup: '' },
+    hideClass: { popup: '' },
+    customClass: swalToastClasses(),
+  })
 }
 
 export function useCategoriaCrud(options: UseCategoriaCrudOptions = {}) {
@@ -487,84 +164,108 @@ export function useCategoriaCrud(options: UseCategoriaCrudOptions = {}) {
   })
 
   /* =========================
-   * Form (SweetAlert2)
-   * - Nuevo/Editar NO maneja status
-   * - Siempre guarda activo
+   * Modal Form (Tailwind)
    * ========================= */
   async function openForm(categoria?: Categoria) {
-    ensureSwalTheme()
-
     const isEdit = Boolean(categoria)
     const current = categoria
       ? {
-        id: Number(categoria.id),
-        nombre: String(categoria.nombre ?? ''),
-        tipo: (categoria.tipo as CategoriaTipo) ?? 'PRODUCTO',
-      }
+          id: Number(categoria.id),
+          nombre: String(categoria.nombre ?? ''),
+          tipo: (categoria.tipo as CategoriaTipo) ?? 'PRODUCTO',
+        }
       : null
 
     const nombreVal = escapeHtml(current?.nombre ?? '')
 
+    const inputCls =
+      'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-900 shadow-sm ' +
+      'outline-none transition placeholder:text-slate-400 ' +
+      'focus:border-emerald-500/60 focus:ring-4 focus:ring-emerald-500/15 ' +
+      'dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:placeholder:text-zinc-500'
+
+    const selectWrapCls = 'relative'
+    const selectCls =
+      'w-full appearance-none rounded-xl border border-slate-200 bg-white px-3 py-2 pr-10 text-sm font-semibold text-slate-900 shadow-sm ' +
+      'outline-none transition hover:bg-slate-50 ' +
+      'focus:border-emerald-500/60 focus:ring-4 focus:ring-emerald-500/15 ' +
+      'dark:border-white/10 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800/60 dark:[color-scheme:dark]'
+
+    const labelCls = 'text-xs font-extrabold text-slate-700 dark:text-zinc-300'
+
+    const tipBtn =
+      'group relative inline-flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 ' +
+      'text-slate-500 transition hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 ' +
+      'dark:border-white/10 dark:text-zinc-400 dark:hover:bg-white/5'
+
+    const tipBubble =
+      'pointer-events-none absolute right-0 top-9 z-50 w-max max-w-[280px] ' +
+      'rounded-2xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white shadow-xl ' +
+      'opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100 ' +
+      'dark:bg-white dark:text-zinc-950'
+
     const html = `
-      <div class="rsa-form">
-        <div class="rsa-row">
-          <div class="rsa-label-row">
-            <label class="rsa-label" for="cat_nombre">
-              Nombre de la categoría
-              <span class="rsa-tip">
-                <span class="rsa-tip-btn" tabindex="0" aria-label="Información del campo nombre">
-                  ${infoIconSvg()}
-                </span>
-                <span class="rsa-tip-bubble">Nombre visible para el cliente (ej. CCTV, Cableado).</span>
+      <div class="grid gap-4">
+        <div class="grid gap-2">
+          <div class="flex items-center justify-between gap-3">
+            <label class="${labelCls}" for="cat_nombre">Nombre de la categoría</label>
+            <button type="button" class="${tipBtn}" aria-label="Ayuda nombre" tabindex="0">
+              <span class="text-[11px] font-black">i</span>
+              <span class="${tipBubble}">
+                Nombre visible para el cliente (ej. CCTV, Cableado).
+                <span class="absolute -top-1 right-3 h-2 w-2 rotate-45 bg-slate-900 dark:bg-white"></span>
               </span>
-            </label>
+            </button>
           </div>
 
           <input
             id="cat_nombre"
-            class="swal2-input"
+            class="${inputCls}"
             placeholder="Ej. CCTV, Cableado, Acceso…"
             value="${nombreVal}"
             autocomplete="off"
           />
         </div>
 
-        <div class="rsa-row">
-          <div class="rsa-label-row">
-            <label class="rsa-label" for="cat_tipo">
-              Tipo
-              <span class="rsa-tip">
-                <span class="rsa-tip-btn" tabindex="0" aria-label="Información del campo tipo">
-                  ${infoIconSvg()}
-                </span>
-                <span class="rsa-tip-bubble">PRODUCTO para catálogo, SERVICIO para instalaciones/soporte.</span>
+        <div class="grid gap-2">
+          <div class="flex items-center justify-between gap-3">
+            <label class="${labelCls}" for="cat_tipo">Tipo</label>
+            <button type="button" class="${tipBtn}" aria-label="Ayuda tipo" tabindex="0">
+              <span class="text-[11px] font-black">i</span>
+              <span class="${tipBubble}">
+                PRODUCTO para catálogo, SERVICIO para instalaciones/soporte.
+                <span class="absolute -top-1 right-3 h-2 w-2 rotate-45 bg-slate-900 dark:bg-white"></span>
               </span>
-            </label>
+            </button>
           </div>
 
-          <select id="cat_tipo" class="swal2-select">
-            <option value="PRODUCTO" ${current?.tipo === 'PRODUCTO' ? 'selected' : ''}>PRODUCTO</option>
-            <option value="SERVICIO" ${current?.tipo === 'SERVICIO' ? 'selected' : ''}>SERVICIO</option>
-          </select>
+          <div class="${selectWrapCls}">
+            <select id="cat_tipo" class="${selectCls}">
+              <option value="PRODUCTO" ${current?.tipo === 'PRODUCTO' ? 'selected' : ''}>PRODUCTO</option>
+              <option value="SERVICIO" ${current?.tipo === 'SERVICIO' ? 'selected' : ''}>SERVICIO</option>
+            </select>
+
+            <svg class="pointer-events-none absolute inset-y-0 right-3 my-auto h-4 w-4 text-slate-400 dark:text-zinc-500" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.1 1.02l-4.25 4.5a.75.75 0 0 1-1.1 0l-4.25-4.5a.75.75 0 0 1 .02-1.06z" clip-rule="evenodd"/>
+            </svg>
+          </div>
         </div>
       </div>
     `
 
-    const { value } = await Swal.fire({
+    const { value } = await fireModal({
       title: isEdit ? 'Editar categoría' : 'Nueva categoría',
       html,
       showCancelButton: true,
       confirmButtonText: 'Guardar',
       cancelButtonText: 'Cancelar',
       focusConfirm: false,
-      heightAuto: false,
+      allowOutsideClick: () => !Swal.isLoading(),
       didOpen: () => {
-        const container = document.querySelector('.swal2-container') as HTMLElement | null
-        if (container) container.setAttribute('data-rsa-theme', isAppDark() ? 'dark' : 'light')
-
         const n = document.getElementById('cat_nombre') as HTMLInputElement | null
         n?.focus()
         n?.select()
+
         n?.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
             e.preventDefault()
@@ -595,52 +296,41 @@ export function useCategoriaCrud(options: UseCategoriaCrudOptions = {}) {
 
     if (!value) return
 
+    // Recomendación: éxito centralizado por flash en Inertia (evita doble toast).
     if (isEdit && current) {
       router.put(`${baseUrl}/${current.id}`, value, {
         preserveScroll: true,
-        onSuccess: () => toast('Categoría actualizada', 'success'),
-        onError: () => toast('Revisa los campos', 'error'),
+        onError: (errors) => toast(firstError(errors as any) ?? 'Revisa los campos', 'error'),
       })
       return
     }
 
     router.post(baseUrl, value, {
       preserveScroll: true,
-      onSuccess: () => toast('Categoría creada', 'success'),
-      onError: () => toast('Revisa los campos', 'error'),
+      onError: (errors) => toast(firstError(errors as any) ?? 'Revisa los campos', 'error'),
     })
   }
 
   async function deactivate(c: Categoria) {
-    ensureSwalTheme()
-
-    const { isConfirmed } = await Swal.fire({
-      title: 'Desactivar categoría',
-      text: `Se dará de baja "${c.nombre}" (baja lógica).`,
+    const { isConfirmed } = await fireModal({
+      title: 'Eliminar categoría',
+      text: `Se eliminará "${c.nombre}".`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Desactivar',
+      confirmButtonText: 'Eliminar',
       cancelButtonText: 'Cancelar',
       reverseButtons: true,
-      heightAuto: false,
-      didOpen: () => {
-        const container = document.querySelector('.swal2-container') as HTMLElement | null
-        if (container) container.setAttribute('data-rsa-theme', isAppDark() ? 'dark' : 'light')
-      },
     })
     if (!isConfirmed) return
 
     router.delete(`${baseUrl}/${c.id}`, {
       preserveScroll: true,
-      onSuccess: () => toast('Categoría desactivada', 'success'),
-      onError: () => toast('No se pudo desactivar', 'error'),
+      onError: () => toast('No se pudo eliminar', 'error'),
     })
   }
 
   async function activate(c: Categoria) {
-    ensureSwalTheme()
-
-    const { isConfirmed } = await Swal.fire({
+    const { isConfirmed } = await fireModal({
       title: 'Activar categoría',
       text: `Se activará "${c.nombre}".`,
       icon: 'question',
@@ -648,11 +338,6 @@ export function useCategoriaCrud(options: UseCategoriaCrudOptions = {}) {
       confirmButtonText: 'Activar',
       cancelButtonText: 'Cancelar',
       reverseButtons: true,
-      heightAuto: false,
-      didOpen: () => {
-        const container = document.querySelector('.swal2-container') as HTMLElement | null
-        if (container) container.setAttribute('data-rsa-theme', isAppDark() ? 'dark' : 'light')
-      },
     })
     if (!isConfirmed) return
 
@@ -661,7 +346,6 @@ export function useCategoriaCrud(options: UseCategoriaCrudOptions = {}) {
       { nombre: c.nombre, tipo: c.tipo, status: 'activo' as CategoriaStatus },
       {
         preserveScroll: true,
-        onSuccess: () => toast('Categoría activada', 'success'),
         onError: () => toast('No se pudo activar', 'error'),
       }
     )
@@ -669,24 +353,6 @@ export function useCategoriaCrud(options: UseCategoriaCrudOptions = {}) {
 
   function toggleStatus(c: Categoria) {
     return c.status === 'activo' ? deactivate(c) : activate(c)
-  }
-
-  function toast(title: string, icon: 'success' | 'error' | 'info' | 'warning' = 'info') {
-    ensureSwalTheme()
-    Swal.fire({
-      toast: true,
-      position: 'top-end',
-      icon,
-      title,
-      showConfirmButton: false,
-      timer: 2000,
-      timerProgressBar: true,
-      heightAuto: false,
-      didOpen: () => {
-        const container = document.querySelector('.swal2-container') as HTMLElement | null
-        if (container) container.setAttribute('data-rsa-theme', isAppDark() ? 'dark' : 'light')
-      },
-    })
   }
 
   return {

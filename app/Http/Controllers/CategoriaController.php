@@ -14,11 +14,10 @@ class CategoriaController extends Controller{
 
     // Metodo para listar todas las categorías con filtros
     public function index(Request $request): Response {
-        // Filtros básicos para tablas Inertia: búsqueda, status y tipo.
+        // Filtros para las tablas: búsqueda, status y tipo.
         $q = trim((string) $request->get('q', ''));
         $status = $request->get('status'); // activo|inactivo|null
         $tipo = $request->get('tipo');     // PRODUCTO|SERVICIO|null
-
         $categorias = Categoria::query()
             ->when($q !== '', fn ($qr) => $qr->where('nombre', 'like', "%{$q}%"))
             ->when($status, fn ($qr) => $qr->where('status', $status))
@@ -26,6 +25,7 @@ class CategoriaController extends Controller{
             ->orderBy('id', 'desc')
             ->paginate(15)
             ->withQueryString();
+        // Renderizamos la vista con Inertia y los datos a mandar
         return Inertia::render('Categorias/Index', [
             'items' => CategoriaResource::collection($categorias),
             'filters' => [
@@ -42,7 +42,7 @@ class CategoriaController extends Controller{
 
     // Metodo para mostrar la pantalla de alta de una categoría
     public function create(): Response {
-        // Pantalla de alta; se mandan opciones para selects.
+        // Pantalla de alta se mandan opciones para selects (En este caos de hace uso de sw alert para el modal)
         return Inertia::render('Categorias/Create', [
             'meta' => [
                 'statuses' => ['activo', 'inactivo'],
@@ -81,9 +81,8 @@ class CategoriaController extends Controller{
 
     // Metodo para eliminación logica
     public function destroy(Categoria $categoria) {
-        // No se borra: se inactiva para mantener auditoría e integridad histórica.
+        // No se borra: se hace eliminación logica
         $categoria->update(['status' => 'inactivo']);
-
         return redirect()
             ->back()
             ->with('success', 'Categoría desactivada.');

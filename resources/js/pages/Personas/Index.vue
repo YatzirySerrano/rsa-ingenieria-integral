@@ -6,30 +6,30 @@
     import PaginationLinks from '@/components/ui/PaginationLinks.vue'
     import { Button } from '@/components/ui/button'
     import { Input } from '@/components/ui/input'
-    
+
     import { usePersonaCrud, PERSONA_ALL, type Persona } from '@/composables/crud/usePersonaCrud'
-    
+
     type Paginated<T> = {
       data: T[]
       links?: any
       meta?: any
     }
-    
+
     const props = defineProps<{
       items: Paginated<Persona>
       filters: { q?: string; status?: string | null }
       meta: { statuses: string[] }
     }>()
-    
+
     const initialStatus =
       (props.filters?.status && String(props.filters.status).trim()) ? String(props.filters.status) : 'activo'
-    
+
     const {
       ALL,
       filters,
       hasActiveFilters,
       resetFilters,
-    
+
       // modal / form
       modalOpen,
       mode,
@@ -40,7 +40,7 @@
       openEdit,
       closeModal,
       submit,
-    
+
       // actions
       toggleStatus,
       displayName,
@@ -52,31 +52,31 @@
         status: initialStatus ?? 'activo',
       },
     })
-    
+
     const personas = computed(() => props.items?.data ?? [])
     const statuses = computed(() => props.meta?.statuses ?? ['activo', 'inactivo'])
-    
+
     function badgeClasses(status: Persona['status']) {
       return status === 'activo'
         ? 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:bg-emerald-400/10 dark:text-emerald-200'
         : 'bg-rose-500/10 text-rose-700 ring-1 ring-rose-500/20 dark:bg-rose-400/10 dark:text-rose-200'
     }
-    
+
     function rowTone(status: Persona['status']) {
       return status === 'activo'
         ? 'hover:bg-emerald-50/40 dark:hover:bg-emerald-500/5'
         : 'hover:bg-rose-50/40 dark:hover:bg-rose-500/5'
     }
-    
+
     function fmt(v: any) {
       const s = String(v ?? '').trim()
       return s ? s : '—'
     }
     </script>
-    
+
     <template>
       <Head title="Personas" />
-    
+
       <AppLayout>
         <div class="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <!-- Background flourish -->
@@ -90,7 +90,7 @@
                      bg-sky-400 dark:opacity-20"
             />
           </div>
-    
+
           <!-- Header -->
           <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div class="min-w-0">
@@ -98,12 +98,12 @@
                 Personas
               </h1>
             </div>
-    
+
             <Button class="font-extrabold shadow-sm hover:shadow-md transition" @click="openCreate()">
               Nueva persona
             </Button>
           </div>
-    
+
           <!-- Filters -->
           <div
             class="mt-5 rounded-2xl border border-slate-200 bg-white/80 backdrop-blur p-4
@@ -120,7 +120,7 @@
                   class="h-11 mt-1"
                 />
               </div>
-    
+
               <div class="md:col-span-3">
                 <label class="text-xs font-black text-slate-700 dark:text-slate-200">
                   Estatus
@@ -135,7 +135,7 @@
                   <option v-for="s in statuses" :key="s" :value="s">{{ s }}</option>
                 </select>
               </div>
-    
+
               <div class="md:col-span-2 flex items-end">
                 <Button
                   variant="secondary"
@@ -148,7 +148,7 @@
               </div>
             </div>
           </div>
-    
+
           <!-- Empty state -->
           <div
             v-if="!personas.length"
@@ -163,12 +163,9 @@
               <p class="mt-1 text-sm text-slate-600 dark:text-slate-300">
                 Crea tu primera persona para empezar a operar.
               </p>
-              <div class="mt-4">
-                <Button class="font-extrabold" @click="openCreate()">Nueva persona</Button>
-              </div>
             </div>
           </div>
-    
+
           <!-- Mobile/Tablet cards (md: 2 cols) -->
           <div v-else class="mt-6 lg:hidden">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -184,7 +181,7 @@
                   class="absolute inset-x-0 top-0 h-1"
                   :class="p.status === 'activo' ? 'bg-emerald-500/70' : 'bg-rose-500/70'"
                 />
-    
+
                 <div class="p-4 sm:p-5">
                   <!-- Top row -->
                   <div class="flex items-start justify-between gap-3">
@@ -196,7 +193,7 @@
                         {{ p.empresa ? p.empresa : 'Sin empresa' }}
                       </p>
                     </div>
-    
+
                     <div class="flex flex-col items-end gap-2">
                       <span
                         class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-black"
@@ -209,19 +206,19 @@
                       </span>
                     </div>
                   </div>
-    
+
                   <!-- Details -->
                   <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
                       <p class="text-[11px] font-black text-slate-500 dark:text-slate-400">Teléfono</p>
                       <p class="mt-0.5 font-bold text-slate-900 dark:text-slate-100">{{ fmt(p.telefono) }}</p>
                     </div>
-    
+
                     <div class="rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
                       <p class="text-[11px] font-black text-slate-500 dark:text-slate-400">RFC</p>
                       <p class="mt-0.5 font-bold text-slate-900 dark:text-slate-100">{{ fmt(p.rfc) }}</p>
                     </div>
-    
+
                     <div class="col-span-2 rounded-xl bg-slate-50 p-3 dark:bg-slate-900/40">
                       <p class="text-[11px] font-black text-slate-500 dark:text-slate-400">Dirección</p>
                       <p class="mt-0.5 text-slate-900 dark:text-slate-100 line-clamp-2">
@@ -229,7 +226,7 @@
                       </p>
                     </div>
                   </div>
-    
+
                   <!-- Actions -->
                   <div class="mt-4 grid grid-cols-2 gap-2">
                     <Button
@@ -239,7 +236,7 @@
                     >
                       Editar
                     </Button>
-    
+
                     <Button
                       class="w-full font-extrabold transition"
                       :variant="p.status === 'activo' ? 'destructive' : 'default'"
@@ -249,7 +246,7 @@
                     </Button>
                   </div>
                 </div>
-    
+
                 <!-- subtle hover glow -->
                 <div
                   class="pointer-events-none absolute -bottom-16 -right-16 h-40 w-40 rounded-full blur-3xl opacity-0
@@ -258,12 +255,12 @@
                 />
               </article>
             </div>
-    
+
             <div class="mt-4">
               <PaginationLinks :links="props.items.links" :meta="props.items.meta" />
             </div>
           </div>
-    
+
           <!-- Desktop table -->
           <div class="mt-6 hidden lg:block">
             <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white/80 backdrop-blur
@@ -295,7 +292,7 @@
                       </th>
                     </tr>
                   </thead>
-    
+
                   <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
                     <tr
                       v-for="p in personas"
@@ -311,25 +308,25 @@
                           ID: {{ p.id }}
                         </div>
                       </td>
-    
+
                       <td class="px-4 py-3 text-sm text-slate-800 dark:text-slate-200">
                         {{ p.empresa ?? '—' }}
                       </td>
-    
+
                       <td class="px-4 py-3 text-sm text-slate-800 dark:text-slate-200">
                         {{ p.telefono ?? '—' }}
                       </td>
-    
+
                       <td class="px-4 py-3 text-sm text-slate-800 dark:text-slate-200">
                         {{ p.rfc ?? '—' }}
                       </td>
-    
+
                       <td class="px-4 py-3 text-sm text-slate-800 dark:text-slate-200 max-w-[320px]">
                         <div class="truncate">
                           {{ p.direccion ?? '—' }}
                         </div>
                       </td>
-    
+
                       <td class="px-4 py-3">
                         <span
                           class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-black"
@@ -338,7 +335,7 @@
                           {{ p.status }}
                         </span>
                       </td>
-    
+
                       <td class="px-4 py-3">
                         <div class="flex justify-end gap-2">
                           <Button
@@ -349,7 +346,7 @@
                           >
                             Editar
                           </Button>
-    
+
                           <Button
                             size="sm"
                             class="font-extrabold hover:shadow-sm transition"
@@ -361,7 +358,7 @@
                         </div>
                       </td>
                     </tr>
-    
+
                     <tr v-if="!personas.length">
                       <td colspan="7" class="px-4 py-10 text-center text-slate-600 dark:text-slate-300">
                         No hay personas para mostrar.
@@ -370,13 +367,13 @@
                   </tbody>
                 </table>
               </div>
-    
+
               <div class="p-4 border-t border-slate-200 dark:border-slate-800">
                 <PaginationLinks :links="props.items.links" :meta="props.items.meta" />
               </div>
             </div>
           </div>
-    
+
           <!-- MODAL -->
           <transition name="fade">
             <div
@@ -397,7 +394,7 @@
                       <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100">
                         {{ mode === 'edit' ? 'Editar persona' : 'Nueva persona' }}
                       </h3>
-    
+
                       <p
                         v-if="errors.form"
                         class="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700
@@ -406,7 +403,7 @@
                         {{ errors.form }}
                       </p>
                     </div>
-    
+
                     <button
                       type="button"
                       class="rounded-xl p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition
@@ -418,7 +415,7 @@
                     </button>
                   </div>
                 </div>
-    
+
                 <!-- Body -->
                 <div class="p-5 sm:p-6">
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
@@ -427,37 +424,37 @@
                       <Input v-model="form.nombre" class="mt-1 h-11" placeholder="Ej. Juan Carlos" />
                       <p v-if="errors.nombre" class="text-xs text-rose-600 mt-1">{{ errors.nombre }}</p>
                     </div>
-    
+
                     <div>
                       <label class="text-xs font-black text-slate-700 dark:text-slate-200">Apellido paterno</label>
                       <Input v-model="form.apellido_paterno" class="mt-1 h-11" placeholder="Ej. Pérez" />
                       <p v-if="errors.apellido_paterno" class="text-xs text-rose-600 mt-1">{{ errors.apellido_paterno }}</p>
                     </div>
-    
+
                     <div>
                       <label class="text-xs font-black text-slate-700 dark:text-slate-200">Apellido materno</label>
                       <Input v-model="form.apellido_materno" class="mt-1 h-11" placeholder="Ej. López" />
                       <p v-if="errors.apellido_materno" class="text-xs text-rose-600 mt-1">{{ errors.apellido_materno }}</p>
                     </div>
-    
+
                     <div>
                       <label class="text-xs font-black text-slate-700 dark:text-slate-200">Teléfono</label>
                       <Input v-model="form.telefono" class="mt-1 h-11" placeholder="10 dígitos" />
                       <p v-if="errors.telefono" class="text-xs text-rose-600 mt-1">{{ errors.telefono }}</p>
                     </div>
-    
+
                     <div>
                       <label class="text-xs font-black text-slate-700 dark:text-slate-200">RFC</label>
                       <Input v-model="form.rfc" class="mt-1 h-11" placeholder="Ej. XAXX010101000" />
                       <p v-if="errors.rfc" class="text-xs text-rose-600 mt-1">{{ errors.rfc }}</p>
                     </div>
-    
+
                     <div class="sm:col-span-2">
                       <label class="text-xs font-black text-slate-700 dark:text-slate-200">Empresa</label>
                       <Input v-model="form.empresa" class="mt-1 h-11" placeholder="Opcional" />
                       <p v-if="errors.empresa" class="text-xs text-rose-600 mt-1">{{ errors.empresa }}</p>
                     </div>
-    
+
                     <div class="sm:col-span-2">
                       <label class="text-xs font-black text-slate-700 dark:text-slate-200">Dirección</label>
                       <textarea
@@ -472,7 +469,7 @@
                     </div>
                   </div>
                 </div>
-    
+
                 <!-- Footer -->
                 <div
                   class="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 p-5 sm:p-6
@@ -491,7 +488,7 @@
         </div>
       </AppLayout>
     </template>
-    
+
     <style scoped>
     .fade-enter-active,
     .fade-leave-active {
@@ -502,4 +499,3 @@
       opacity: 0;
     }
     </style>
-    
