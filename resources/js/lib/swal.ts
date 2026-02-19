@@ -4,10 +4,10 @@ import Swal, {
     type SweetAlertResult,
   } from 'sweetalert2'
   import 'sweetalert2/dist/sweetalert2.min.css'
-  
+
   type ToastIcon = Exclude<SweetAlertIcon, 'question'>
   const Z_INDEX_TOP = 20000
-  
+
   function ensureTopZIndex() {
     const id = 'swal2-zindex-top'
     if (document.getElementById(id)) return
@@ -16,7 +16,7 @@ import Swal, {
     style.textContent = `.swal2-container{z-index:${Z_INDEX_TOP}!important}`
     document.head.appendChild(style)
   }
-  
+
   function baseModal(options: SweetAlertOptions) {
     ensureTopZIndex()
     return Swal.fire({
@@ -25,7 +25,7 @@ import Swal, {
       ...options,
     })
   }
-  
+
   function baseToast() {
     ensureTopZIndex()
     return Swal.mixin({
@@ -41,7 +41,7 @@ import Swal, {
       },
     })
   }
-  
+
   export function swalOk(text: string, title = 'Listo') {
     return baseModal({
       icon: 'success' as const,
@@ -50,7 +50,7 @@ import Swal, {
       confirmButtonText: 'Aceptar',
     })
   }
-  
+
   export function swalErr(text: string, title = 'Error') {
     return baseModal({
       icon: 'error' as const,
@@ -59,7 +59,7 @@ import Swal, {
       confirmButtonText: 'Entendido',
     })
   }
-  
+
   export function swalInfo(text: string, title = 'Info') {
     return baseModal({
       icon: 'info' as const,
@@ -68,7 +68,7 @@ import Swal, {
       confirmButtonText: 'OK',
     })
   }
-  
+
   export function swalConfirm(
     text: string,
     opts?: { title?: string; confirmText?: string; cancelText?: string; icon?: SweetAlertIcon }
@@ -83,7 +83,7 @@ import Swal, {
       reverseButtons: true,
     })
   }
-  
+
   export function swalLoading(text = 'Procesando...') {
     ensureTopZIndex()
     return Swal.fire({
@@ -95,11 +95,11 @@ import Swal, {
       didOpen: () => Swal.showLoading(),
     })
   }
-  
+
   export function swalClose() {
     Swal.close()
   }
-  
+
   export function swalNotify(
     text: string,
     icon: ToastIcon = 'success',

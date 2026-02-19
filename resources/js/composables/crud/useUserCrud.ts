@@ -68,21 +68,16 @@ function normalizeBaseUrl(url: string) {
   return u
 }
 
+function isInertiaValidationErrors(x: unknown): x is Record<string, string> {
+  return !!x && typeof x === 'object'
+}
+
 export function useUserCrud(opts: Options = {}) {
   const baseUrl = normalizeBaseUrl(opts.baseUrl ?? '/admin/usuarios')
   const lookupUrl = normalizeBaseUrl(opts.lookupUrl ?? '/admin/usuarios/personas-lookup')
 
   /* ======================
    * Filtros (Inertia)
-   *
-   * PROBLEMA QUE TENÍAS:
-   * - preserveState: false => Inertia re-monta la página
-   * - al escribir 1 letra, se dispara navegación y pierdes foco / se “traba” el input
-   *
-   * SOLUCIÓN:
-   * - preserveState: true
-   * - only: ['users','filters'] para que no re-renderice de más
-   * - debounce un poquito más amable
    * ====================== */
   const filters = reactive<UserFilters>({
     q: opts.initialFilters?.q ?? '',
@@ -103,9 +98,9 @@ export function useUserCrud(opts: Options = {}) {
         { ...filters },
         {
           preserveScroll: true,
-          preserveState: true, // clave para que no “mate” tu input al escribir
+          preserveState: true,
           replace: true,
-          only: ['users', 'filters'], // solo refresca lo que cambia con filtros
+          only: ['users', 'filters', 'flash', 'catalogs'],
         }
       )
     }, 420)
@@ -124,11 +119,14 @@ export function useUserCrud(opts: Options = {}) {
     filters.q = ''
     filters.rol = ALL
     filters.status = ALL
-    router.get(baseUrl, { ...filters }, { preserveScroll: true, preserveState: true, replace: true, only: ['users', 'filters'] })
+    router.get(
+      baseUrl,
+      { ...filters },
+      { preserveScroll: true, preserveState: true, replace: true, only: ['users', 'filters', 'flash', 'catalogs'] }
+    )
   }
 
   function changePerPage(v: number) {
-    // 0 = “Todos” (lo convertimos en backend a 100000)
     filters.per_page = v
   }
 
@@ -139,6 +137,11 @@ export function useUserCrud(opts: Options = {}) {
   const mode = ref<'create' | 'edit'>('create')
   const editingId = ref<number | null>(null)
   const busy = ref(false)
+
+  const busyText = computed(() => {
+    if (!busy.value) return ''
+    return mode.value === 'create' ? 'Enviando correo…' : 'Guardando…'
+  })
 
   // Personas
   const personaLoading = ref(false)
@@ -159,6 +162,14 @@ export function useUserCrud(opts: Options = {}) {
     Object.keys(errors).forEach((k) => delete (errors as any)[k])
   }
 
+  function applyBackendErrors(e: unknown) {
+    if (!isInertiaValidationErrors(e)) return
+    clearErrors()
+    for (const [k, v] of Object.entries(e)) {
+      ;(errors as any)[k] = String(v)
+    }
+  }
+
   function resetPersonaState() {
     personaResults.value = []
     personaLoading.value = false
@@ -168,13 +179,6 @@ export function useUserCrud(opts: Options = {}) {
 
   /* ======================
    * Personas lookup
-   *
-   * Requisito:
-   * - Si no escribo nada: mostrar TODAS las activas sin usuario
-   * - Si escribo 2+ letras: filtrar
-   *
-   * Yo aquí las cargo “de golpe” (limit alto) para que SearchSelect filtre sin pegarle al server cada tecla.
-   * Si prefieres server-side, se ajusta SearchSelect para emitir query y aquí llamamos con q.
    * ====================== */
   let aborter: AbortController | null = null
   async function fetchPersonasAllAvailable() {
@@ -184,8 +188,7 @@ export function useUserCrud(opts: Options = {}) {
 
     try {
       const params = new URLSearchParams()
-      params.set('limit', '5000') // “todas” (hasta 5000)
-      // q vacío => controller regresa todas las disponibles
+      params.set('limit', '5000')
 
       const res = await fetch(`${lookupUrl}?${params.toString()}`, {
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -218,7 +221,7 @@ export function useUserCrud(opts: Options = {}) {
     form.name = ''
     form.email = ''
     form.rol = 'vendedor'
-    form.password = '' // no se usa en create, backend la genera
+    form.password = ''
 
     resetPersonaState()
     void fetchPersonasAllAvailable()
@@ -231,11 +234,11 @@ export function useUserCrud(opts: Options = {}) {
 
     clearErrors()
 
+    form.name = user.name ?? ''
     form.email = user.email ?? ''
     form.rol = (user.rol ?? 'vendedor') as UserRol
-    form.password = '' // opcional para reset
+    form.password = ''
 
-    // En edit la persona es fija, la muestro pero NO dejo cambiarla
     const p = user.persona?.id
       ? ({
           id: Number(user.persona.id),
@@ -248,9 +251,6 @@ export function useUserCrud(opts: Options = {}) {
     resetPersonaState()
     selectedPersona.value = p
     form.persona_id = p?.id ?? null
-
-    // Importante: aquí NO necesito cargar todas, porque en edit no se cambia.
-    // Si quieres que el componente muestre el texto, con selectedPersona basta.
   }
 
   function closeModal() {
@@ -264,17 +264,14 @@ export function useUserCrud(opts: Options = {}) {
     (id) => {
       if (!id) {
         selectedPersona.value = null
-        form.name = ''
+        if (mode.value === 'create') form.name = ''
         return
       }
 
       const found = personaResults.value.find((x) => Number(x.id) === Number(id)) || null
       if (found) {
         selectedPersona.value = found
-        if (mode.value === 'create') {
-          // Nombre se fuerza a persona (y en el input va disabled)
-          form.name = found.nombre_completo
-        }
+        if (mode.value === 'create') form.name = found.nombre_completo
       }
     }
   )
@@ -285,12 +282,9 @@ export function useUserCrud(opts: Options = {}) {
   function validate(): boolean {
     clearErrors()
 
-    // persona solo obligatoria al crear
     if (mode.value === 'create' && !form.persona_id) errors.persona_id = 'Selecciona una persona.'
     if (!form.email.trim() || !form.email.includes('@')) errors.email = 'Email inválido.'
     if (!form.rol) errors.rol = 'Selecciona un rol.'
-
-    // password solo en edit si quieren reset (mín 8)
     if (mode.value === 'edit' && form.password.trim() && form.password.trim().length < 8) {
       errors.password = 'Password mínimo 8 caracteres.'
     }
@@ -300,11 +294,6 @@ export function useUserCrud(opts: Options = {}) {
 
   /* ======================
    * Guardar
-   *
-   * Create:
-   * - NO mando password (la genera backend)
-   * - NO mando status (backend controla)
-   * - name lo ignoro en backend igual (se arma por persona), pero lo mando solo para UI si quieres.
    * ====================== */
   function submit() {
     if (busy.value) return
@@ -318,7 +307,7 @@ export function useUserCrud(opts: Options = {}) {
 
     if (mode.value === 'edit' && editingId.value) {
       const payload: any = {
-        persona_id: form.persona_id, // backend valida que no cambie
+        persona_id: form.persona_id,
         email: form.email.trim(),
         rol: form.rol,
         password: form.password.trim() ? form.password.trim() : null,
@@ -328,8 +317,9 @@ export function useUserCrud(opts: Options = {}) {
         preserveScroll: true,
         preserveState: false,
         onFinish: done,
-        onError: () => {
-          errors.form = 'No se pudo guardar. Revisa validaciones del backend.'
+        onError: (e) => {
+          applyBackendErrors(e)
+          errors.form = errors.form || 'No se pudo guardar. Revisa validaciones del backend.'
           void swalNotify('No se pudo guardar', 'error')
         },
         onSuccess: () => {
@@ -345,16 +335,15 @@ export function useUserCrud(opts: Options = {}) {
       persona_id: form.persona_id,
       email: form.email.trim(),
       rol: form.rol,
-      // name y password NO son necesarios (backend manda la verdad),
-      // pero no estorban si llegan.
     }
 
     router.post(baseUrl, payload, {
       preserveScroll: true,
       preserveState: false,
       onFinish: done,
-      onError: () => {
-        errors.form = 'No se pudo crear. Revisa validaciones del backend.'
+      onError: (e) => {
+        applyBackendErrors(e)
+        errors.form = errors.form || 'No se pudo crear. Revisa validaciones del backend.'
         void swalNotify('No se pudo crear', 'error')
       },
       onSuccess: () => {
@@ -365,16 +354,11 @@ export function useUserCrud(opts: Options = {}) {
   }
 
   /* ======================
-   * Eliminar / Activar (lógico)
-   *
-   * - Antes: DELETE solo desactivaba y además soltaba persona (eso ya NO).
-   * - Ahora:
-   *   * Activo  -> “Eliminar” (DELETE)
-   *   * Inactivo -> “Activar” (PATCH /activar)
+   * Eliminar / Activar
    * ====================== */
   async function toggleUser(user: UserRow) {
     if (user.status === 'activo') {
-      const res = await swalConfirm('Esto es una eliminación lógica. El usuario no podrá entrar.', {
+      const res = await swalConfirm('Esto es una eliminación. El usuario no podrá entrar.', {
         title: `Eliminar a ${user.name}`,
         confirmText: 'Eliminar',
         cancelText: 'Cancelar',
@@ -385,13 +369,12 @@ export function useUserCrud(opts: Options = {}) {
       router.delete(`${baseUrl}/${user.id}`, {
         preserveScroll: true,
         preserveState: false,
-        onSuccess: () => void swalNotify('Usuario eliminado (lógico)', 'success'),
+        onSuccess: () => void swalNotify('Usuario eliminado', 'success'),
         onError: () => void swalErr('No se pudo eliminar. Intenta de nuevo.'),
       })
       return
     }
 
-    // Activar
     const res = await swalConfirm('El usuario podrá volver a entrar al sistema.', {
       title: `Activar a ${user.name}`,
       confirmText: 'Activar',
@@ -420,6 +403,7 @@ export function useUserCrud(opts: Options = {}) {
     mode,
     editingId,
     busy,
+    busyText,
     form,
     errors,
 

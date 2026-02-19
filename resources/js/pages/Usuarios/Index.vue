@@ -13,8 +13,6 @@ type Paginated<T> = {
   data: T[]
   links: LinkItem[]
   meta?: any
-  current_page?: number
-  last_page?: number
   total: number
   per_page?: number
 }
@@ -38,6 +36,7 @@ const {
   modalOpen,
   mode,
   busy,
+  busyText,
   form,
   errors,
 
@@ -65,11 +64,23 @@ function prettyLabel(raw: string) {
   return t
 }
 
+// evita duplicados por re-render / partial reload
+const last = { success: '', error: '' }
+
 watch(
   () => [flash.value?.success, flash.value?.error],
   ([s, e]) => {
-    if (s) void swalNotify(String(s), 'success')
-    if (e) void swalNotify(String(e), 'error')
+    const ss = s ? String(s) : ''
+    const ee = e ? String(e) : ''
+
+    if (ss && ss !== last.success) {
+      last.success = ss
+      setTimeout(() => swalNotify(ss, 'success'), 0)
+    }
+    if (ee && ee !== last.error) {
+      last.error = ee
+      setTimeout(() => swalNotify(ee, 'error'), 0)
+    }
   },
   { immediate: true }
 )
@@ -79,44 +90,27 @@ function onKeydown(e: KeyboardEvent) {
 }
 window.addEventListener('keydown', onKeydown)
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+
+import type { BreadcrumbItem } from '@/types'
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Usuarios', href: '/admin/usuarios' },
+]
 </script>
 
 <template>
   <Head title="Usuarios" />
 
-  <AppLayout>
-    <!-- FULL WIDTH real: quité max-w-7xl -->
+  <AppLayout :breadcrumbs="breadcrumbs">
     <div class="mx-auto w-full px-4 py-6 sm:px-6 lg:px-8 2xl:px-12">
-      <!-- Header -->
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div class="min-w-0">
-          <h1 class="text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-            Usuarios
-          </h1>
-        </div>
 
-        <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <button
-            type="button"
-            class="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white shadow-sm
-                   transition-all duration-200
-                   hover:-translate-y-[1px] hover:shadow-lg hover:shadow-slate-900/10
-                   active:translate-y-0 active:shadow-sm
-                   dark:bg-white dark:text-slate-900 dark:hover:shadow-white/10 sm:w-auto"
-            @click="openCreate()"
-          >
-            <span class="transition-transform duration-200 group-hover:scale-[1.03]">Registrar usuario</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Filters -->
-      <div class="mt-6 rounded-3xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-950 sm:p-5">
+      <div class="mt-0 rounded-3xl border border-slate-200/70 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-slate-950 sm:p-5">
         <div class="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-end">
           <div class="lg:col-span-6">
             <label class="mb-1 block text-xs font-black uppercase tracking-wide text-slate-600 dark:text-slate-300">
               Buscar
             </label>
+
             <div
               class="group flex items-center gap-2 rounded-2xl border-2 border-slate-200/70 bg-white/95 px-4 py-3
                      shadow-sm shadow-transparent transition-all duration-200
@@ -131,7 +125,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 class="w-full bg-transparent text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-400
                        dark:text-slate-100 dark:placeholder:text-slate-500"
               />
-              <!-- Quité el ⌘K porque se ve feo y no aporta -->
             </div>
           </div>
 
@@ -154,7 +147,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
           <div class="lg:col-span-3">
             <label class="mb-1 block text-xs font-black uppercase tracking-wide text-slate-600 dark:text-slate-300">
-              Status
+              Estatus
             </label>
             <select
               v-model="filters.status"
@@ -168,6 +161,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
               <option v-for="s in props.catalogs.statuses" :key="s" :value="s">{{ s }}</option>
             </select>
           </div>
+
         </div>
 
         <div class="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -177,6 +171,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             </span>
             <span>Total de usuarios</span>
           </div>
+
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <button
+                type="button"
+                class="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-3 text-sm font-black text-white shadow-sm
+                    transition-all duration-200
+                    hover:-translate-y-[1px] hover:shadow-lg hover:shadow-slate-900/10
+                    active:translate-y-0 active:shadow-sm
+                    dark:bg-white dark:text-slate-900 dark:hover:shadow-white/10 sm:w-auto"
+                @click="openCreate()"
+            >
+                <span class="transition-transform duration-200 group-hover:scale-[1.03]">Registrar usuario</span>
+            </button>
+            </div>
 
           <button
             v-if="hasFilters"
@@ -193,7 +201,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         </div>
       </div>
 
-      <!-- List (Desktop table) -->
       <div class="mt-6">
         <div class="hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950 lg:block">
           <div class="border-b border-slate-200 px-6 py-4 dark:border-slate-800">
@@ -264,7 +271,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                     Editar
                   </button>
 
-                  <!-- Eliminación lógica / Activación -->
                   <button
                     type="button"
                     class="rounded-2xl border px-3 py-2 text-xs font-black transition-all duration-200"
@@ -280,9 +286,87 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             </div>
           </div>
         </div>
+
+        <!-- MOBILE / TABLET: cards (sin tabla) -->
+        <div class="lg:hidden">
+        <div class="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-950">
+            <div class="border-b border-slate-200 px-4 py-4 dark:border-slate-800">
+            <div class="text-xs font-black uppercase tracking-wide text-slate-600 dark:text-slate-300">
+                Usuarios
+            </div>
+            </div>
+
+            <div v-if="rows.length === 0" class="px-4 py-14 text-center text-sm font-semibold text-slate-600 dark:text-slate-300">
+            Sin resultados.
+            </div>
+
+            <div v-else class="divide-y divide-slate-100 dark:divide-slate-900">
+            <div
+                v-for="u in rows"
+                :key="u.id"
+                class="p-4 transition-all duration-200 hover:bg-slate-50/70 dark:hover:bg-slate-900/30"
+            >
+                <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="truncate text-sm font-black text-slate-900 dark:text-slate-100">
+                    {{ u.name }}
+                    </div>
+                    <div class="mt-0.5 truncate text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    {{ u.email }}
+                    </div>
+
+                    <div class="mt-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                    <div v-if="u.persona?.nombre_completo" class="text-sm font-black text-slate-900 dark:text-slate-100">
+                        {{ u.persona.nombre_completo }}
+                    </div>
+                    <div v-else class="italic">Sin persona</div>
+                    </div>
+
+                    <div class="mt-3 flex flex-wrap gap-2">
+                    <span class="inline-flex w-fit rounded-full bg-slate-100 px-2.5 py-1 text-xs font-black text-slate-900 dark:bg-white/10 dark:text-slate-100">
+                        {{ u.rol }}
+                    </span>
+
+                    <span
+                        class="inline-flex w-fit rounded-full px-2.5 py-1 text-xs font-black"
+                        :class="u.status === 'activo'
+                        ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-200'
+                        : 'bg-slate-100 text-slate-800 dark:bg-white/10 dark:text-slate-200'"
+                    >
+                        {{ u.status }}
+                    </span>
+                    </div>
+                </div>
+
+                <div class="flex shrink-0 flex-col gap-2">
+                    <button
+                    type="button"
+                    class="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs font-black text-slate-900
+                            transition-all duration-200 hover:bg-slate-50 hover:shadow-sm
+                            dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:hover:bg-slate-900"
+                    @click="openEdit(u)"
+                    >
+                    Editar
+                    </button>
+
+                    <button
+                    type="button"
+                    class="rounded-2xl border px-3 py-2 text-xs font-black transition-all duration-200"
+                    :class="u.status === 'activo'
+                        ? 'border-rose-200 bg-rose-50 text-rose-900 hover:bg-rose-100 hover:shadow-sm dark:border-rose-900/40 dark:bg-rose-950/40 dark:text-rose-200 dark:hover:bg-rose-950/70'
+                        : 'border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 hover:shadow-sm dark:border-emerald-900/40 dark:bg-emerald-950/40 dark:text-emerald-200 dark:hover:bg-emerald-950/70'"
+                    @click="toggleUser(u)"
+                    >
+                    {{ u.status === 'activo' ? 'Eliminar' : 'Activar' }}
+                    </button>
+                </div>
+                </div>
+            </div>
+            </div>
+        </div>
+        </div>
       </div>
 
-      <!-- Pagination -->
       <div class="mt-6">
         <PaginationLinks
           :meta="props.users.meta"
@@ -292,7 +376,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         />
       </div>
 
-      <!-- MODAL -->
       <transition
         enter-active-class="transition duration-200 ease-out"
         enter-from-class="opacity-0 translate-y-2"
@@ -313,14 +396,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                   <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100">
                     {{ mode === 'edit' ? 'Editar usuario' : 'Crear usuario' }}
                   </h3>
-                  <p v-if="errors.form" class="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200">
+
+                  <p
+                    v-if="errors.form"
+                    class="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-bold text-rose-700
+                           dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-200"
+                  >
                     {{ errors.form }}
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  class="rounded-2xl p-2 text-slate-500 transition hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-900"
+                  class="rounded-2xl p-2 text-slate-500 transition hover:text-slate-900 hover:bg-slate-100
+                         dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-900"
                   @click="closeModal()"
                   aria-label="Cerrar"
                 >
@@ -331,11 +420,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
             <div class="p-5 sm:p-6">
               <div class="grid grid-cols-1 gap-4">
-                <!-- Persona -->
                 <div class="rounded-3xl border border-slate-200 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-900/30 sm:p-5">
                   <h4 class="text-sm font-black text-slate-900 dark:text-slate-100">Persona</h4>
 
-                  <!-- CREATE: seleccionable -->
                   <div v-if="mode === 'create'" class="mt-3">
                     <SearchSelect
                       v-model="form.persona_id"
@@ -358,7 +445,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                     </div>
                   </div>
 
-                  <!-- EDIT: fija (sin cambiar persona) -->
                   <div v-else class="mt-3">
                     <input
                       :value="selectedPersona?.nombre_completo || 'Sin persona'"
@@ -372,7 +458,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                   </div>
                 </div>
 
-                <!-- Campos usuario -->
                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div class="sm:col-span-2">
                     <label class="text-xs font-black text-slate-700 dark:text-slate-200">Nombre</label>
@@ -417,7 +502,6 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                     <p v-if="errors.rol" class="mt-1 text-xs font-bold text-rose-600">{{ errors.rol }}</p>
                   </div>
 
-                  <!-- Password solo edit (reset) -->
                   <div v-if="mode === 'edit'">
                     <label class="text-xs font-black text-slate-700 dark:text-slate-200">Reset password (opcional)</label>
                     <input
@@ -442,6 +526,14 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
             </div>
 
             <div class="flex flex-col-reverse gap-2 border-t border-slate-200 p-5 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-end sm:p-6">
+              <div
+                v-if="busy && mode === 'create'"
+                class="mr-auto flex items-center gap-2 text-xs font-semibold text-slate-600 dark:text-slate-300"
+              >
+                <span class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-transparent dark:border-slate-700 dark:border-t-transparent" />
+                <span>Espere un momento, {{ busyText }}</span>
+              </div>
+
               <button
                 type="button"
                 class="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-black text-slate-900
@@ -461,7 +553,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
                 :disabled="busy"
                 @click="submit()"
               >
-                {{ busy ? 'Guardando…' : 'Guardar' }}
+                {{ busy ? (mode === 'create' ? 'Enviando…' : 'Guardando…') : 'Guardar' }}
               </button>
             </div>
           </div>

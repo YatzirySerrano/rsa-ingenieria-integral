@@ -11,66 +11,76 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
+
 import { dashboard } from '@/routes';
 import { index as productosIndex } from '@/routes/productos'
 import { index as serviciosIndex } from '@/routes/Servicios'
 import { index as cotizacionsIndex } from '@/routes/cotizaciones'
 import { index as personasIndex } from '@/routes/personas'
-// import { index as logActivityIndex } from '@/routes/logActivity'
 import { index as categoriasIndex } from '@/routes/categorias'
 import { index as marcasIndex } from '@/routes/marcas'
 import { index as usuariosIndex } from '@/routes/usuarios'
 
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Package , Briefcase, FileText} from 'lucide-vue-next';
+
+import {
+    Gauge,
+    Boxes,
+    Wrench,
+    ClipboardList,
+    Tags,
+    Users,
+    BadgeCheck,
+    UserCog
+} from 'lucide-vue-next';
+
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems = [
     {
         title: 'Dashboard',
         href: dashboard().url,
-        icon: LayoutGrid,
+        icon: Gauge,
     },
     {
         title: 'Productos',
         href: productosIndex().url,
-        icon: Package,
+        icon: Boxes,
     },
     {
         title: 'Servicios',
         href: serviciosIndex().url,
-        icon: Briefcase,
+        icon: Wrench,
     },
     {
         title: 'Cotizaciones',
         href: cotizacionsIndex().url,
-        icon: FileText,
+        icon: ClipboardList,
     },
     {
-        title: 'Categorias',
+        title: 'Categorías',
         href: categoriasIndex().url,
-        icon: FileText,
+        icon: Tags,
     },
     {
         title: 'Personas',
         href: personasIndex().url,
-        icon: FileText,
+        icon: Users,
     },
     {
         title: 'Marcas',
         href: marcasIndex().url,
-        icon: FileText,
+        icon: BadgeCheck,
     },
     {
         title: 'Usuarios',
         href: usuariosIndex().url,
-        icon: FileText,
+        icon: UserCog,
     },
-]
-
-const footerNavItems: NavItem[] = [
 ];
+
+const footerNavItems: NavItem[] = [];
 </script>
 
 <template>

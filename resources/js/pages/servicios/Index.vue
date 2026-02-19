@@ -213,22 +213,30 @@ function actionBtnClass(status: string) {
     ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm shadow-rose-500/20'
     : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-500/20'
 }
+
+import type { BreadcrumbItem } from '@/types'
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Servicios', href: '/servicios' },
+]
 </script>
 
 <template>
   <Head title="Servicios" />
 
-  <AppLayout>
+  <AppLayout :breadcrumbs="breadcrumbs">
     <div class="px-4 py-5 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-14">
-      <div class="mb-6 lg:mb-8">
-        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-          <div class="space-y-1">
-            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-zinc-100">
-              Servicios
-            </h1>
-          </div>
 
-          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div class="mb-6 lg:mb-8">
+        <div
+          class="rounded-2xl lg:rounded-3xl border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-zinc-950/50
+                 p-4 sm:p-5 lg:p-6 shadow-xl shadow-slate-200/20 dark:shadow-black/20 backdrop-blur-sm"
+        >
+          <div class="flex items-center justify-between mb-4 sm:mb-5">
+            <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-zinc-100">Filtros</h3>
+            <Filter class="h-5 w-5 text-slate-400 dark:text-zinc-500" />
+
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
             <Button
               type="button"
               variant="outline"
@@ -253,17 +261,6 @@ function actionBtnClass(status: string) {
               <span class="text-xs sm:text-sm font-extrabold">Nuevo</span>
             </Button>
           </div>
-        </div>
-      </div>
-
-      <div class="mb-6 lg:mb-8">
-        <div
-          class="rounded-2xl lg:rounded-3xl border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-zinc-950/50
-                 p-4 sm:p-5 lg:p-6 shadow-xl shadow-slate-200/20 dark:shadow-black/20 backdrop-blur-sm"
-        >
-          <div class="flex items-center justify-between mb-4 sm:mb-5">
-            <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-zinc-100">Filtros</h3>
-            <Filter class="h-5 w-5 text-slate-400 dark:text-zinc-500" />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4">

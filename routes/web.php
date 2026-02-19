@@ -3,12 +3,11 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
+
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\MarcaController;
-use App\Http\Controllers\CotizacionController;
-use App\Http\Controllers\CotizacionDetalleController;
 use App\Http\Controllers\PersonaController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\PublicProductoController;
@@ -38,31 +37,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    // Rutas para servicios excepto show
+    // Servicios (sin show)
     Route::resource('servicios', ServicioController::class)->only(['index','store','update','destroy']);
     Route::patch('servicios/{servicio}/reactivate', [ServicioController::class, 'reactivate'])
-  ->name('servicios.reactivate');
+        ->name('servicios.reactivate');
 
-    // Rutas para categorias excepto show
-    Route::resource('categorias', CategoriaController::class)
-        ->except(['show']);
-    // Rutas para marcas excepto show
-    Route::resource('marcas', MarcaController::class)
-        ->except(['show']);
-    // Rutas para marcas excepto show
-    Route::resource('personas', PersonaController::class)
-        ->except(['show']);
-    // Rutas para usuarios
-    Route::get('/admin/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
-    Route::post('/admin/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
-    Route::put('/admin/usuarios/{user}', [UsuarioController::class, 'update'])->name('usuarios.update');
-    Route::delete('/admin/usuarios/{user}', [UsuarioController::class, 'destroy'])->name('usuarios.destroy');
-    // Lookup de personas
-    Route::get('/admin/usuarios/personas-lookup', [UsuarioController::class, 'personasLookup']);
-    // Activar usuario (para el botón “Activar”)
-    Route::patch('/admin/usuarios/{usuario}/activar', [UsuarioController::class, 'activar']);
+    // Categorías / Marcas / Personas (sin show)
+    Route::resource('categorias', CategoriaController::class)->except(['show']);
+    Route::resource('marcas', MarcaController::class)->except(['show']);
+    Route::resource('personas', PersonaController::class)->except(['show']);
 
-    // Rutas para productos excepto show
+    // -------------------------
+    // Admin: Usuarios
+    // -------------------------
+    Route::prefix('admin')->group(function () {
+        Route::get('usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
+        Route::post('usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
+        Route::put('usuarios/{user}', [UsuarioController::class, 'update'])->name('usuarios.update');
+        Route::delete('usuarios/{user}', [UsuarioController::class, 'destroy'])->name('usuarios.destroy');
+
+        // Lookup de personas (para combobox / search)
+        Route::get('usuarios/personas-lookup', [UsuarioController::class, 'personasLookup'])
+            ->name('usuarios.personasLookup');
+
+        // Activar usuario
+        Route::patch('usuarios/{user}/activar', [UsuarioController::class, 'activar'])
+            ->name('usuarios.activar');
+    });
+
+    // -------------------------
+    // Productos
+    // -------------------------
     Route::resource('productos', ProductoController::class);
     Route::post('productos/{producto}/medias', [ProductoController::class, 'mediaUpload'])
         ->name('productos.medias.upload');
@@ -77,6 +82,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('productos/{producto}/toggle-status', [ProductoController::class, 'toggleStatus'])
         ->name('productos.toggleStatus');
 
+    // -------------------------
+    // Cotizaciones (Panel)
+    // -------------------------
     Route::get('/cotizaciones', [CotizacionPanelController::class, 'index'])
         ->name('cotizaciones.index');
     Route::get('/cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'show'])

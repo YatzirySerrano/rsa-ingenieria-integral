@@ -56,12 +56,18 @@ function formatDate(value: string | null) {
     minute: '2-digit',
   }).format(date)
 }
+
+import type { BreadcrumbItem } from '@/types'
+
+const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Categorías', href: '/categorias' },
+]
 </script>
 
 <template>
   <Head title="Categorías" />
 
-  <AppLayout>
+  <AppLayout :breadcrumbs="breadcrumbs">
     <div class="px-4 py-5 sm:px-6 lg:px-10 2xl:px-14">
       <div
         class="rounded-3xl border border-slate-200/70 bg-white/80 p-4 shadow-sm backdrop-blur
@@ -69,14 +75,9 @@ function formatDate(value: string | null) {
       >
         <div class="flex flex-col gap-4">
           <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div class="min-w-0">
-              <h1
-                class="truncate text-lg font-black tracking-tight text-slate-900
-                       sm:text-xl lg:text-2xl dark:text-zinc-100"
-              >
-                Categorías
-              </h1>
-            </div>
+
+            <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-zinc-100">Filtros</h3>
+            <Filter class="h-5 w-5 text-slate-400 dark:text-zinc-500" />
 
             <div class="flex flex-wrap items-center gap-2">
               <Button

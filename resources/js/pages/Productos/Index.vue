@@ -1,310 +1,316 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3'
-import { computed, ref } from 'vue'
+    import { Head } from '@inertiajs/vue3'
+    import { computed, ref } from 'vue'
 
-import AppLayout from '@/layouts/AppLayout.vue'
-import PaginationLinks from '@/components/ui/PaginationLinks.vue'
-import SearchSelect from '@/components/util/SearchSelect.vue'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+    import AppLayout from '@/layouts/AppLayout.vue'
+    import PaginationLinks from '@/components/ui/PaginationLinks.vue'
+    import SearchSelect from '@/components/util/SearchSelect.vue'
+    import { Button } from '@/components/ui/button'
+    import { Input } from '@/components/ui/input'
 
-import ProductoMediaManager from '@/components/ProductoMediaManager.vue'
+    import ProductoMediaManager from '@/components/ProductoMediaManager.vue'
 
-import type { Paginated } from '@/types/common'
-import type { Producto, ProductoMedia, MarcaLite, CategoriaLite } from '@/composables/crud/useProductoCrud'
-import { useProductoCrud } from '@/composables/crud/useProductoCrud'
+    import type { Paginated } from '@/types/common'
+    import type { Producto, ProductoMedia, MarcaLite, CategoriaLite } from '@/composables/crud/useProductoCrud'
+    import { useProductoCrud } from '@/composables/crud/useProductoCrud'
 
-import Swal from 'sweetalert2'
-import { swalNotify } from '@/lib/swal'
+    import Swal from 'sweetalert2'
+    import { swalNotify } from '@/lib/swal'
 
-import {
-  Plus,
-  Pencil,
-  Power,
-  RefreshCw,
-  Search,
-  Filter,
-  Tag,
-  Layers,
-  Barcode,
-  DollarSign,
-  Package,
-  Image as ImageIcon,
-  X,
-  Upload,
-  Trash2,
-  Sparkles,
-  Eye,
-} from 'lucide-vue-next'
+    import {
+        Plus,
+        Pencil,
+        Power,
+        RefreshCw,
+        Search,
+        Filter,
+        Tag,
+        Layers,
+        Barcode,
+        DollarSign,
+        Package,
+        Image as ImageIcon,
+        X,
+        Upload,
+        Trash2,
+        Sparkles,
+        Eye,
+    } from 'lucide-vue-next'
 
-const props = defineProps<{
-  items: Paginated<Producto>
-  filters: Partial<{ q: string; status: string; marca_id: string; categoria_id: string; per_page?: number | string }>
-  meta: {
-    statuses: string[]
-    marcas: { data?: MarcaLite[] } | MarcaLite[]
-    categorias: { data?: CategoriaLite[] } | CategoriaLite[]
-  }
-}>()
+    const props = defineProps<{
+        items: Paginated<Producto>
+        filters: Partial<{ q: string; status: string; marca_id: string; categoria_id: string; per_page?: number | string }>
+        meta: {
+            statuses: string[]
+            marcas: { data?: MarcaLite[] } | MarcaLite[]
+            categorias: { data?: CategoriaLite[] } | CategoriaLite[]
+        }
+    }>()
 
-const items = computed(() => {
-  const it = props.items as any
-  const safeLinks = Array.isArray(it?.links)
-    ? it.links
-    : it?.meta?.links && Array.isArray(it.meta.links)
-      ? it.meta.links
-      : []
-  const safeData = Array.isArray(it?.data) ? it.data : []
-  return {
-    ...props.items,
-    data: safeData,
-    links: safeLinks,
-  } as Paginated<Producto> & { links: any[]; data: Producto[] }
-})
+    const items = computed(() => {
+        const it = props.items as any
+        const safeLinks = Array.isArray(it?.links)
+            ? it.links
+            : it?.meta?.links && Array.isArray(it.meta.links)
+            ? it.meta.links
+            : []
+        const safeData = Array.isArray(it?.data) ? it.data : []
+        return {
+            ...props.items,
+            data: safeData,
+            links: safeLinks,
+        } as Paginated<Producto> & { links: any[]; data: Producto[] }
+    })
 
-const rows = computed<Producto[]>(() => items.value.data ?? [])
-const total = computed(() => (items.value.meta?.total ?? rows.value.length) as number)
+    const rows = computed<Producto[]>(() => items.value.data ?? [])
+    const total = computed(() => (items.value.meta?.total ?? rows.value.length) as number)
 
-const marcas = computed<MarcaLite[]>(() => {
-  const v: any = props.meta.marcas
-  return Array.isArray(v) ? v : v?.data || []
-})
-const categorias = computed<CategoriaLite[]>(() => {
-  const v: any = props.meta.categorias
-  return Array.isArray(v) ? v : v?.data || []
-})
+    const marcas = computed<MarcaLite[]>(() => {
+        const v: any = props.meta.marcas
+        return Array.isArray(v) ? v : v?.data || []
+    })
+    const categorias = computed<CategoriaLite[]>(() => {
+        const v: any = props.meta.categorias
+        return Array.isArray(v) ? v : v?.data || []
+    })
 
-const crud = useProductoCrud({
-  initialFilters: props.filters as any,
-  baseUrl: '/productos',
-  autoApply: true,
-  debounceMs: 350,
-})
+    const crud = useProductoCrud({
+        initialFilters: props.filters as any,
+        baseUrl: '/productos',
+        autoApply: true,
+        debounceMs: 350,
+    })
 
-const perPage = computed<number>(() => {
-  const n0 = Number((crud.filters as any).per_page ?? NaN)
-  if (Number.isFinite(n0)) return n0
+    const perPage = computed<number>(() => {
+        const n0 = Number((crud.filters as any).per_page ?? NaN)
+        if (Number.isFinite(n0)) return n0
+        const n1 = Number(props.filters?.per_page ?? NaN)
+        if (Number.isFinite(n1)) return n1
+        const n2 = Number((items.value.meta as any)?.per_page ?? NaN)
+        if (Number.isFinite(n2)) return n2
+        return 10
+    })
 
-  const n1 = Number(props.filters?.per_page ?? NaN)
-  if (Number.isFinite(n1)) return n1
+    const marcaFilterModel = computed<any>({
+        get: () => (crud.filters.marca_id === crud.ALL ? '' : crud.filters.marca_id),
+        set: (v: any) => {
+            const s = String(v ?? '').trim()
+            crud.filters.marca_id = s ? s : crud.ALL
+        },
+    })
+    const categoriaFilterModel = computed<any>({
+        get: () => (crud.filters.categoria_id === crud.ALL ? '' : crud.filters.categoria_id),
+        set: (v: any) => {
+            const s = String(v ?? '').trim()
+            crud.filters.categoria_id = s ? s : crud.ALL
+        },
+    })
 
-  const n2 = Number((items.value.meta as any)?.per_page ?? NaN)
-  if (Number.isFinite(n2)) return n2
+    const showMediaModal = ref(false)
+    const selectedProductForMedia = ref<Producto | null>(null)
 
-  return 10
-})
+    function openMediaModal(p: Producto) {
+        selectedProductForMedia.value = p
+        showMediaModal.value = true
+    }
+    function closeMediaModal() {
+        showMediaModal.value = false
+        selectedProductForMedia.value = null
+    }
 
-const marcaFilterModel = computed<any>({
-  get: () => (crud.filters.marca_id === crud.ALL ? '' : crud.filters.marca_id),
-  set: (v: any) => {
-    const s = String(v ?? '').trim()
-    crud.filters.marca_id = s ? s : crud.ALL
-  },
-})
-const categoriaFilterModel = computed<any>({
-  get: () => (crud.filters.categoria_id === crud.ALL ? '' : crud.filters.categoria_id),
-  set: (v: any) => {
-    const s = String(v ?? '').trim()
-    crud.filters.categoria_id = s ? s : crud.ALL
-  },
-})
+    type MediaTipo = 'imagen' | 'video'
+    const mediaManagerInitial = computed<ProductoMedia[]>(() => {
+        const p = selectedProductForMedia.value
+        if (!p) return []
+        return (p.medias ?? []).map((m) => ({
+            ...m,
+            tipo: ((m as any).tipo ?? 'imagen') as MediaTipo,
+            producto_id: p.id,
+        })) as any
+    })
 
-const showMediaModal = ref(false)
-const selectedProductForMedia = ref<Producto | null>(null)
+    function money(v: unknown): string {
+        if (v === null || v === undefined || v === '') return '$0.00'
+        const n = Number(v)
+        if (!Number.isFinite(n)) return String(v)
+        return n.toLocaleString('es-MX', {
+            style: 'currency',
+            currency: 'MXN',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })
+    }
+    function statusPill(status: string): string {
+        return status === 'activo'
+            ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/20'
+            : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-1 ring-rose-500/20'
+    }
+    function rowDot(status: string): string {
+        return status === 'activo' ? 'bg-emerald-500' : 'bg-rose-500'
+    }
+    function getStatusButtonClasses(status: string): string {
+        return status === 'activo'
+            ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm shadow-rose-500/20'
+            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-500/20'
+    }
+    function normalizeStorageUrl(url: string): string {
+        if (!url) return ''
+        if (url.startsWith('http')) return url
+        if (url.startsWith('/storage/')) return url
+        const clean = url.replace(/^storage\//, '').replace(/^\/storage\//, '')
+        return `/storage/${clean}`
+    }
+    function getActiveMedias(producto: Producto): ProductoMedia[] {
+    return (producto.medias || []).filter((m) => m.status === 'activo')
+    }
+    function getActiveMediaCount(producto: Producto): number {
+    return getActiveMedias(producto).length
+    }
+    function getFirstActiveImage(producto: Producto): string {
+    const medias = getActiveMedias(producto)
+    if (!medias.length) return ''
+    const main =
+        medias.find((m) => !!m.principal) ||
+        medias.slice().sort((a, b) => (a.orden ?? 9999) - (b.orden ?? 9999))[0]
+    return normalizeStorageUrl(main.url)
+    }
 
-function openMediaModal(p: Producto) {
-  selectedProductForMedia.value = p
-  showMediaModal.value = true
-}
-function closeMediaModal() {
-  showMediaModal.value = false
-  selectedProductForMedia.value = null
-}
+    const modalMarcaModel = computed<any>({
+    get: () => crud.form.marca_id ?? '',
+    set: (v: any) => {
+        const n = Number(v)
+        crud.form.marca_id = Number.isFinite(n) && n > 0 ? n : null
+    },
+    })
+    const modalCategoriaModel = computed<any>({
+    get: () => crud.form.categoria_id ?? '',
+    set: (v: any) => {
+        const n = Number(v)
+        crud.form.categoria_id = Number.isFinite(n) && n > 0 ? n : null
+    },
+    })
 
-type MediaTipo = 'imagen' | 'video'
-const mediaManagerInitial = computed<ProductoMedia[]>(() => {
-  const p = selectedProductForMedia.value
-  if (!p) return []
-  return (p.medias ?? []).map((m) => ({
-    ...m,
-    tipo: ((m as any).tipo ?? 'imagen') as MediaTipo,
-    producto_id: p.id,
-  })) as any
-})
+    function onFotosChange(e: Event) {
+    const input = e.target as HTMLInputElement
+    crud.setFotos(input.files)
+    }
+    function clearFotosInput() {
+    crud.clearFotos()
+    const el = document.getElementById('producto_fotos_input') as HTMLInputElement | null
+    if (el) el.value = ''
+    }
 
-function money(v: unknown): string {
-  if (v === null || v === undefined || v === '') return '$0.00'
-  const n = Number(v)
-  if (!Number.isFinite(n)) return String(v)
-  return n.toLocaleString('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })
-}
-function statusPill(status: string): string {
-  return status === 'activo'
-    ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-1 ring-emerald-500/20'
-    : 'bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-1 ring-rose-500/20'
-}
-function rowDot(status: string): string {
-  return status === 'activo' ? 'bg-emerald-500' : 'bg-rose-500'
-}
-function getStatusButtonClasses(status: string): string {
-  return status === 'activo'
-    ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-sm shadow-rose-500/20'
-    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm shadow-emerald-500/20'
-}
-function normalizeStorageUrl(url: string): string {
-  if (!url) return ''
-  if (url.startsWith('http')) return url
-  if (url.startsWith('/storage/')) return url
-  const clean = url.replace(/^storage\//, '').replace(/^\/storage\//, '')
-  return `/storage/${clean}`
-}
-function getActiveMedias(producto: Producto): ProductoMedia[] {
-  return (producto.medias || []).filter((m) => m.status === 'activo')
-}
-function getActiveMediaCount(producto: Producto): number {
-  return getActiveMedias(producto).length
-}
-function getFirstActiveImage(producto: Producto): string {
-  const medias = getActiveMedias(producto)
-  if (!medias.length) return ''
-  const main =
-    medias.find((m) => !!m.principal) ||
-    medias.slice().sort((a, b) => (a.orden ?? 9999) - (b.orden ?? 9999))[0]
-  return normalizeStorageUrl(main.url)
-}
+    async function showProducto(p: Producto) {
+    const isDark = document.documentElement.classList.contains('dark')
+    const imgs = (p.medias ?? [])
+        .filter((m: any) => (m?.tipo ?? 'imagen') === 'imagen' && m.status === 'activo')
+        .sort((a, b) => (a.orden ?? 9999) - (b.orden ?? 9999))
+        .map((m) => normalizeStorageUrl((m as any).url))
 
-const modalMarcaModel = computed<any>({
-  get: () => crud.form.marca_id ?? '',
-  set: (v: any) => {
-    const n = Number(v)
-    crud.form.marca_id = Number.isFinite(n) && n > 0 ? n : null
-  },
-})
-const modalCategoriaModel = computed<any>({
-  get: () => crud.form.categoria_id ?? '',
-  set: (v: any) => {
-    const n = Number(v)
-    crud.form.categoria_id = Number.isFinite(n) && n > 0 ? n : null
-  },
-})
+    const gallery =
+        imgs.length > 0
+        ? `
+            <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px">
+            ${imgs
+                .slice(0, 12)
+                .map(
+                (src) => `
+                <div style="aspect-ratio:1/1;overflow:hidden;border-radius:14px;border:1px solid rgba(148,163,184,.35)">
+                    <img src="${src}" style="width:100%;height:100%;object-fit:cover" />
+                </div>
+                `
+                )
+                .join('')}
+            </div>
+            ${imgs.length > 12 ? `<div style="margin-top:10px;font-weight:700;opacity:.75">+${imgs.length - 12} más</div>` : ''}
+        `
+        : `<div style="margin-top:10px;opacity:.75;font-weight:700">Sin imágenes activas.</div>`
 
-function onFotosChange(e: Event) {
-  const input = e.target as HTMLInputElement
-  crud.setFotos(input.files)
-}
-function clearFotosInput() {
-  crud.clearFotos()
-  const el = document.getElementById('producto_fotos_input') as HTMLInputElement | null
-  if (el) el.value = ''
-}
+    await Swal.fire({
+        title: `<div style="text-align:left;font-weight:900">${p.nombre}</div>`,
+        html: `
+        <div style="text-align:left">
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+            <span style="padding:6px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.35);font-weight:800">SKU: ${p.sku}</span>
+            <span style="padding:6px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.35);font-weight:800">Stock: ${p.stock}</span>
+            <span style="padding:6px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.35);font-weight:800">Venta: ${money(p.precio_venta)}</span>
+            <span style="padding:6px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.35);font-weight:800">Estado: ${p.status}</span>
+            </div>
 
-async function showProducto(p: Producto) {
-  const isDark = document.documentElement.classList.contains('dark')
-  const imgs = (p.medias ?? [])
-    .filter((m: any) => (m?.tipo ?? 'imagen') === 'imagen' && m.status === 'activo')
-    .sort((a, b) => (a.orden ?? 9999) - (b.orden ?? 9999))
-    .map((m) => normalizeStorageUrl((m as any).url))
+            <div style="margin-top:12px;font-weight:800;opacity:.85">
+            Marca: <span style="font-weight:900">${p.marca?.nombre ?? '—'}</span>
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            Categoría: <span style="font-weight:900">${p.categoria?.nombre ?? '—'}</span>
+            </div>
 
-  const gallery =
-    imgs.length > 0
-      ? `
-        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:12px">
-          ${imgs
-            .slice(0, 12)
-            .map(
-              (src) => `
-              <div style="aspect-ratio:1/1;overflow:hidden;border-radius:14px;border:1px solid rgba(148,163,184,.35)">
-                <img src="${src}" style="width:100%;height:100%;object-fit:cover" />
-              </div>
-            `
-            )
-            .join('')}
+            ${p.descripcion ? `<div style="margin-top:10px;opacity:.85">${p.descripcion}</div>` : ''}
+
+            ${gallery}
         </div>
-        ${imgs.length > 12 ? `<div style="margin-top:10px;font-weight:700;opacity:.75">+${imgs.length - 12} más</div>` : ''}
-      `
-      : `<div style="margin-top:10px;opacity:.75;font-weight:700">Sin imágenes activas.</div>`
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'Cerrar',
+        width: 980,
+        background: isDark ? '#0b0f19' : '#ffffff',
+        color: isDark ? '#e4e4e7' : '#0f172a',
+        heightAuto: false,
+    })
+    }
 
-  await Swal.fire({
-    title: `<div style="text-align:left;font-weight:900">${p.nombre}</div>`,
-    html: `
-      <div style="text-align:left">
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
-          <span style="padding:6px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.35);font-weight:800">SKU: ${p.sku}</span>
-          <span style="padding:6px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.35);font-weight:800">Stock: ${p.stock}</span>
-          <span style="padding:6px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.35);font-weight:800">Venta: ${money(p.precio_venta)}</span>
-          <span style="padding:6px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.35);font-weight:800">Estado: ${p.status}</span>
-        </div>
+    async function confirmToggleStatus(p: Producto) {
+    const isDark = document.documentElement.classList.contains('dark')
 
-        <div style="margin-top:12px;font-weight:800;opacity:.85">
-          Marca: <span style="font-weight:900">${p.marca?.nombre ?? '—'}</span>
-          &nbsp;&nbsp;|&nbsp;&nbsp;
-          Categoría: <span style="font-weight:900">${p.categoria?.nombre ?? '—'}</span>
-        </div>
+    const { isConfirmed } = await Swal.fire({
+        title: p.status === 'activo' ? 'Desactivar producto' : 'Activar producto',
+        text:
+        p.status === 'activo'
+            ? `El producto "${p.nombre}" quedará inactivo.`
+            : `El producto "${p.nombre}" volverá a estar activo.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: p.status === 'activo' ? 'Desactivar' : 'Activar',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true,
+        background: isDark ? '#0b0f19' : '#ffffff',
+        color: isDark ? '#e4e4e7' : '#0f172a',
+        heightAuto: false,
+    })
 
-        ${p.descripcion ? `<div style="margin-top:10px;opacity:.85">${p.descripcion}</div>` : ''}
+    if (!isConfirmed) return
 
-        ${gallery}
-      </div>
-    `,
-    showConfirmButton: true,
-    confirmButtonText: 'Cerrar',
-    width: 980,
-    background: isDark ? '#0b0f19' : '#ffffff',
-    color: isDark ? '#e4e4e7' : '#0f172a',
-    heightAuto: false,
-  })
-}
+    const ok = await crud.toggleStatus(p)
+    if (ok) {
+        swalNotify(p.status === 'activo' ? 'Producto desactivado.' : 'Producto activado.', 'success')
+        crud.applyFilters()
+    } else {
+        swalNotify('No se pudo cambiar el estado. Revisa el endpoint.', 'error')
+    }
+    }
 
-async function confirmToggleStatus(p: Producto) {
-  const isDark = document.documentElement.classList.contains('dark')
+    import type { BreadcrumbItem } from '@/types'
 
-  const { isConfirmed } = await Swal.fire({
-    title: p.status === 'activo' ? 'Desactivar producto' : 'Activar producto',
-    text:
-      p.status === 'activo'
-        ? `El producto "${p.nombre}" quedará inactivo.`
-        : `El producto "${p.nombre}" volverá a estar activo.`,
-    icon: 'question',
-    showCancelButton: true,
-    confirmButtonText: p.status === 'activo' ? 'Desactivar' : 'Activar',
-    cancelButtonText: 'Cancelar',
-    reverseButtons: true,
-    background: isDark ? '#0b0f19' : '#ffffff',
-    color: isDark ? '#e4e4e7' : '#0f172a',
-    heightAuto: false,
-  })
-
-  if (!isConfirmed) return
-
-  const ok = await crud.toggleStatus(p)
-  if (ok) {
-    swalNotify(p.status === 'activo' ? 'Producto desactivado.' : 'Producto activado.', 'success')
-    crud.applyFilters()
-  } else {
-    swalNotify('No se pudo cambiar el estado. Revisa el endpoint.', 'error')
-  }
-}
+    const breadcrumbs: BreadcrumbItem[] = [
+    { title: 'Productos', href: '/productos' },
+    ]
 </script>
 
 <template>
   <Head title="Productos" />
 
-  <AppLayout>
+  <AppLayout :breadcrumbs="breadcrumbs">
     <div class="px-4 py-5 sm:px-6 md:px-8 lg:px-10 xl:px-12 2xl:px-14">
-      <div class="mb-6 lg:mb-8">
-        <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-          <div class="space-y-1">
-            <h1 class="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight text-slate-900 dark:text-zinc-100">
-              Productos
-            </h1>
-          </div>
 
-          <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+      <div class="mb-6 lg:mb-8">
+        <div
+          class="rounded-2xl lg:rounded-3xl border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-zinc-950/50
+                 p-4 sm:p-5 lg:p-6 shadow-xl shadow-slate-200/20 dark:shadow-black/20 backdrop-blur-sm
+                 transition-all hover:shadow-2xl"
+        >
+          <div class="flex items-center justify-between mb-4 sm:mb-5">
+            <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-zinc-100">Filtros</h3>
+            <Filter class="h-5 w-5 text-slate-400 dark:text-zinc-500" />
+
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
             <Button
               type="button"
               variant="outline"
@@ -329,18 +335,6 @@ async function confirmToggleStatus(p: Producto) {
               <span class="text-xs sm:text-sm font-extrabold">Nuevo</span>
             </Button>
           </div>
-        </div>
-      </div>
-
-      <div class="mb-6 lg:mb-8">
-        <div
-          class="rounded-2xl lg:rounded-3xl border border-slate-200/70 dark:border-white/10 bg-white/80 dark:bg-zinc-950/50
-                 p-4 sm:p-5 lg:p-6 shadow-xl shadow-slate-200/20 dark:shadow-black/20 backdrop-blur-sm
-                 transition-all hover:shadow-2xl"
-        >
-          <div class="flex items-center justify-between mb-4 sm:mb-5">
-            <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-zinc-100">Filtros</h3>
-            <Filter class="h-5 w-5 text-slate-400 dark:text-zinc-500" />
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 sm:gap-4">

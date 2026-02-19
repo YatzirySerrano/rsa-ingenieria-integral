@@ -72,12 +72,18 @@
       const s = String(v ?? '').trim()
       return s ? s : '—'
     }
-    </script>
 
-    <template>
+    import type { BreadcrumbItem } from '@/types'
+
+    const breadcrumbs: BreadcrumbItem[] = [
+        { title: 'Personas', href: '/personas' },
+    ]
+</script>
+
+<template>
       <Head title="Personas" />
 
-      <AppLayout>
+      <AppLayout :breadcrumbs="breadcrumbs">
         <div class="px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           <!-- Background flourish -->
           <div class="relative">
@@ -95,7 +101,7 @@
           <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div class="min-w-0">
               <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-slate-100">
-                Personas
+                Filtros
               </h1>
             </div>
 
@@ -303,9 +309,6 @@
                       <td class="px-4 py-3">
                         <div class="font-black text-slate-900 dark:text-slate-100">
                           {{ displayName(p) }}
-                        </div>
-                        <div class="text-xs text-slate-500 dark:text-slate-400">
-                          ID: {{ p.id }}
                         </div>
                       </td>
 
