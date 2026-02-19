@@ -1,419 +1,433 @@
-// resources/js/composables/crud/useProductoCrud.ts
-// ================================================
-// Composable de Productos (negocio y estado, cero UX):
-// - Maneja filtros y navegación por Inertia (applyFilters, reset)
-// - Maneja modal create/edit (openCreate/openEdit/closeModal)
-// - Maneja form + validaciones backend (422)
-// - Maneja fotos como File[] + previews tipados (fotoPreviews: Array<{url,name}>)
-// - No dispara Swal. La UI decide cómo notificar.
-
-import { reactive, ref, computed, watch } from 'vue'
-import { router } from '@inertiajs/vue3'
 import axios from 'axios'
+import Swal from 'sweetalert2'
+import { computed, reactive, ref, watch, onBeforeUnmount, proxyRefs } from 'vue'
+import { router } from '@inertiajs/vue3'
 
-export type MarcaLite = { id: number; nombre: string }
-export type CategoriaLite = { id: number; nombre: string }
+export type CategoriaTipo = 'PRODUCTO' | 'SERVICIO'
+export type Status = 'activo' | 'inactivo'
+export type ProductoMediaTipo = 'imagen' | 'video'
+
+export type Marca = { id: number; nombre: string; status: Status }
+export type Categoria = { id: number; nombre: string; tipo: CategoriaTipo; status: Status }
+
+export type MarcaLite = Pick<Marca, 'id' | 'nombre'>
+export type CategoriaLite = Pick<Categoria, 'id' | 'nombre'>
 
 export type ProductoMedia = {
   id: number
+  producto_id: number
+  tipo: ProductoMediaTipo
   url: string
-  status: 'activo' | 'inactivo'
-  principal?: boolean
-  orden?: number | null
+  orden: number
+  principal: boolean
+  status: Status
 }
 
 export type Producto = {
   id: number
-  sku: string
-  nombre: string
-  descripcion?: string | null
-  stock: number
-  costo_lista?: number | string | null
-  precio_venta?: number | string | null
-  status: 'activo' | 'inactivo'
-  marca?: MarcaLite | null
-  categoria?: CategoriaLite | null
-  medias?: ProductoMedia[]
-}
-
-type Filters = {
-  q: string
-  status: string
-  marca_id: string
-  categoria_id: string
-  per_page?: number | string
-  page?: number
-}
-
-type ModalPayload = { marcas: MarcaLite[]; categorias: CategoriaLite[] }
-
-type FormState = {
-  id: number | null
   marca_id: number | null
   categoria_id: number | null
   sku: string
   nombre: string
-  descripcion: string
-  stock: number | string
-  precio_venta: number | string
-  costo_lista: number | string
-  fotos: File[]
+  descripcion?: string | null
+  stock: number
+  costo_lista: number
+  precio_venta: number
+  status: Status
+  marca?: Marca | null
+  categoria?: Categoria | null
+  medias?: ProductoMedia[]
 }
 
-type Errors = {
-  general?: string
-  marca_id?: string
-  categoria_id?: string
-  sku?: string
-  nombre?: string
-  descripcion?: string
-  stock?: string
-  precio_venta?: string
-  costo_lista?: string
+export type ProductoFilters = {
+  q: string
+  marca_id: string
+  categoria_id: string
+  status: string
+  per_page?: number | string
 }
 
-type FotoPreview = { url: string; name: string }
+/**
+ * IMPORTANTE:
+ * Tu backend está usando "__ALL__" (según tu route:list y controller),
+ * así que estandarizamos aquí para evitar bugs silenciosos.
+ */
+export const ALL = '__ALL__' as const
 
-export function useProductoCrud(opts: { initialFilters?: Partial<Filters>; baseUrl: string }) {
-    const baseUrl = opts.baseUrl
-  const ALL = '__ALL__'
+function ensureLeadingSlash(u: string) {
+  if (!u) return '/'
+  return u.startsWith('/') ? u : `/${u}`
+}
+function trimTrailingSlash(u: string) {
+  return u.replace(/\/+$/, '')
+}
 
-  // =========================
-  // Filtros (para la vista)
-  // =========================
-  const filters = reactive<Filters>({
+function normalizeAll(v: any): string {
+  const s = String(v ?? '').trim()
+  if (!s) return ALL
+  if (s === '__all__' || s === '__ALL__') return ALL
+  return s
+}
+
+let swalStyled = false
+function ensureSwalZ() {
+  if (swalStyled) return
+  const s = document.createElement('style')
+  s.textContent = `.swal2-container{z-index:20000 !important}`
+  document.head.appendChild(s)
+  swalStyled = true
+}
+
+function swalOk(title: string, text?: string) {
+  ensureSwalZ()
+  return Swal.fire({ icon: 'success', title, text, confirmButtonText: 'OK', heightAuto: false })
+}
+function swalErr(title: string, text?: string) {
+  ensureSwalZ()
+  return Swal.fire({ icon: 'error', title, text, confirmButtonText: 'OK', heightAuto: false })
+}
+
+type UseProductoCrudOptions = {
+  initialFilters?: Partial<ProductoFilters>
+  baseUrl?: string
+  autoApply?: boolean
+  debounceMs?: number
+}
+
+type OpenCtx = {
+  marcas?: MarcaLite[]
+  categorias?: CategoriaLite[]
+}
+
+export function useProductoCrud(opts: UseProductoCrudOptions = {}) {
+  const baseUrlRaw = ensureLeadingSlash(opts.baseUrl ?? '/productos')
+  const baseUrl = trimTrailingSlash(baseUrlRaw)
+
+  const filters = reactive<ProductoFilters>({
     q: String(opts.initialFilters?.q ?? ''),
-    status: String(opts.initialFilters?.status ?? ALL),
-    marca_id: String(opts.initialFilters?.marca_id ?? ALL),
-    categoria_id: String(opts.initialFilters?.categoria_id ?? ALL),
-    per_page: opts.initialFilters?.per_page !== undefined ? Number(opts.initialFilters?.per_page) : 10,
-    page: opts.initialFilters?.page !== undefined ? Number(opts.initialFilters?.page) : 1,
+    marca_id: normalizeAll(opts.initialFilters?.marca_id ?? ALL),
+    categoria_id: normalizeAll(opts.initialFilters?.categoria_id ?? ALL),
+    status: normalizeAll(opts.initialFilters?.status ?? ALL),
+    per_page: opts.initialFilters?.per_page ?? 10,
   })
 
-  // Detecta si hay filtros activos (para habilitar botón "Reiniciar")
-  const hasActiveFilters = computed(() => {
-    const q = (filters.q || '').trim()
-    const any =
-      !!q ||
-      (filters.status && filters.status !== ALL) ||
-      (filters.marca_id && filters.marca_id !== ALL) ||
-      (filters.categoria_id && filters.categoria_id !== ALL)
-    return any
-  })
-
-  // Debounce simple para búsqueda (evita visitas por cada tecla)
-  let qTimer: number | null = null
-  watch(
-    () => filters.q,
-    () => {
-      if (qTimer) window.clearTimeout(qTimer)
-      qTimer = window.setTimeout(() => applyFilters(), 350) as any
-    }
-  )
-
-  // Cuando cambian selects/status aplicamos directo (rápido y consistente)
-  watch(
-    () => [filters.status, filters.marca_id, filters.categoria_id],
-    () => applyFilters()
-  )
-
-  // dentro de useProductoCrud
-function setPerPage(v: number) {
-    filters.per_page = Number(v) // fuerza number, incluye 0
-  filters.page = 1             // reset page
-  applyFilters()
-  }
-  
-  function applyFilters() {
-    const q = (filters.q || '').trim()
-  
-    const params: Record<string, any> = {}
-  
-    if (q) params.q = q
-    if (filters.status && filters.status !== ALL) params.status = filters.status
-    if (filters.marca_id && filters.marca_id !== ALL) params.marca_id = filters.marca_id
-    if (filters.categoria_id && filters.categoria_id !== ALL) params.categoria_id = filters.categoria_id
-  
-    // per_page: permitir 0, 10, 15, 20. NO uses "if(per_page)" porque 0 es falsy.
-    if (filters.per_page !== undefined && filters.per_page !== null && filters.per_page !== '') {
-      params.per_page = Number(filters.per_page)
-    }
-  
-    // page: solo si existe y es >= 1
-    if (filters.page && Number(filters.page) >= 1) {
-      params.page = Number(filters.page)
-    }
-  
-    router.get(baseUrl, params, {
-      preserveScroll: true,
-      preserveState: true,
-      replace: true,
-    })
-  }
-
-  function resetFilters() {
-    filters.q = ''
-    filters.status = ALL
-    filters.marca_id = ALL
-    filters.categoria_id = ALL
-    filters.page = 1
-    applyFilters()
-  }
-
-  // =========================
-  // Modal create/edit
-  // =========================
   const modalOpen = ref(false)
   const modalMode = ref<'create' | 'edit'>('create')
 
   const modalMarcas = ref<MarcaLite[]>([])
   const modalCategorias = ref<CategoriaLite[]>([])
 
-  const saving = ref(false)
-  const errors = reactive<Errors>({})
+  // Blindaje: id de edición separado del form (aquí estaba tu bug real)
+  const editingId = ref<number | null>(null)
 
-  // Form tipado (importante para no romper TS en la vista)
-  const form = reactive<FormState>({
-    id: null,
-    marca_id: null,
-    categoria_id: null,
+  const form = reactive({
+    id: null as number | null,
+    marca_id: null as number | null,
+    categoria_id: null as number | null,
     sku: '',
+    stock: 0 as number | string,
+    precio_venta: 0 as number | string,
+    costo_lista: 0 as number | string,
     nombre: '',
     descripcion: '',
-    stock: 0,
-    precio_venta: 0,
-    costo_lista: 0,
-    fotos: [],
+    status: 'activo' as Status,
+
+    fotos: [] as File[],
+    foto_principal: null as File | null,
   })
 
-  // =========================
-  // Fotos + previews (TIPADO REAL)
-  // =========================
-  const fotoPreviews = ref<FotoPreview[]>([])
+  const errors = reactive<Record<string, string>>({})
+  const submitting = ref(false)
+  const saving = computed(() => submitting.value)
 
-  function revokePreviews() {
-    for (const p of fotoPreviews.value) URL.revokeObjectURL(p.url)
+  function resetErrors() {
+    Object.keys(errors).forEach((k) => delete errors[k])
+  }
+
+  // ---- Fotos / previews (nunca undefined) ----
+  const fotoPreviews = ref<Array<{ url: string; name: string }>>([])
+  let previewUrls: string[] = []
+
+  function clearPreviews() {
+    previewUrls.forEach((u) => URL.revokeObjectURL(u))
+    previewUrls = []
     fotoPreviews.value = []
   }
 
-  function setFotos(fileList: FileList | null) {
-    revokePreviews()
-
-    if (!fileList || !fileList.length) {
+  function setFotos(files: FileList | null | undefined) {
+    clearPreviews()
+    if (!files || files.length === 0) {
       form.fotos = []
       return
     }
+    const arr = Array.from(files)
+    form.fotos = arr
 
-    // File[] para que el template pueda usar length, slice, etc.
-    const files = Array.from(fileList)
-    form.fotos = files
-
-    // Previews tipados
-    fotoPreviews.value = files.map((f) => ({ url: URL.createObjectURL(f), name: f.name }))
+    const max = 24
+    const mapped = arr.slice(0, max).map((f) => {
+      const url = URL.createObjectURL(f)
+      previewUrls.push(url)
+      return { url, name: f.name }
+    })
+    fotoPreviews.value = mapped
   }
 
   function clearFotos() {
     form.fotos = []
-    revokePreviews()
+    form.foto_principal = null
+    clearPreviews()
   }
 
-  function clearErrors() {
-    for (const k of Object.keys(errors)) {
-      // @ts-ignore
-      errors[k] = undefined
-    }
-  }
+  onBeforeUnmount(() => {
+    clearPreviews()
+  })
 
-  function fillFromProducto(p: Producto) {
-    form.id = p.id ?? null
-    form.marca_id = (p.marca?.id ?? null) as any
-    form.categoria_id = (p.categoria?.id ?? null) as any
-    form.sku = String(p.sku ?? '')
-    form.nombre = String(p.nombre ?? '')
-    form.descripcion = String(p.descripcion ?? '')
-    form.stock = (p.stock ?? 0) as any
-    form.precio_venta = (p.precio_venta ?? 0) as any
-    form.costo_lista = (p.costo_lista ?? 0) as any
-
-    // En edit no arrastramos fotos automáticamente
-    clearFotos()
-  }
-
-  function openCreate(payload: ModalPayload) {
-    // No UX aquí. Solo estado.
-    modalMode.value = 'create'
-    modalMarcas.value = payload.marcas || []
-    modalCategorias.value = payload.categorias || []
-    clearErrors()
-
+  function resetForm() {
     form.id = null
+    editingId.value = null
+
     form.marca_id = null
     form.categoria_id = null
     form.sku = ''
-    form.nombre = ''
-    form.descripcion = ''
     form.stock = 0
     form.precio_venta = 0
     form.costo_lista = 0
+    form.nombre = ''
+    form.descripcion = ''
+    form.status = 'activo'
     clearFotos()
+  }
 
+  function openCreate(ctx?: OpenCtx) {
+    resetErrors()
+    resetForm()
+    modalMode.value = 'create'
+    modalMarcas.value = ctx?.marcas ?? []
+    modalCategorias.value = ctx?.categorias ?? []
     modalOpen.value = true
   }
 
-  function openEdit(payload: ModalPayload, p: Producto) {
-    // Importante: aquí NO se dispara Swal.
-    modalMode.value = 'edit'
-    modalMarcas.value = payload.marcas || []
-    modalCategorias.value = payload.categorias || []
-    clearErrors()
+  function fillFromProducto(p: Producto) {
+    const id = Number((p as any)?.id ?? 0)
+    form.id = Number.isFinite(id) && id > 0 ? id : null
+    editingId.value = form.id
 
+    form.marca_id = (p.marca_id ?? null) as any
+    form.categoria_id = (p.categoria_id ?? null) as any
+    form.sku = p.sku ?? ''
+    form.stock = Number(p.stock ?? 0)
+    form.precio_venta = Number(p.precio_venta ?? 0)
+    form.costo_lista = Number(p.costo_lista ?? 0)
+    form.nombre = p.nombre ?? ''
+    form.descripcion = p.descripcion ?? ''
+    form.status = (p.status ?? 'activo') as Status
+    clearFotos()
+  }
+
+  function openEdit(ctx: OpenCtx | undefined, p: Producto) {
+    resetErrors()
+    resetForm()
+    modalMode.value = 'edit'
+    modalMarcas.value = ctx?.marcas ?? []
+    modalCategorias.value = ctx?.categorias ?? []
     fillFromProducto(p)
     modalOpen.value = true
   }
 
   function closeModal() {
     modalOpen.value = false
-    saving.value = false
-    clearErrors()
-    clearFotos()
-  }
-
-  // =========================
-  // Submit (store / update)
-  // =========================
-  function toNumber(v: any, fallback = 0) {
-    const n = Number(v)
-    return Number.isFinite(n) ? n : fallback
   }
 
   function buildPayload() {
     return {
-      marca_id: form.marca_id,
-      categoria_id: form.categoria_id,
-      sku: (form.sku || '').trim(),
-      nombre: (form.nombre || '').trim(),
-      descripcion: (form.descripcion || '').trim(),
-      stock: toNumber(form.stock, 0),
-      precio_venta: toNumber(form.precio_venta, 0),
-      costo_lista: toNumber(form.costo_lista, 0),
+      marca_id: form.marca_id ?? null,
+      categoria_id: form.categoria_id ?? null,
+      sku: String(form.sku ?? ''),
+      stock: Number(form.stock ?? 0),
+      precio_venta: Number(form.precio_venta ?? 0),
+      costo_lista: Number(form.costo_lista ?? 0),
+      nombre: String(form.nombre ?? ''),
+      descripcion: String(form.descripcion ?? ''),
+      status: String(form.status ?? 'activo'),
     }
   }
 
-  function buildFormData() {
+  function buildMultipart(method: 'POST' | 'PUT') {
     const fd = new FormData()
-    const payload = buildPayload()
+    if (method === 'PUT') fd.append('_method', 'PUT')
 
-    Object.entries(payload).forEach(([k, v]) => {
-      if (v === null || v === undefined) return
-      fd.append(k, String(v))
-    })
+    if (form.marca_id) fd.append('marca_id', String(form.marca_id))
+    if (form.categoria_id) fd.append('categoria_id', String(form.categoria_id))
 
-    // Fotos (si hay) se mandan como fotos[]
-    for (const f of form.fotos) fd.append('fotos[]', f)
+    fd.append('sku', String(form.sku || ''))
+    fd.append('stock', String(Number(form.stock ?? 0)))
+    fd.append('precio_venta', String(Number(form.precio_venta ?? 0)))
+    fd.append('costo_lista', String(Number(form.costo_lista ?? 0)))
+    fd.append('nombre', String(form.nombre || ''))
+    fd.append('descripcion', String(form.descripcion || ''))
+    fd.append('status', String(form.status || 'activo'))
 
-    // Si tu backend usa PUT para update con multipart, se hace method spoof
-    if (modalMode.value === 'edit' && form.id) {
-      fd.append('_method', 'PUT')
-    }
+    if (form.foto_principal) fd.append('foto_principal', form.foto_principal)
+    if (form.fotos?.length) form.fotos.forEach((f) => fd.append('fotos[]', f))
 
     return fd
   }
 
+  function queryFromFilters(extra?: Record<string, any>) {
+    const q: any = {
+      q: filters.q || undefined,
+      marca_id: filters.marca_id !== ALL ? filters.marca_id : undefined,
+      categoria_id: filters.categoria_id !== ALL ? filters.categoria_id : undefined,
+      status: filters.status !== ALL ? filters.status : undefined,
+      per_page: filters.per_page ? Number(filters.per_page) : undefined,
+      ...extra,
+    }
+    Object.keys(q).forEach((k) => (q[k] === undefined ? delete q[k] : null))
+    return q
+  }
+
+  function applyFilters(extra?: Record<string, any>) {
+    router.get(baseUrl, queryFromFilters(extra), {
+      preserveScroll: true,
+      preserveState: true,
+      replace: true,
+    })
+  }
+
+  // Auto apply (debounce)
+  const autoApply = opts.autoApply ?? true
+  const debounceMs = opts.debounceMs ?? 350
+  let t: number | null = null
+
+  if (autoApply) {
+    watch(
+      filters,
+      () => {
+        if (t) window.clearTimeout(t)
+        t = window.setTimeout(() => {
+          applyFilters({ page: 1 })
+        }, debounceMs)
+      },
+      { deep: true }
+    )
+  }
+
+  function setPerPage(n: number) {
+    const safe = Number(n)
+    filters.per_page = Number.isFinite(safe) && safe > 0 ? safe : 10
+  }
+
+  const hasActiveFilters = computed(() => {
+    const q = String(filters.q ?? '').trim()
+    return q !== '' || filters.marca_id !== ALL || filters.categoria_id !== ALL || filters.status !== ALL
+  })
+
+  function resetFilters() {
+    filters.q = ''
+    filters.marca_id = ALL
+    filters.categoria_id = ALL
+    filters.status = ALL
+    const n = Number(filters.per_page ?? 10)
+    filters.per_page = Number.isFinite(n) && n > 0 ? n : 10
+  }
+
+  function updateUrlOrThrow(): string {
+    const id = Number(editingId.value ?? form.id ?? 0)
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new Error('No llegó el id del producto para actualizar.')
+    }
+    return `${baseUrl}/${id}`
+  }
+
   async function submit() {
-    if (saving.value) return
-
-    saving.value = true
-    clearErrors()
-
+    resetErrors()
+    submitting.value = true
     try {
-      const hasFotos = form.fotos.length > 0
+      const hasFotos = !!form.foto_principal || (form.fotos?.length ?? 0) > 0
 
       if (modalMode.value === 'create') {
         if (hasFotos) {
-          await axios.post(opts.baseUrl, buildFormData(), {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          })
+          const fd = buildMultipart('POST')
+          await axios.post(baseUrl, fd, { headers: { Accept: 'application/json' } })
         } else {
-          await axios.post(opts.baseUrl, buildPayload())
+          await axios.post(baseUrl, buildPayload(), { headers: { Accept: 'application/json' } })
         }
+        await swalOk('Listo', 'Producto creado.')
       } else {
-        if (!form.id) throw new Error('Falta id para actualizar')
+        const url = updateUrlOrThrow()
 
         if (hasFotos) {
-          await axios.post(`${opts.baseUrl}/${form.id}`, buildFormData(), {
-            headers: { 'Content-Type': 'multipart/form-data' },
-          })
+          const fd = buildMultipart('PUT')
+          await axios.post(url, fd, { headers: { Accept: 'application/json' } })
         } else {
-          await axios.put(`${opts.baseUrl}/${form.id}`, buildPayload())
+          await axios.put(url, buildPayload(), { headers: { Accept: 'application/json' } })
         }
+        await swalOk('Listo', 'Producto actualizado.')
       }
 
       closeModal()
       applyFilters()
-    } catch (err: any) {
-      // 422: errores de validación
-      if (err?.response?.status === 422) {
-        const bag = err.response.data?.errors || {}
-        for (const [k, v] of Object.entries(bag)) {
-          const msg = Array.isArray(v) ? String(v[0] ?? '') : String(v ?? '')
-          // @ts-ignore
-          errors[k] = msg
-        }
-        errors.general = err.response.data?.message || 'Revisa los campos.'
+    } catch (e: any) {
+      if (e?.response?.status === 422) {
+        const bag = e.response.data?.errors ?? {}
+        Object.keys(bag).forEach((k) => (errors[k] = String(bag[k]?.[0] ?? bag[k] ?? 'Error')))
+        await swalErr('Revisa el formulario', 'Hay campos con error.')
       } else {
-        errors.general = err?.response?.data?.message || err?.message || 'Error al guardar.'
+        await swalErr('Error', e?.response?.data?.message ?? e?.message ?? 'Error')
       }
     } finally {
-      saving.value = false
+      submitting.value = false
     }
   }
 
-  // =========================
-  // Toggle status
-  // =========================
   async function toggleStatus(p: Producto): Promise<boolean> {
     try {
-      // Ajusta este endpoint si el tuyo se llama distinto.
-      // Recomendado: PATCH /productos/{id}/toggle-status
-      await axios.patch(`${opts.baseUrl}/${p.id}/toggle-status`)
-      applyFilters()
+      await axios.patch(`${baseUrl}/${p.id}/toggle-status`, null, { headers: { Accept: 'application/json' } })
       return true
     } catch {
       return false
     }
   }
 
-  return {
+  async function destroy(p: Producto): Promise<boolean> {
+    try {
+      await axios.delete(`${baseUrl}/${p.id}`, { headers: { Accept: 'application/json' } })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  return proxyRefs({
+    baseUrl,
     ALL,
 
-    // filtros
     filters,
-    hasActiveFilters,
     applyFilters,
     setPerPage,
     resetFilters,
+    hasActiveFilters,
 
-    // modal
     modalOpen,
     modalMode,
     modalMarcas,
     modalCategorias,
 
-    // form
     form,
     errors,
+    submitting,
     saving,
 
-    // fotos
     fotoPreviews,
     setFotos,
     clearFotos,
 
-    // acciones
     openCreate,
     openEdit,
     closeModal,
     submit,
+
     toggleStatus,
-  }
+    destroy,
+  })
 }

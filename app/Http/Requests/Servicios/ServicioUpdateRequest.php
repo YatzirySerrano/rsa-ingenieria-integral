@@ -18,7 +18,6 @@ class ServicioUpdateRequest extends FormRequest {
             'nombre' => ['required', 'string', 'max:160'],
             'descripcion' => ['nullable', 'string'],
             'precio' => ['required', 'numeric', 'min:0'],
-            'status' => ['required', Rule::in(['activo', 'inactivo'])],
         ];
     }
 

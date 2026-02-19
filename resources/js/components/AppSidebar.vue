@@ -36,12 +36,12 @@ const mainNavItems = [
         title: 'Productos',
         href: productosIndex().url,
         icon: Package,
-    },/*
+    },
     {
         title: 'Servicios',
         href: serviciosIndex().url,
         icon: Briefcase,
-    },*/
+    },
     {
         title: 'Cotizaciones',
         href: cotizacionsIndex().url,

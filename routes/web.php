@@ -39,8 +39,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
 
     // Rutas para servicios excepto show
-    Route::resource('servicios', ServicioController::class)
-        ->except(['show']);
+    Route::resource('servicios', ServicioController::class)->only(['index','store','update','destroy']);
+    Route::patch('servicios/{servicio}/reactivate', [ServicioController::class, 'reactivate'])
+  ->name('servicios.reactivate');
+
     // Rutas para categorias excepto show
     Route::resource('categorias', CategoriaController::class)
         ->except(['show']);
@@ -50,9 +52,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Rutas para marcas excepto show
     Route::resource('personas', PersonaController::class)
         ->except(['show']);
-    // Rutas para productos excepto show
-    Route::resource('productos', ProductoController::class)
-        ->except(['show']);
     // Rutas para usuarios
     Route::get('/admin/usuarios', [UsuarioController::class, 'index'])->name('usuarios.index');
     Route::post('/admin/usuarios', [UsuarioController::class, 'store'])->name('usuarios.store');
@@ -60,21 +59,23 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('/admin/usuarios/{user}', [UsuarioController::class, 'destroy'])->name('usuarios.destroy');
     // Lookup de personas
     Route::get('/admin/usuarios/personas-lookup', [UsuarioController::class, 'personasLookup']);
-
     // Activar usuario (para el botón “Activar”)
     Route::patch('/admin/usuarios/{usuario}/activar', [UsuarioController::class, 'activar']);
 
-    // Media de productos (rutas web, no api)
-    Route::post('/productos/{producto}/media', [ProductoController::class, 'mediaUpload'])
-    ->name('productos.media.upload');
-    Route::post('/productos/{producto}/media/order', [ProductoController::class, 'mediaUpdateOrder'])
-        ->name('productos.media.order');
-    Route::post('/productos/{producto}/media/{media}/main', [ProductoController::class, 'mediaSetMain'])
-        ->name('productos.media.main');
-    Route::put('/productos/{producto}/media/{media}', [ProductoController::class, 'mediaUpdate'])
-        ->name('productos.media.update');
-    Route::delete('/productos/{producto}/media/{media}', [ProductoController::class, 'mediaDestroy'])
-        ->name('productos.media.destroy');
+    // Rutas para productos excepto show
+    Route::resource('productos', ProductoController::class);
+    Route::post('productos/{producto}/medias', [ProductoController::class, 'mediaUpload'])
+        ->name('productos.medias.upload');
+    Route::patch('productos/{producto}/medias/order', [ProductoController::class, 'mediaUpdateOrder'])
+        ->name('productos.medias.order');
+    Route::patch('productos/{producto}/medias/{media}/main', [ProductoController::class, 'mediaSetMain'])
+        ->name('productos.medias.main');
+    Route::patch('productos/{producto}/medias/{media}', [ProductoController::class, 'mediaUpdate'])
+        ->name('productos.medias.update');
+    Route::delete('productos/{producto}/medias/{media}', [ProductoController::class, 'mediaDestroy'])
+        ->name('productos.medias.destroy');
+    Route::patch('productos/{producto}/toggle-status', [ProductoController::class, 'toggleStatus'])
+        ->name('productos.toggleStatus');
 
     Route::get('/cotizaciones', [CotizacionPanelController::class, 'index'])
         ->name('cotizaciones.index');

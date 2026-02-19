@@ -142,15 +142,6 @@
                     <option v-for="s in props.meta.statuses" :key="s" :value="s">{{ s }}</option>
                   </select>
                 </div>
-    
-                <div class="hidden lg:col-span-2 lg:block">
-                  <div
-                    class="rounded-2xl border border-slate-200 bg-white/60 px-3 py-2 text-xs text-slate-600
-                           dark:border-white/10 dark:bg-white/5 dark:text-zinc-400"
-                  >
-                    <span class="font-bold">Regla:</span> el estado se cambia con Activar/Desactivar.
-                  </div>
-                </div>
               </div>
             </div>
           </div>

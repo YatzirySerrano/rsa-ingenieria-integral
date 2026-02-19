@@ -12,33 +12,48 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class ServicioController extends Controller {
-
-    // Listado con filtros para el catálogo de servicios.
-    public function index(Request $request): Response {
+class ServicioController extends Controller
+{
+    public function index(Request $request): Response
+    {
         $q = trim((string) $request->get('q', ''));
+
         $status = $request->get('status');
+        $status = is_string($status) ? trim($status) : $status;
+        if ($status === '' || $status === '__ALL__' || $status === '__all__') $status = null;
+
         $categoriaId = $request->get('categoria_id');
+        $categoriaId = is_string($categoriaId) ? trim($categoriaId) : $categoriaId;
+        if ($categoriaId === '' || $categoriaId === '__ALL__' || $categoriaId === '__all__') $categoriaId = null;
+
+        $perPage = (int) $request->get('per_page', 10);
+        if ($perPage <= 0) $perPage = 10;
+        if ($perPage > 100) $perPage = 100;
 
         $servicios = Servicio::query()
             ->with(['categoria'])
-            ->when($q !== '', fn($qr) => $qr->where('nombre', 'like', "%{$q}%"))
-            ->when($status, fn($qr) => $qr->where('status', $status))
-            ->when($categoriaId, fn($qr) => $qr->where('categoria_id', $categoriaId))
+            ->when($q !== '', fn ($qr) => $qr->where(function ($w) use ($q) {
+                $w->where('nombre', 'like', "%{$q}%")
+                  ->orWhere('descripcion', 'like', "%{$q}%");
+            }))
+            ->when($status, fn ($qr) => $qr->where('status', $status))
+            ->when($categoriaId, fn ($qr) => $qr->where('categoria_id', $categoriaId))
             ->orderBy('id', 'desc')
-            ->paginate(15)
+            ->paginate($perPage)
             ->withQueryString();
-        // Solo categorías tipo SERVICIO para evitar mezclar catálogos.
+
         $categorias = Categoria::query()
             ->where('tipo', 'SERVICIO')
             ->orderBy('nombre')
             ->get();
+
         return Inertia::render('servicios/Index', [
             'items' => ServicioResource::collection($servicios),
             'filters' => [
                 'q' => $q,
                 'status' => $status,
                 'categoria_id' => $categoriaId,
+                'per_page' => $perPage,
             ],
             'meta' => [
                 'statuses' => ['activo', 'inactivo'],
@@ -47,58 +62,79 @@ class ServicioController extends Controller {
         ]);
     }
 
-    // Pantalla de alta.
-    public function create(): Response {
-        $categorias = Categoria::query()
-            ->where('tipo', 'SERVICIO')
-            ->orderBy('nombre')
-            ->get();
-        return Inertia::render('servicios/Create', [
-            'meta' => [
-                'statuses' => ['activo', 'inactivo'],
-                'categorias' => CategoriaResource::collection($categorias),
-            ],
-        ]);
-    }
+    public function store(ServicioStoreRequest $request)
+    {
+        $data = $request->validated();
 
-    // Alta: crea y regresa a index.
-    public function store(ServicioStoreRequest $request) {
-        Servicio::create($request->validated());
+        // Estatus automático: siempre activo al crear
+        $data['status'] = 'activo';
+
+        $servicio = Servicio::create($data);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => 'Servicio creado correctamente.',
+                'data' => new ServicioResource($servicio->load('categoria')),
+            ]);
+        }
+
         return redirect()
             ->route('servicios.index')
             ->with('success', 'Servicio creado correctamente.');
     }
 
-    // Pantalla de edición.
-    public function edit(Servicio $servicio): Response {
-        $categorias = Categoria::query()
-            ->where('tipo', 'SERVICIO')
-            ->orderBy('nombre')
-            ->get();
-        $servicio->load('categoria');
-        return Inertia::render('Servicios/Edit', [
-            'item' => new ServicioResource($servicio),
-            'meta' => [
-                'statuses' => ['activo', 'inactivo'],
-                'categorias' => CategoriaResource::collection($categorias),
-            ],
-        ]);
-    }
+    public function update(ServicioUpdateRequest $request, Servicio $servicio)
+    {
+        $data = $request->validated();
 
-    // Edición: actualiza y regresa a index.
-    public function update(ServicioUpdateRequest $request, Servicio $servicio) {
-        $servicio->update($request->validated());
+        // Blindaje: el status NO se toca en edit (solo cambia con delete lógico)
+        unset($data['status']);
+
+        $servicio->update($data);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => 'Servicio actualizado correctamente.',
+                'data' => new ServicioResource($servicio->fresh()->load('categoria')),
+            ]);
+        }
+
         return redirect()
             ->route('servicios.index')
             ->with('success', 'Servicio actualizado correctamente.');
     }
 
-    // Eliminación lógica.
-    public function destroy(Servicio $servicio) {
+    public function destroy(Request $request, Servicio $servicio)
+    {
         $servicio->update(['status' => 'inactivo']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => 'Servicio desactivado.',
+            ]);
+        }
+
         return redirect()
             ->back()
             ->with('success', 'Servicio desactivado.');
+    }
+
+    public function reactivate(Request $request, Servicio $servicio)
+    {
+        $servicio->update(['status' => 'activo']);
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'ok' => true,
+                'message' => 'Servicio reactivado.',
+                'data' => new ServicioResource($servicio->fresh()->load('categoria')),
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Servicio reactivado.');
     }
 
 }

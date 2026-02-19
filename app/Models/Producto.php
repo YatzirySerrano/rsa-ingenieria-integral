@@ -3,19 +3,27 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Builder;
 
 class Producto extends Model {
-    
+
     protected $table = 'productos';
 
+    // Si prefieres: protected $guarded = [];
     protected $fillable = [
-        'marca_id', 'categoria_id',
-        'sku', 'nombre', 'descripcion',
-        'stock', 'costo_lista', 'precio_venta',
-        'created_by', 'updated_by', 'deleted_by',
+        'marca_id',
+        'categoria_id',
+        'sku',
+        'nombre',
+        'descripcion',
+        'stock',
+        'costo_lista',
+        'precio_venta',
+        'created_by',
+        'updated_by',
+        'deleted_by',
         'status',
     ];
 
@@ -24,10 +32,6 @@ class Producto extends Model {
         'costo_lista' => 'decimal:2',
         'precio_venta' => 'decimal:2',
     ];
-
-    public function scopeActivo(Builder $q): Builder {
-        return $q->where('status', 'activo');
-    }
 
     public function marca(): BelongsTo {
         return $this->belongsTo(Marca::class, 'marca_id');
@@ -39,8 +43,17 @@ class Producto extends Model {
 
     public function medias(): HasMany {
         return $this->hasMany(ProductoMedia::class, 'producto_id')
-            ->orderBy('principal', 'desc')
-            ->orderBy('orden', 'asc');
+            ->orderBy('orden');
+    }
+
+    public function scopeActivo($query) {
+        return $query->where('status', 'activo');
+    }
+
+
+    // Opcional: si quieres también un scope para inactivos
+    public function scopeInactivo(Builder $query): Builder {
+        return $query->where('status', 'inactivo');
     }
 
 }
