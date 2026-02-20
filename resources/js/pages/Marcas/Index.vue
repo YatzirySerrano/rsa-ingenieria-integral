@@ -1,49 +1,37 @@
 <script setup lang="ts">
     import { Head } from '@inertiajs/vue3'
     import { computed } from 'vue'
-
     import AppLayout from '@/layouts/AppLayout.vue'
     import PaginationLinks from '@/components/ui/PaginationLinks.vue'
     import { Button } from '@/components/ui/button'
     import { Input } from '@/components/ui/input'
-
     import type { Paginated } from '@/types/common'
     import type { Marca } from '@/composables/crud/useMarcaCrud'
     import { useMarcaCrud } from '@/composables/crud/useMarcaCrud'
-
     import { Plus, Pencil, Power, RefreshCw, Search, Filter } from 'lucide-vue-next'
 
     const props = defineProps<{
-      items: Paginated<Marca>
-      filters: Partial<{ q: string; status: string }>
-      meta: { statuses: string[] }
+        items: Paginated<Marca>
+        filters: Partial<{ q: string; status: string }>
+        meta: { statuses: string[] }
     }>()
 
-    /**
-     * Composable:
-     * - Toda la lógica de filtros y acciones vive aquí
-     * - La vista solo “consume” funciones
-     */
     const crud = useMarcaCrud({
-      initialFilters: props.filters,
-      baseUrl: '/marcas',
+        initialFilters: props.filters,
+        baseUrl: '/marcas',
     })
 
-    /**
-     * KPIs compactos (de la página actual).
-     * Si necesitas totales globales reales, se mandan desde backend en meta.
-     */
     const kpi = computed(() => {
-      const d = props.items.data ?? []
-      const activos = d.filter((x) => x.status === 'activo').length
-      const inactivos = d.filter((x) => x.status === 'inactivo').length
-      return { page: d.length, activos, inactivos }
+        const d = props.items.data ?? []
+        const activos = d.filter((x) => x.status === 'activo').length
+        const inactivos = d.filter((x) => x.status === 'inactivo').length
+        return { page: d.length, activos, inactivos }
     })
 
     function statusPill(status: string) {
-      return status === 'activo'
-        ? 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-200'
-        : 'bg-rose-500/10 text-rose-700 ring-1 ring-rose-500/20 dark:text-rose-200'
+        return status === 'activo'
+            ? 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-200'
+            : 'bg-rose-500/10 text-rose-700 ring-1 ring-rose-500/20 dark:text-rose-200'
     }
 
     function rowDot(status: string) {

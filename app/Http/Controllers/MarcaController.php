@@ -16,16 +16,26 @@ class MarcaController extends Controller {
     public function index(Request $request): Response {
         $q = trim((string) $request->get('q', ''));
         $status = $request->get('status');
-
         $marcas = Marca::query()
             ->when($q !== '', fn($qr) => $qr->where('nombre', 'like', "%{$q}%"))
             ->when($status, fn($qr) => $qr->where('status', $status))
             ->orderBy('id', 'desc')
             ->paginate(15)
             ->withQueryString();
-
         return Inertia::render('Marcas/Index', [
-            'items' => MarcaResource::collection($marcas),
+            'items' => [
+                // ARRAY real (lo que tu v-for espera)
+                'data' => MarcaResource::collection($marcas->items())->resolve(),
+                // ARRAY de links (lo que PaginationLinks espera)
+                'links' => $marcas->linkCollection()->toArray(),
+                // meta opcional por si lo usas
+                'meta' => [
+                    'current_page' => $marcas->currentPage(),
+                    'last_page' => $marcas->lastPage(),
+                    'per_page' => $marcas->perPage(),
+                    'total' => $marcas->total(),
+                ],
+            ],
             'filters' => [
                 'q' => $q,
                 'status' => $status,
