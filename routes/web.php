@@ -12,6 +12,7 @@ use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\PublicProductoController;
 use App\Http\Controllers\Panel\CotizacionPanelController;
 use App\Http\Controllers\Panel\CotizacionDetalleController;
+use App\Http\Controllers\DashboardController;
 
 // Index del sitio web
 Route::get('/', function () {
@@ -28,14 +29,17 @@ Route::get('/servicios/cctv', function () {
 Route::get('/catalogo', [PublicProductoController::class, 'index'])
     ->name('catalogo.publico');
 
+// GUEST (público) -> separado para no pelearse con /cotizaciones (admin)
+Route::get('/cotizar', [CotizacionPublicController::class, 'create'])->name('cotizar.create');
+Route::post('/cotizar', [CotizacionPublicController::class, 'store'])->name('cotizar.store');
+Route::get('/cotizacion/{token}', [CotizacionPublicController::class, 'show'])->name('cotizacion.public.show');
+
 // -------------------------
 // Protected (Auth)
 // -------------------------
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    Route::get('/dashboard', function () {
-        return Inertia::render('Dashboard');
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Servicios (sin show)
     Route::resource('servicios', ServicioController::class)->only(['index','store','update','destroy']);
@@ -82,20 +86,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('productos/{producto}/toggle-status', [ProductoController::class, 'toggleStatus'])
         ->name('productos.toggleStatus');
 
-    // -------------------------
-    // Cotizaciones
-    // -------------------------
-    Route::get('cotizaciones', [CotizacionPanelController::class, 'index'])->name('cotizaciones.index');
-    Route::get('cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'show'])->name('cotizaciones.show');
-    Route::put('cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'update'])->name('cotizaciones.update');
-    Route::delete('cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'destroy'])->name('cotizaciones.destroy');
+    // ADMIN (panel interno) -> URL limpia como tus otros CRUDs
+    Route::get('/cotizaciones', [CotizacionPanelController::class, 'index'])->name('cotizaciones.index');
+    Route::get('/cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'show'])->name('cotizaciones.show');
 
-    Route::post('cotizaciones/{cotizacion}/add-item', [CotizacionPanelController::class, 'addItem'])->name('cotizaciones.addItem');
-    Route::post('cotizaciones/{cotizacion}/send', [CotizacionPanelController::class, 'send'])->name('cotizaciones.send');
-    Route::post('cotizaciones/{cotizacion}/mark-sent', [CotizacionPanelController::class, 'markSent'])->name('cotizaciones.markSent');
+    // Cabecera
+    Route::put('/cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'update'])->name('cotizaciones.update');
+    Route::delete('/cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'destroy'])->name('cotizaciones.destroy'); // baja lógica
 
-    Route::put('cotizaciones/detalles/{detalle}', [CotizacionDetalleController::class, 'update'])->name('cotizaciones.detalles.update');
-    Route::delete('cotizaciones/detalles/{detalle}', [CotizacionDetalleController::class, 'destroy'])->name('cotizaciones.detalles.destroy');
+    // Acciones admin
+    Route::post('/cotizaciones/{cotizacion}/add-item', [CotizacionPanelController::class, 'addItem'])->name('cotizaciones.addItem');
+    Route::post('/cotizaciones/{cotizacion}/reply', [CotizacionPanelController::class, 'reply'])->name('cotizaciones.reply'); // marcar DEVUELTA
+    Route::post('/cotizaciones/{cotizacion}/mark-sent', [CotizacionPanelController::class, 'markSent'])->name('cotizaciones.markSent'); // ENVIADA
+
+    // Detalles (carrito)
+    Route::put('/cotizaciones/detalles/{detalle}', [CotizacionDetalleController::class, 'update'])->name('cotizaciones.detalles.update');
+    Route::delete('/cotizaciones/detalles/{detalle}', [CotizacionDetalleController::class, 'destroy'])->name('cotizaciones.detalles.destroy'); // baja lógica
 });
 
 require __DIR__ . '/settings.php';

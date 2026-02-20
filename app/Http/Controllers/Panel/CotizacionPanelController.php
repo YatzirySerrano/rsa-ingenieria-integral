@@ -3,307 +3,206 @@
 namespace App\Http\Controllers\Panel;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Panel\CotizacionAddItemRequest;
+use App\Http\Requests\Panel\CotizacionIndexRequest;
+use App\Http\Requests\Panel\CotizacionMarkSentRequest;
+use App\Http\Requests\Panel\CotizacionReplyRequest;
+use App\Http\Requests\Panel\CotizacionUpdateRequest;
 use App\Models\Cotizacion;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
+use App\Models\CotizacionDetalle;
+use App\Models\Producto;
+use App\Models\Servicio;
+use App\Models\Log;
+use App\Services\Cotizaciones\CotizacionTotals;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
-use Inertia\Response;
 
-class CotizacionPanelController extends Controller
-{
-    /* =====================================================
-     * GET /panel/cotizaciones (index + filtros)
-     * ===================================================== */
-    public function index(Request $request): Response
-    {
-        $q = trim((string) $request->get('q', ''));
-        $estatus = (string) $request->get('estatus', '__all__');
+class CotizacionPanelController extends Controller {
 
+    public function __construct(private CotizacionTotals $totals) {}
+
+    public function index(CotizacionIndexRequest $request) {
+        $q = trim((string) $request->input('q', ''));
+        $estatus = $request->input('estatus');
+        $perPage = (int) ($request->input('per_page') ?: 15);
         $query = Cotizacion::query()
-            ->with([
-                'persona',
-                'usuario',
-                'detalles' => fn ($d) => $d->activo()->with(['producto', 'servicio']),
-            ])
-            ->latest('id');
-
+            ->where('status', 'activo')
+            ->withSum(['detalles as total_calculado' => fn ($dq) => $dq->where('status', 'activo')], 'total_linea');
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->where('folio', 'like', "%{$q}%")
-                  ->orWhere('email_destino', 'like', "%{$q}%")
-                  ->orWhere('telefono_destino', 'like', "%{$q}%");
+                    ->orWhere('email_destino', 'like', "%{$q}%")
+                    ->orWhere('telefono_destino', 'like', "%{$q}%");
             });
         }
-
-        if ($estatus !== '__all__' && $estatus !== '') {
+        if ($estatus && $estatus !== '__all__') {
             $query->where('estatus', $estatus);
         }
-
-        $items = $query->paginate(10)->withQueryString();
-
-        $items->getCollection()->transform(function (Cotizacion $c) {
-            $calc = $this->calcTotals($c);
-            $reply = $this->readReplyFromToken($c->token);
-
-            $c->setAttribute('total_calculado', $calc['total_calculado']);
-            $c->setAttribute('diferencia_total', $calc['diferencia_total']);
-            $c->setAttribute('respuesta_resumen', $reply['respuesta_resumen'] ?? null);
-            $c->setAttribute('descuento_monto', $reply['descuento_monto'] ?? 0);
-            $c->setAttribute('total_final', $reply['total_final'] ?? null);
-
-            return $c;
-        });
-
-        $meta = [
-            'estatuses' => Cotizacion::query()
-                ->select('estatus')
-                ->whereNotNull('estatus')
-                ->distinct()
-                ->orderBy('estatus')
-                ->pluck('estatus')
-                ->values()
-                ->all(),
-        ];
-
-        // IMPORTANTE: esto define la carpeta/archivo Vue:
-        // resources/js/Pages/Cotizaciones/Index.vue
+        $items = $query->orderByDesc('id')
+            ->paginate($perPage)
+            ->withQueryString()
+            // CLAVE: esto mantiene links como ARRAY (Inertia paginator)
+            ->through(function (Cotizacion $c) {
+                $calc = (float) ($c->total_calculado ?? 0);
+                $diff = round(((float) $c->total) - $calc, 2);
+                $diff = (abs($diff) >= 0.01) ? $diff : 0;
+                return [
+                    'id' => $c->id,
+                    'folio' => $c->folio,
+                    'token' => $c->token,
+                    'estatus' => $c->estatus,
+                    'email_destino' => $c->email_destino,
+                    'telefono_destino' => $c->telefono_destino,
+                    'subtotal' => $c->subtotal,
+                    'total' => $c->total,
+                    'total_calculado' => $calc,
+                    'diferencia_total' => $diff,
+                    'status' => $c->status,
+                    'created_at' => optional($c->created_at)->toISOString(),
+                ];
+            });
         return Inertia::render('cotizaciones/Index', [
             'items' => $items,
             'filters' => [
-                'q' => $q,
-                'estatus' => $estatus,
+                'q' => $q ?: null,
+                'estatus' => $estatus ?: '__all__',
             ],
-            'meta' => $meta,
-        ]);
-    }
-
-    /* =====================================================
-     * GET /panel/cotizaciones/{id} (detalle)
-     * ===================================================== */
-    public function show(Cotizacion $cotizacion): Response
-    {
-        $cotizacion->load([
-            'persona',
-            'usuario',
-            'detalles' => fn ($d) => $d->activo()->with(['producto', 'servicio']),
-        ]);
-
-        $calc = $this->calcTotals($cotizacion);
-        $reply = $this->readReplyFromToken($cotizacion->token);
-
-        $cotizacion->setAttribute('total_calculado', $calc['total_calculado']);
-        $cotizacion->setAttribute('diferencia_total', $calc['diferencia_total']);
-        $cotizacion->setAttribute('respuesta_resumen', $reply['respuesta_resumen'] ?? null);
-        $cotizacion->setAttribute('descuento_monto', $reply['descuento_monto'] ?? 0);
-        $cotizacion->setAttribute('total_final', $reply['total_final'] ?? null);
-        $cotizacion->setAttribute('reply_meta', $reply['meta'] ?? null);
-
-        // resources/js/Pages/Cotizaciones/Show.vue
-        return Inertia::render('cotizaciones/Show', [
-            'cotizacion' => $cotizacion,
-        ]);
-    }
-
-    /* =====================================================
-     * PUT /panel/cotizaciones/{id}/reply (guardar respuesta + DEVUELTA)
-     * ===================================================== */
-    public function reply(Request $request, Cotizacion $cotizacion)
-    {
-        $data = $request->validate([
-            'respuesta_resumen' => ['required', 'string', 'min:5', 'max:5000'],
-            'descuento_monto' => ['nullable', 'numeric', 'min:0', 'max:99999999'],
-            'total_final' => ['nullable', 'numeric', 'min:0', 'max:999999999'],
-        ]);
-
-        $cotizacion->load(['detalles' => fn ($d) => $d->activo()]);
-
-        $calc = $this->calcTotals($cotizacion);
-        $base = (float) $calc['total_calculado'];
-
-        $descuento = (float) ($data['descuento_monto'] ?? 0);
-        $totalFinal = array_key_exists('total_final', $data) && $data['total_final'] !== null
-            ? (float) $data['total_final']
-            : max(0, $base - $descuento);
-
-        $reply = [
-            'respuesta_resumen' => trim($data['respuesta_resumen']),
-            'descuento_monto' => round($descuento, 2),
-            'total_final' => round($totalFinal, 2),
             'meta' => [
-                'responded_at' => now()->toIso8601String(),
-                'responded_by' => $request->user()?->id,
-                'calc_total' => round($base, 2),
-                'client_total' => round((float) $cotizacion->total, 2),
-                'diff_total' => round((float) $calc['diferencia_total'], 2),
+                'estatuses' => ['BORRADOR','EN_REVISION','DEVUELTA','ENVIADA'],
             ],
-        ];
+        ]);
+    }
 
-        $cotizacion->token = $this->writeReplyIntoToken($cotizacion->token, $reply);
+    public function show(Cotizacion $cotizacion) {
+        abort_unless($cotizacion->status === 'activo', 404);
+        $cotizacion->load([
+            'detalles' => fn ($q) => $q->orderBy('id')->where('status','activo')->with(['producto','servicio']),
+        ]);
+        return Inertia::render('cotizaciones/Show', [
+            'item' => [
+                'id' => $cotizacion->id,
+                'folio' => $cotizacion->folio,
+                'token' => $cotizacion->token,
+                'estatus' => $cotizacion->estatus,
+                'email_destino' => $cotizacion->email_destino,
+                'telefono_destino' => $cotizacion->telefono_destino,
+                'subtotal' => $cotizacion->subtotal,
+                'total' => $cotizacion->total,
+                'status' => $cotizacion->status,
+                'detalles' => $cotizacion->detalles->map(fn ($d) => [
+                    'id' => $d->id,
+                    'producto_id' => $d->producto_id,
+                    'servicio_id' => $d->servicio_id,
+                    'cantidad' => $d->cantidad,
+                    'precio_unitario' => $d->precio_unitario,
+                    'total_linea' => $d->total_linea,
+                    'status' => $d->status,
+                    'producto' => $d->producto ? [
+                        'id' => $d->producto->id,
+                        'sku' => $d->producto->sku,
+                        'nombre' => $d->producto->nombre,
+                    ] : null,
+                    'servicio' => $d->servicio ? [
+                        'id' => $d->servicio->id,
+                        'nombre' => $d->servicio->nombre,
+                    ] : null,
+                ])->values(),
+            ],
+            'meta' => [
+                'estatuses' => ['BORRADOR','EN_REVISION','DEVUELTA','ENVIADA'],
+            ],
+        ]);
+    }
+
+    public function update(CotizacionUpdateRequest $request, Cotizacion $cotizacion)
+    {
+        abort_unless($cotizacion->status === 'activo', 404);
+        $cotizacion->fill($request->only(['email_destino','telefono_destino','estatus']));
+        if (!$cotizacion->estatus) $cotizacion->estatus = 'EN_REVISION';
+        $cotizacion->save();
+        $this->log('update', 'cotizacions', $cotizacion->id, 'Update cabecera/estatus.');
+        return back(303);
+    }
+
+    public function destroy(Cotizacion $cotizacion) {
+        abort_unless($cotizacion->status === 'activo', 404);
+        $cotizacion->status = 'inactivo';
+        $cotizacion->save();
+        $this->log('delete', 'cotizacions', $cotizacion->id, 'Baja lógica.');
+        return redirect()->route('cotizaciones.index', [], 303);
+    }
+
+    public function addItem(CotizacionAddItemRequest $request, Cotizacion $cotizacion) {
+        abort_unless($cotizacion->status === 'activo', 404);
+        $tipo = $request->input('tipo');
+        $cantidad = (float) $request->input('cantidad');
+        $productoId = $tipo === 'PRODUCTO' ? (int) $request->input('producto_id') : null;
+        $servicioId = $tipo === 'SERVICIO' ? (int) $request->input('servicio_id') : null;
+        $precio = 0.0;
+        if ($tipo === 'PRODUCTO') {
+            $p = Producto::where('id', $productoId)->where('status','activo')->firstOrFail();
+            $precio = (float) $p->precio_venta;
+        } else {
+            $s = Servicio::where('id', $servicioId)->where('status','activo')->firstOrFail();
+            $precio = (float) $s->precio;
+        }
+        $detalle = CotizacionDetalle::query()
+            ->where('cotizacion_id', $cotizacion->id)
+            ->where('status','activo')
+            ->when($productoId, fn ($q) => $q->where('producto_id',$productoId)->whereNull('servicio_id'))
+            ->when($servicioId, fn ($q) => $q->where('servicio_id',$servicioId)->whereNull('producto_id'))
+            ->first();
+        if ($detalle) {
+            $detalle->cantidad = (float) $detalle->cantidad + $cantidad;
+            $detalle->precio_unitario = $precio;
+            $detalle->total_linea = round(((float) $detalle->cantidad) * $precio, 2);
+            $detalle->save();
+        } else {
+            CotizacionDetalle::create([
+                'cotizacion_id' => $cotizacion->id,
+                'producto_id' => $productoId,
+                'servicio_id' => $servicioId,
+                'cantidad' => $cantidad,
+                'precio_unitario' => $precio,
+                'total_linea' => round($cantidad * $precio, 2),
+                'status' => 'activo',
+            ]);
+        }
+        if ($cotizacion->estatus === 'BORRADOR') {
+            $cotizacion->estatus = 'EN_REVISION';
+            $cotizacion->save();
+        }
+        $this->totals->recalc($cotizacion);
+        $this->log('create', 'cotizacion_detalles', $cotizacion->id, 'Add item.');
+        return back(303);
+    }
+
+    public function reply(CotizacionReplyRequest $request, Cotizacion $cotizacion) {
+        abort_unless($cotizacion->status === 'activo', 404);
+        $cotizacion->fill($request->only(['email_destino','telefono_destino']));
         $cotizacion->estatus = 'DEVUELTA';
         $cotizacion->save();
-
-        return back()->with('success', 'Respuesta guardada y marcada como DEVUELTA.');
+        $this->log('update', 'cotizacions', $cotizacion->id, 'Marcada DEVUELTA.');
+        return back(303);
     }
 
-    /* =====================================================
-     * POST /panel/cotizaciones/{id}/send-email
-     * ===================================================== */
-    public function sendEmail(Request $request, Cotizacion $cotizacion)
-    {
-        $email = trim((string) ($cotizacion->email_destino ?? ''));
-        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return back()->withErrors(['email_destino' => 'Correo inválido o vacío.']);
-        }
-
-        $reply = $this->readReplyFromToken($cotizacion->token);
-        $resumen = trim((string) ($reply['respuesta_resumen'] ?? ''));
-        if ($resumen === '') {
-            return back()->withErrors(['respuesta_resumen' => 'Primero guarda la respuesta (Responder).']);
-        }
-
-        $totalFinal = (float) ($reply['total_final'] ?? $cotizacion->total);
-        $descuento = (float) ($reply['descuento_monto'] ?? 0);
-
-        $subject = "Respuesta a tu cotización {$cotizacion->folio}";
-        $html = $this->buildReplyEmailHtml(
-            folio: (string) $cotizacion->folio,
-            resumen: $resumen,
-            totalFinal: $totalFinal,
-            descuento: $descuento
-        );
-
-        try {
-            Mail::send([], [], function ($message) use ($email, $subject, $html) {
-                $message->to($email)
-                    ->subject($subject)
-                    ->setBody($html, 'text/html');
-            });
-        } catch (\Throwable $e) {
-            return back()->withErrors(['email_send' => 'No se pudo enviar el correo. Revisa configuración MAIL.']);
-        }
-
-        return back()->with('success', 'Correo enviado al cliente.');
+    public function markSent(CotizacionMarkSentRequest $request, Cotizacion $cotizacion) {
+        abort_unless($cotizacion->status === 'activo', 404);
+        $cotizacion->estatus = 'ENVIADA';
+        $cotizacion->save();
+        $this->log('update', 'cotizacions', $cotizacion->id, 'Marcada ENVIADA.');
+        return back(303);
     }
 
-    /* =====================================================
-     * POST /panel/cotizaciones/{id}/send-whatsapp
-     * SIN API: redirect a wa.me con texto precargado
-     * ===================================================== */
-    public function sendWhatsapp(Request $request, Cotizacion $cotizacion)
-    {
-        $phoneRaw = (string) ($cotizacion->telefono_destino ?? '');
-        $digits = preg_replace('/\D+/', '', $phoneRaw) ?? '';
-
-        if (strlen($digits) < 10) {
-            return back()->withErrors(['telefono_destino' => 'Teléfono inválido o vacío.']);
-        }
-
-        $reply = $this->readReplyFromToken($cotizacion->token);
-        $resumen = trim((string) ($reply['respuesta_resumen'] ?? ''));
-        if ($resumen === '') {
-            return back()->withErrors(['respuesta_resumen' => 'Primero guarda la respuesta (Responder).']);
-        }
-
-        $totalFinal = (float) ($reply['total_final'] ?? $cotizacion->total);
-
-        // Si vienen 10 dígitos, asumimos MX y anteponemos 52
-        if (strlen($digits) === 10) $digits = '52' . $digits;
-
-        $msg = $this->buildWhatsappMessage(
-            folio: (string) $cotizacion->folio,
-            resumen: $resumen,
-            totalFinal: $totalFinal
-        );
-
-        $url = 'https://wa.me/' . $digits . '?text=' . urlencode($msg);
-
-        return redirect()->away($url);
+    private function log(string $accion, string $tabla, ?int $registroId, ?string $detalle): void {
+        Log::create([
+            'usuario_id' => auth()->id(),
+            'accion' => Str::limit($accion, 30, ''),
+            'tabla' => Str::limit($tabla, 80, ''),
+            'registro_id' => $registroId,
+            'detalle' => $detalle ? Str::limit($detalle, 255, '') : null,
+            'status' => 'activo',
+        ]);
     }
 
-    /* =========================
-     * Helpers
-     * ========================= */
-
-    private function calcTotals(Cotizacion $c): array
-    {
-        $sum = 0.0;
-        foreach ($c->detalles ?? [] as $d) {
-            $sum += (float) $d->total_linea;
-        }
-
-        $totalCalculado = round($sum, 2);
-        $totalCliente = round((float) $c->total, 2);
-
-        return [
-            'total_calculado' => $totalCalculado,
-            'diferencia_total' => round($totalCliente - $totalCalculado, 2),
-        ];
-    }
-
-    private function readReplyFromToken(?string $token): array
-    {
-        $token = trim((string) ($token ?? ''));
-        if ($token === '') return [];
-
-        $decoded = json_decode($token, true);
-        if (!is_array($decoded)) return [];
-
-        $reply = $decoded['panel_reply'] ?? null;
-        return is_array($reply) ? $reply : [];
-    }
-
-    private function writeReplyIntoToken(?string $token, array $reply): string
-    {
-        $token = trim((string) ($token ?? ''));
-
-        $decoded = json_decode($token, true);
-        if (!is_array($decoded)) {
-            $decoded = $token !== '' ? ['legacy_token' => $token] : [];
-        }
-
-        $decoded['panel_reply'] = $reply;
-
-        return json_encode($decoded, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    }
-
-    private function buildWhatsappMessage(string $folio, string $resumen, float $totalFinal): string
-    {
-        $total = number_format($totalFinal, 2);
-        return "Cotización {$folio}\n\n{$resumen}\n\nTotal final: $ {$total}";
-    }
-
-    private function buildReplyEmailHtml(string $folio, string $resumen, float $totalFinal, float $descuento): string
-    {
-        $total = number_format($totalFinal, 2);
-        $desc = number_format($descuento, 2);
-
-        $descuentoHtml = $descuento > 0
-            ? "<p style=\"margin:6px 0 0; color:#64748b; font-size:13px;\">Descuento aplicado: $ {$desc}</p>"
-            : "";
-
-        $resumenSafe = nl2br(e($resumen));
-
-        return "
-<!doctype html>
-<html lang=\"es\">
-<head>
-  <meta charset=\"utf-8\">
-  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">
-  <title>Respuesta de cotización</title>
-</head>
-<body style=\"margin:0; padding:0; background:#f6f7fb; font-family: Arial, Helvetica, sans-serif;\">
-  <div style=\"max-width:640px; margin:0 auto; padding:24px;\">
-    <div style=\"background:#ffffff; border:1px solid #e6e8ef; border-radius:16px; padding:20px;\">
-      <h2 style=\"margin:0 0 10px; font-size:18px; color:#0f172a;\">Cotización {$folio}</h2>
-      <div style=\"background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px; margin:12px 0;\">
-        <p style=\"margin:0; color:#0f172a; font-size:14px; line-height:1.55;\">{$resumenSafe}</p>
-      </div>
-      <p style=\"margin:0; color:#0f172a; font-weight:700; font-size:14px;\">Total final: $ {$total}</p>
-      {$descuentoHtml}
-      <p style=\"margin:16px 0 0; color:#64748b; font-size:12px;\">Folio: {$folio}</p>
-    </div>
-  </div>
-</body>
-</html>";
-    }
 }
