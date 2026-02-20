@@ -88,10 +88,33 @@ class CotizacionPanelController extends Controller {
     // NUEVO: pantalla para crear cotización desde panel
     public function create() {
         $this->ensurePanelActor();
+        $toPublic = fn (?string $path) => $path ? '/storage/' . ltrim($path, '/') : null;
         $productos = Producto::query()
             ->where('status','activo')
+            ->with(['medias' => fn($q) => $q->where('status','activo')->orderByDesc('principal')->orderBy('orden')])
             ->orderBy('nombre')
-            ->get(['id','sku','nombre','precio_venta']);
+            ->get(['id','sku','nombre','precio_venta'])
+            ->map(function (Producto $p) use ($toPublic) {
+                $imgPath =
+                    $p->medias->firstWhere('principal', 1)?->url
+                    ?: $p->medias->first()?->url;
+                return [
+                    'id' => $p->id,
+                    'sku' => $p->sku,
+                    'nombre' => $p->nombre,
+                    'precio_venta' => $p->precio_venta,
+                    // clave: relativo
+                    'image_url' => $toPublic($imgPath),
+                    //  clave: relativos también
+                    'medias' => $p->medias->map(fn($m) => [
+                        'id' => $m->id,
+                        'url' => $toPublic($m->url),
+                        'principal' => (bool) $m->principal,
+                        'orden' => (int) $m->orden,
+                        'tipo' => $m->tipo,
+                    ])->values(),
+                ];
+            });
         $servicios = Servicio::query()
             ->where('status','activo')
             ->orderBy('nombre')
@@ -120,42 +143,47 @@ class CotizacionPanelController extends Controller {
 
     public function show(Cotizacion $cotizacion) {
         $this->ensurePanelActor();
-        abort_unless($cotizacion->status === 'activo', 404);
         $cotizacion->load([
-            'detalles' => fn ($q) => $q->orderBy('id')->where('status','activo')->with(['producto','servicio']),
+            'detalles' => fn($q) => $q->where('status','activo')->orderBy('id'),
+            'detalles.producto:id,sku,nombre',
+            'detalles.servicio:id,nombre',
         ]);
+        // Catálogo (para agregar ítems desde el Show sin pedir "ID")
+        $toPublic = fn (?string $path) => $path ? '/storage/' . ltrim($path, '/') : null;
+        $productos = Producto::query()
+            ->where('status','activo')
+            ->with(['medias' => fn($q) => $q->where('status','activo')->orderByDesc('principal')->orderBy('orden')])
+            ->orderBy('nombre')
+            ->get(['id','sku','nombre','precio_venta'])
+            ->map(function (Producto $p) use ($toPublic) {
+                $imgPath =
+                    $p->medias->firstWhere('principal', 1)?->url
+                    ?: $p->medias->first()?->url;
+                return [
+                    'id' => $p->id,
+                    'sku' => $p->sku,
+                    'nombre' => $p->nombre,
+                    'precio_venta' => $p->precio_venta,
+                    'image_url' => $toPublic($imgPath),
+                    'medias' => $p->medias->map(fn($m) => [
+                        'id' => $m->id,
+                        'url' => $toPublic($m->url),
+                        'principal' => (bool) $m->principal,
+                        'orden' => (int) $m->orden,
+                        'tipo' => $m->tipo,
+                    ])->values(),
+                ];
+            });
+        $servicios = Servicio::query()
+            ->where('status','activo')
+            ->orderBy('nombre')
+            ->get(['id','nombre','precio']);
         return Inertia::render('Cotizaciones/Show', [
-            'item' => [
-                'id' => $cotizacion->id,
-                'folio' => $cotizacion->folio,
-                'token' => $cotizacion->token,
-                'estatus' => $cotizacion->estatus,
-                'email_destino' => $cotizacion->email_destino,
-                'telefono_destino' => $cotizacion->telefono_destino,
-                'subtotal' => $cotizacion->subtotal,
-                'total' => $cotizacion->total,
-                'status' => $cotizacion->status,
-                'detalles' => $cotizacion->detalles->map(fn ($d) => [
-                    'id' => $d->id,
-                    'producto_id' => $d->producto_id,
-                    'servicio_id' => $d->servicio_id,
-                    'cantidad' => $d->cantidad,
-                    'precio_unitario' => $d->precio_unitario,
-                    'total_linea' => $d->total_linea,
-                    'status' => $d->status,
-                    'producto' => $d->producto ? [
-                        'id' => $d->producto->id,
-                        'sku' => $d->producto->sku,
-                        'nombre' => $d->producto->nombre,
-                    ] : null,
-                    'servicio' => $d->servicio ? [
-                        'id' => $d->servicio->id,
-                        'nombre' => $d->servicio->nombre,
-                    ] : null,
-                ])->values(),
-            ],
+            'item' => $cotizacion,
             'meta' => [
-                'estatuses' => ['BORRADOR','EN_REVISION','DEVUELTA','ENVIADA'],
+                'estatuses' => ['NUEVA','EN_REVISION','DEVUELTA','ENVIADA'],
+                'productos' => $productos,
+                'servicios' => $servicios,
             ],
         ]);
     }
@@ -163,6 +191,8 @@ class CotizacionPanelController extends Controller {
     public function update(CotizacionUpdateRequest $request, Cotizacion $cotizacion) {
         $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
+        $this->guardNotSent($cotizacion);
+
         $cotizacion->fill($request->only(['email_destino','telefono_destino','estatus']));
         if (!$cotizacion->estatus) $cotizacion->estatus = 'EN_REVISION';
         $cotizacion->save();
@@ -173,6 +203,7 @@ class CotizacionPanelController extends Controller {
     public function destroy(Cotizacion $cotizacion) {
         $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
+        $this->guardNotSent($cotizacion);
         $cotizacion->status = 'inactivo';
         $cotizacion->save();
         $this->log('delete', 'cotizacions', $cotizacion->id, 'Baja lógica.');
@@ -182,6 +213,7 @@ class CotizacionPanelController extends Controller {
     public function addItem(CotizacionAddItemRequest $request, Cotizacion $cotizacion) {
         $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
+        $this->guardNotSent($cotizacion);
         $tipo = $request->input('tipo');
         $cantidad = (float) $request->input('cantidad');
         $productoId = $tipo === 'PRODUCTO' ? (int) $request->input('producto_id') : null;
@@ -228,6 +260,7 @@ class CotizacionPanelController extends Controller {
     public function reply(CotizacionReplyRequest $request, Cotizacion $cotizacion) {
         $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
+        $this->guardNotSent($cotizacion);
         $cotizacion->fill($request->only(['email_destino','telefono_destino']));
         $cotizacion->estatus = 'DEVUELTA';
         $cotizacion->save();
@@ -235,20 +268,34 @@ class CotizacionPanelController extends Controller {
         return back(303);
     }
 
-    // OJO: este NO manda correo. Es para cuando tú ya la mandaste por WhatsApp y solo quieres marcar.
+   // OJO: este NO manda correo. Es para cuando tú ya la mandaste por WhatsApp y solo quieres marcar.
     public function markSent(CotizacionMarkSentRequest $request, Cotizacion $cotizacion) {
         $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
+        // si ya está ENVIADA, no permitir “marcar otra vez”
+        if (strtoupper((string) $cotizacion->estatus) === 'ENVIADA') {
+            return back(303);
+        }
         $cotizacion->estatus = 'ENVIADA';
         $cotizacion->save();
         $this->log('update', 'cotizacions', $cotizacion->id, 'Marcada ENVIADA (manual).');
         return back(303);
     }
 
+    private function guardNotSent(Cotizacion $cotizacion): void {
+        if (strtoupper((string) $cotizacion->estatus) === 'ENVIADA') {
+            abort(422, 'La cotización ya fue marcada como ENVIADA.');
+        }
+    }
+
     // NUEVO: manda correo desde el sistema y marca ENVIADA
     public function sendEmail(CotizacionSendEmailRequest $request, Cotizacion $cotizacion) {
         $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
+        // si ya está ENVIADA, no reenviar/reciclar estado aquí
+        if (strtoupper((string) $cotizacion->estatus) === 'ENVIADA') {
+            return back(303);
+        }
         $email = trim((string) ($request->input('email') ?: $cotizacion->email_destino));
         abort_unless($email !== '', 422);
         $url = route('cotizacion.public.show', ['token' => $cotizacion->token]);

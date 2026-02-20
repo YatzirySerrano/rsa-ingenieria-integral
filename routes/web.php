@@ -89,20 +89,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // ADMIN (panel interno) -> URL limpia como tus otros CRUDs
     Route::prefix('cotizaciones')->name('cotizaciones.')->group(function () {
-
         Route::get('/', [CotizacionPanelController::class, 'index'])->name('index');
 
+        // Crear cotización desde panel
         Route::get('/create', [CotizacionPanelController::class, 'create'])->name('create');
         Route::post('/', [CotizacionPanelController::class, 'store'])->name('store');
 
+        // Detalles: editar SOLO cantidad + quitar (status inactivo)    a
+        Route::match(['put', 'patch'], '/detalles/{detalle}', [CotizacionDetalleController::class, 'update'])
+            ->name('detalles.update');
+        Route::delete('/detalles/{detalle}', [CotizacionDetalleController::class, 'destroy'])
+            ->name('detalles.destroy');
+
+        // Ver cotización
         Route::get('/{cotizacion}', [CotizacionPanelController::class, 'show'])->name('show');
+
+        // Carrito: agregar item (desde catálogo)
+        Route::post('/{cotizacion}/items', [CotizacionPanelController::class, 'addItem'])->name('items.add');
+
+        // Flujos de estatus
+        Route::post('/{cotizacion}/reply', [CotizacionPanelController::class, 'reply'])->name('reply');
+        Route::post('/{cotizacion}/mark-sent', [CotizacionPanelController::class, 'markSent'])->name('markSent');
+
+        Route::post('/{cotizacion}/send-email', [CotizacionPanelController::class, 'sendEmail'])->name('sendEmail');
+
         Route::put('/{cotizacion}', [CotizacionPanelController::class, 'update'])->name('update');
         Route::delete('/{cotizacion}', [CotizacionPanelController::class, 'destroy'])->name('destroy');
 
-        Route::post('/{cotizacion}/items', [CotizacionPanelController::class, 'addItem'])->name('items.add');
-        Route::post('/{cotizacion}/reply', [CotizacionPanelController::class, 'reply'])->name('reply');
-        Route::post('/{cotizacion}/mark-sent', [CotizacionPanelController::class, 'markSent'])->name('markSent');
-        Route::post('/{cotizacion}/send-email', [CotizacionPanelController::class, 'sendEmail'])->name('sendEmail');
     });
 
 });

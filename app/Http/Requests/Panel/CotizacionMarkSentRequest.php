@@ -6,12 +6,15 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class CotizacionMarkSentRequest extends FormRequest {
 
-    public function authorize(): bool { return true; }
+    public function authorize(): bool {
+        $u = $this->user();
+        $rol = $u?->rol;
+        return (bool) ($u && in_array($rol, ['admin', 'vendedor'], true));
+    }
 
     public function rules(): array {
-        return [
-            'channel' => ['required','in:email,whatsapp'],
-        ];
+        // IMPORTANTE: mark-sent NO requiere payload
+        return [];
     }
-    
+
 }

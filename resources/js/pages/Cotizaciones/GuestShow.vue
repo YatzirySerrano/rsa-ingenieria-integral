@@ -49,7 +49,7 @@ const statusUi = computed(() => {
   <PublicLayout>
     <Head :title="`Cotización ${props.item.folio}`" />
 
-    <div class="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8 pb-8 pt-24 sm:pt-28">
       <h1 class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 dark:text-zinc-100">
         Cotización {{ props.item.folio }}
       </h1>

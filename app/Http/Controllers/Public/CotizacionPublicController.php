@@ -21,7 +21,7 @@ class CotizacionPublicController extends Controller {
             ->where('status','activo')
             ->orderBy('nombre')
             ->get(['id','nombre','precio']);
-        return Inertia::render('cotizaciones/GuestCreate', [
+        return Inertia::render('Cotizaciones/GuestCreate', [
             'meta' => [
                 'productos' => $productos,
                 'servicios' => $servicios,
@@ -48,7 +48,7 @@ class CotizacionPublicController extends Controller {
         $cotizacion->load([
             'detalles' => fn ($q) => $q->orderBy('id')->where('status','activo')->with(['producto','servicio']),
         ]);
-        return Inertia::render('cotizaciones/GuestShow', [
+        return Inertia::render('Cotizaciones/GuestShow', [
             'item' => [
                 'folio' => $cotizacion->folio,
                 'token' => $cotizacion->token,

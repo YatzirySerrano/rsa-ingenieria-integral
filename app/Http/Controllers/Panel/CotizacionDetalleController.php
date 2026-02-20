@@ -11,22 +11,35 @@ class CotizacionDetalleController extends Controller {
 
     public function __construct(private CotizacionTotals $totals) {}
 
+    private function ensurePanelActor(): void {
+        abort_unless(auth()->check(), 403);
+    }
+
     public function update(CotizacionDetalleUpdateRequest $request, CotizacionDetalle $detalle) {
-        abort_unless($detalle->status === 'activo', 404);
-        $detalle->cantidad = (float) $request->input('cantidad');
-        $detalle->precio_unitario = (float) $request->input('precio_unitario');
-        $detalle->total_linea = round(((float)$detalle->cantidad) * ((float)$detalle->precio_unitario), 2);
+        $this->ensurePanelActor();
+        $cotizacion = $detalle->cotizacion()->firstOrFail();
+        if (strtoupper((string) $cotizacion->estatus) === 'ENVIADA') {
+            abort(422, 'La cotización ya fue marcada como ENVIADA.');
+        }
+        $cantidad = (int) $request->validated('cantidad');
+        $detalle->cantidad = $cantidad;
+        $detalle->total_linea = $cantidad * (float) $detalle->precio_unitario;
         $detalle->save();
-        $this->totals->recalc($detalle->cotizacion);
-        return back(303);
+        // Tu service solo tiene recalc()
+        $this->totals->recalc($cotizacion);
+        return back();
     }
 
     public function destroy(CotizacionDetalle $detalle) {
-        abort_unless($detalle->status === 'activo', 404);
-        $detalle->status = 'inactivo';
-        $detalle->save();
-        $this->totals->recalc($detalle->cotizacion);
-        return back(303);
+        $this->ensurePanelActor();
+        $cotizacion = $detalle->cotizacion()->firstOrFail();
+        if (strtoupper((string) $cotizacion->estatus) === 'ENVIADA') {
+            abort(422, 'La cotización ya fue marcada como ENVIADA.');
+        }
+        $detalle->update(['status' => 'inactivo']);
+        //  Recalcula subtotal/total con SOLO activos (ya lo haces en el service)
+        $this->totals->recalc($cotizacion);
+        return back();
     }
 
 }

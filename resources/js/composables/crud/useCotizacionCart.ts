@@ -1,8 +1,8 @@
 import { computed, type ComputedRef } from 'vue'
 import { router } from '@inertiajs/vue3'
-import { swalConfirm, swalErr, swalNotify } from '@/lib/swal'
+import { swalConfirm, swalErr, swalLoading, swalClose } from '@/lib/swal'
 
-type Detalle = {
+export type Detalle = {
   id: number
   producto_id?: number | null
   servicio_id?: number | null
@@ -14,7 +14,7 @@ type Detalle = {
   servicio?: { id: number; nombre: string } | null
 }
 
-type Cotizacion = {
+export type Cotizacion = {
   id: number
   folio: string
   token: string
@@ -32,209 +32,118 @@ type Options = {
   cotizacion: ComputedRef<Cotizacion>
 }
 
-function money(v: number | string | null | undefined) {
-  const n = Number(v ?? 0)
-  return n.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
+function toNumber(v: any) {
+  const n = typeof v === 'string' ? Number(v) : Number(v ?? 0)
+  return Number.isFinite(n) ? n : 0
 }
 
 export function useCotizacionCart({ baseUrl, cotizacion }: Options) {
-  const detallesActivos = computed(() => (cotizacion.value.detalles ?? []).filter(d => d.status === 'activo'))
+  const detallesActivos = computed(() => (cotizacion.value.detalles ?? []).filter((d) => d.status === 'activo'))
+
+  function money(v: any) {
+    return toNumber(v).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
+  }
 
   function itemLabel(d: Detalle) {
     if (d.producto) return `${d.producto.sku ? d.producto.sku + ' · ' : ''}${d.producto.nombre}`
     if (d.servicio) return d.servicio.nombre
+    if (d.producto_id) return `Producto #${d.producto_id}`
+    if (d.servicio_id) return `Servicio #${d.servicio_id}`
     return 'Ítem'
   }
 
-  async function openAddItem() {
-    const { value } = await (await import('sweetalert2')).default.fire({
-      title: 'Agregar item',
-      input: 'select',
-      inputOptions: { PRODUCTO: 'Producto', SERVICIO: 'Servicio' },
-      inputValue: 'PRODUCTO',
-      showCancelButton: true,
-      confirmButtonText: 'Siguiente',
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true,
-    })
-
-    if (!value) return
-    const tipo = value as 'PRODUCTO' | 'SERVICIO'
-
-    const Swal = (await import('sweetalert2')).default
-
-    const { value: idRaw } = await Swal.fire({
-      title: 'ID del item',
-      input: 'text',
-      inputPlaceholder: tipo === 'PRODUCTO' ? 'ID de producto' : 'ID de servicio',
-      showCancelButton: true,
-      confirmButtonText: 'Siguiente',
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true,
-      preConfirm: (v) => {
-        const s = String(v ?? '').trim()
-        if (!/^\d+$/.test(s)) {
-          Swal.showValidationMessage('Pon un ID numérico válido.')
-          return
-        }
-        return Number(s)
+  function addItem(payload: { tipo: 'PRODUCTO' | 'SERVICIO'; producto_id?: number | null; servicio_id?: number | null; cantidad?: number }) {
+    router.post(
+      `${baseUrl}/${cotizacion.value.id}/items`,
+      {
+        tipo: payload.tipo,
+        producto_id: payload.tipo === 'PRODUCTO' ? payload.producto_id : null,
+        servicio_id: payload.tipo === 'SERVICIO' ? payload.servicio_id : null,
+        cantidad: payload.cantidad ?? 1,
       },
-    })
-    if (!idRaw) return
-
-    const { value: cantidad } = await Swal.fire({
-      title: 'Cantidad',
-      input: 'number',
-      inputValue: 1,
-      inputAttributes: { min: '0.01', step: '0.01' },
-      showCancelButton: true,
-      confirmButtonText: 'Agregar',
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true,
-      preConfirm: (v) => {
-        const n = Number(v)
-        if (Number.isNaN(n) || n <= 0) {
-          Swal.showValidationMessage('Cantidad inválida.')
-          return
-        }
-        return n
-      },
-    })
-    if (!cantidad) return
-
-    const payload: Record<string, any> = {
-      tipo,
-      cantidad,
-      producto_id: tipo === 'PRODUCTO' ? idRaw : null,
-      servicio_id: tipo === 'SERVICIO' ? idRaw : null,
-    }
-
-    router.post(`${baseUrl}/${cotizacion.value.id}/add-item`, payload, {
-      preserveScroll: true,
-      onSuccess: () => swalNotify('Agregado al carrito', 'success'),
-      onError: (e) => swalErr('No se pudo agregar. Revisa ID/estatus del catálogo.'),
-    })
+      {
+        preserveScroll: true,
+        onError: () => swalErr('No se pudo agregar el ítem.'),
+      }
+    )
   }
 
-  async function openEditDetalle(d: Detalle) {
-    const Swal = (await import('sweetalert2')).default
-
-    const { value } = await Swal.fire({
-      title: 'Editar ítem',
-      html: `<div style="text-align:left">
-        <div><b>${itemLabel(d)}</b></div>
-        <div style="margin-top:8px">Cantidad</div>
-        <input id="cantidad" class="swal2-input" value="${String(d.cantidad)}" />
-        <div style="margin-top:8px">Precio unitario</div>
-        <input id="precio" class="swal2-input" value="${String(d.precio_unitario)}" />
-      </div>`,
-      showCancelButton: true,
-      confirmButtonText: 'Guardar',
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true,
-      focusConfirm: false,
-      preConfirm: () => {
-        const cantidadRaw = (document.getElementById('cantidad') as HTMLInputElement).value.trim()
-        const precioRaw = (document.getElementById('precio') as HTMLInputElement).value.trim()
-
-        const cantidad = Number(cantidadRaw)
-        const precio = Number(precioRaw)
-
-        if (!cantidadRaw || Number.isNaN(cantidad) || cantidad <= 0) {
-          Swal.showValidationMessage('Cantidad inválida.')
-          return
-        }
-        if (!precioRaw || Number.isNaN(precio) || precio < 0) {
-          Swal.showValidationMessage('Precio inválido.')
-          return
-        }
-        return { cantidad, precio_unitario: precio }
-      },
-    })
-
-    if (!value) return
-
-    router.put(`/cotizaciones/detalles/${d.id}`, value, {
-      preserveScroll: true,
-      onSuccess: () => swalNotify('Ítem actualizado', 'success'),
-      onError: () => swalErr('No se pudo actualizar.'),
-    })
+  function updateCantidad(detalleId: number, cantidad: number) {
+    router.put(
+      `${baseUrl}/detalles/${detalleId}`,
+      { cantidad },
+      {
+        preserveScroll: true,
+        onError: () => swalErr('No se pudo actualizar la cantidad.'),
+      }
+    )
   }
 
   async function removeDetalle(d: Detalle) {
-    const { isConfirmed } = await swalConfirm('Se quitará el ítem del carrito.', {
+    const { isConfirmed } = await swalConfirm('', {
       title: 'Quitar ítem',
       confirmText: 'Quitar',
       cancelText: 'Cancelar',
     })
     if (!isConfirmed) return
 
-    router.delete(`/cotizaciones/detalles/${d.id}`, {
+    router.delete(`${baseUrl}/detalles/${d.id}`, {
       preserveScroll: true,
-      onSuccess: () => swalNotify('Ítem eliminado', 'success'),
-      onError: () => swalErr('No se pudo eliminar.'),
+      onError: () => swalErr('No se pudo quitar el ítem.'),
     })
   }
 
-  async function openReply() {
-    const Swal = (await import('sweetalert2')).default
-
-    const { value } = await Swal.fire({
-      title: 'Responder (marcar DEVUELTA)',
-      html: `<div style="text-align:left">
-        <div style="margin-top:8px">Correo (opcional)</div>
-        <input id="email" class="swal2-input" value="${cotizacion.value.email_destino ?? ''}" />
-        <div style="margin-top:8px">Teléfono (opcional)</div>
-        <input id="tel" class="swal2-input" value="${cotizacion.value.telefono_destino ?? ''}" />
-      </div>`,
-      showCancelButton: true,
-      confirmButtonText: 'Marcar DEVUELTA',
-      cancelButtonText: 'Cancelar',
-      reverseButtons: true,
-      focusConfirm: false,
-      preConfirm: () => {
-        const email = (document.getElementById('email') as HTMLInputElement).value.trim()
-        const tel = (document.getElementById('tel') as HTMLInputElement).value.trim()
-        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          Swal.showValidationMessage('Correo inválido.')
-          return
-        }
-        return { email_destino: email || null, telefono_destino: tel || null }
-      },
-    })
-
-    if (!value) return
-
-    router.post(`${baseUrl}/${cotizacion.value.id}/reply`, value, {
-      preserveScroll: true,
-      onSuccess: () => swalNotify('Marcada DEVUELTA', 'success'),
-      onError: () => swalErr('No se pudo marcar DEVUELTA.'),
-    })
-  }
-
-  async function openMarkSent() {
-    const { isConfirmed } = await swalConfirm('¿Confirmas que ya la enviaste al cliente?', {
-      title: 'Marcar ENVIADA',
-      confirmText: 'Sí, marcar',
+  async function markSent() {
+    const { isConfirmed } = await swalConfirm('', {
+      title: 'Marcar como ENVIADA',
+      confirmText: 'Marcar ENVIADA',
       cancelText: 'Cancelar',
     })
     if (!isConfirmed) return
 
-    router.post(`${baseUrl}/${cotizacion.value.id}/mark-sent`, { channel: 'email' }, {
-      preserveScroll: true,
-      onSuccess: () => swalNotify('Marcada ENVIADA', 'success'),
-      onError: () => swalErr('No se pudo marcar ENVIADA.'),
+    swalLoading('Actualizando...')
+    router.post(
+      `${baseUrl}/${cotizacion.value.id}/mark-sent`,
+      {},
+      {
+        preserveScroll: true,
+        onFinish: () => swalClose(),
+        onError: () => swalErr('No se pudo marcar como ENVIADA.'),
+      }
+    )
+  }
+
+  async function reply(payload: { email_destino?: string | null; telefono_destino?: string | null }) {
+    const { isConfirmed } = await swalConfirm('', {
+      title: 'Marcar DEVUELTA',
+      confirmText: 'Marcar DEVUELTA',
+      cancelText: 'Cancelar',
     })
+    if (!isConfirmed) return
+
+    swalLoading('Actualizando...')
+    router.post(
+      `${baseUrl}/${cotizacion.value.id}/reply`,
+      {
+        email_destino: payload.email_destino || null,
+        telefono_destino: payload.telefono_destino || null,
+      },
+      {
+        preserveScroll: true,
+        onFinish: () => swalClose(),
+        onError: () => swalErr('No se pudo marcar DEVUELTA.'),
+      }
+    )
   }
 
   return {
     detallesActivos,
     money,
     itemLabel,
-    openAddItem,
-    openEditDetalle,
+    addItem,
+    updateCantidad,
     removeDetalle,
-    openReply,
-    openMarkSent,
+    markSent,
+    reply,
   }
 }

@@ -166,12 +166,6 @@
                             <option v-for="e in props.meta.estatuses" :key="e" :value="e">{{ e }}</option>
                         </select>
                         </div>
-
-                        <div class="md:col-span-6 lg:col-span-3">
-                        <p class="text-xs text-slate-500 dark:text-zinc-500 md:pt-7">
-                            Flujo: Guest envía → Admin revisa → Admin devuelve por WhatsApp/Email.
-                        </p>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -181,12 +175,6 @@
                 class="hidden overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:block
                         dark:border-white/10 dark:bg-zinc-950/40"
                 >
-                <div class="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-white/10">
-                    <p class="text-sm font-black text-slate-900 dark:text-zinc-100">Cotizaciones recibidas</p>
-                    <p class="text-xs text-slate-500 dark:text-zinc-500">
-                    Responder = ajustar y marcar DEVUELTA. Enviar = abrir Email/WhatsApp y marcar ENVIADA.
-                    </p>
-                </div>
 
                 <div class="overflow-x-auto">
                     <table class="min-w-full text-sm">
@@ -282,17 +270,6 @@
                             >
                                 <Inbox class="h-4 w-4" />
                                 <span class="font-extrabold">Abrir</span>
-                            </Button>
-
-                            <Button
-                                type="button"
-                                size="sm"
-                                class="gap-2 bg-amber-600 text-white transition hover:bg-amber-500 active:scale-[.99]
-                                    dark:bg-amber-500 dark:text-zinc-950 dark:hover:bg-amber-400"
-                                @click.prevent="panel.replyFlow(c)"
-                            >
-                                <FileCheck2 class="h-4 w-4" />
-                                <span class="font-extrabold">Responder</span>
                             </Button>
 
                             <Button
@@ -397,17 +374,6 @@
                         >
                         <Inbox class="h-4 w-4" />
                         Abrir
-                        </Button>
-
-                        <Button
-                        type="button"
-                        size="sm"
-                        class="gap-2 bg-amber-600 text-white transition hover:bg-amber-500
-                                dark:bg-amber-500 dark:text-zinc-950 dark:hover:bg-amber-400"
-                        @click.prevent="panel.replyFlow(c)"
-                        >
-                        <FileCheck2 class="h-4 w-4" />
-                        Responder
                         </Button>
 
                         <Button
