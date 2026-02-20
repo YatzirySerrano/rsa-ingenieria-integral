@@ -24,58 +24,59 @@
     } from 'lucide-vue-next'
 
     const props = defineProps<{
-    items: Paginated<Cotizacion>
-    filters: Partial<{ q: string; estatus: string }>
-    meta: { estatuses: string[] }
+        items: Paginated<Cotizacion>
+        filters: Partial<{ q: string; estatus: string }>
+        meta: { estatuses: string[] }
     }>()
 
+
     const panel = useCotizacionPanel({
-    initialFilters: props.filters,
-    baseUrl: '/cotizaciones',
+        initialFilters: props.filters,
+        baseUrl: '/cotizaciones',
     })
 
     const stats = computed(() => {
-    const d = props.items.data ?? []
-    const ui = d.map((x) => panel.uiEstatus(x))
-    return {
-        page: d.length,
-        nuevas: ui.filter((x) => x === 'NUEVA').length,
-        enRevision: ui.filter((x) => x === 'EN_REVISION').length,
-        devueltas: ui.filter((x) => x === 'DEVUELTA').length,
-    }
+        const d = props.items.data ?? []
+        const ui = d.map((x) => panel.uiEstatus(x))
+        return {
+            page: d.length,
+            nuevas: ui.filter((x) => x === 'NUEVA').length,
+            enRevision: ui.filter((x) => x === 'EN_REVISION').length,
+            devueltas: ui.filter((x) => x === 'DEVUELTA').length,
+        }
     })
 
     function safe(v?: string | null) {
-    const s = String(v ?? '').trim()
-    return s ? s : '—'
+        const s = String(v ?? '').trim()
+        return s ? s : '—'
     }
 
     function money(v: any) {
-    const n = typeof v === 'string' ? Number(v) : Number(v ?? 0)
-    if (Number.isNaN(n)) return '0.00'
-    return n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        const n = typeof v === 'string' ? Number(v) : Number(v ?? 0)
+        if (Number.isNaN(n)) return '0.00'
+        return n.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     }
 
     function pillUiEstatus(e: ReturnType<typeof panel.uiEstatus>) {
-    const map: Record<string, string> = {
-        NUEVA: 'bg-blue-500/10 text-blue-700 ring-1 ring-blue-500/20 dark:text-blue-200',
-        EN_REVISION: 'bg-amber-500/10 text-amber-800 ring-1 ring-amber-500/20 dark:text-amber-200',
-        DEVUELTA: 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-200',
-    }
-    return map[e] ?? 'bg-slate-500/10 text-slate-700 ring-1 ring-slate-500/15 dark:text-zinc-200'
+        const map: Record<string, string> = {
+            NUEVA: 'bg-blue-500/10 text-blue-700 ring-1 ring-blue-500/20 dark:text-blue-200',
+            EN_REVISION: 'bg-amber-500/10 text-amber-800 ring-1 ring-amber-500/20 dark:text-amber-200',
+            DEVUELTA: 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-200',
+        }
+        return map[e] ?? 'bg-slate-500/10 text-slate-700 ring-1 ring-slate-500/15 dark:text-zinc-200'
     }
 
     function estatusIcon(e: ReturnType<typeof panel.uiEstatus>) {
-    if (e === 'NUEVA') return Inbox
-    if (e === 'EN_REVISION') return FileCheck2
-    if (e === 'DEVUELTA') return Undo2
-    return Inbox
+        if (e === 'NUEVA') return Inbox
+        if (e === 'EN_REVISION') return FileCheck2
+        if (e === 'DEVUELTA') return Undo2
+        return Inbox
     }
 
     function diffBadgeClass(diff?: number | null) {
-    const d = Number(diff ?? 0)
-    if (!d) return 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-200'
-    return 'bg-rose-500/10 text-rose-700 ring-1 ring-rose-500/20 dark:text-rose-200'
+        const d = Number(diff ?? 0)
+        if (!d) return 'bg-emerald-500/10 text-emerald-700 ring-1 ring-emerald-500/20 dark:text-emerald-200'
+        return 'bg-rose-500/10 text-rose-700 ring-1 ring-rose-500/20 dark:text-rose-200'
     }
 
     import type { BreadcrumbItem } from '@/types'

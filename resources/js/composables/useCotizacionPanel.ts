@@ -1,6 +1,7 @@
 import { computed, reactive, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
-import { swalConfirm, swalErr, swalNotify } from '@/lib/swal'
+import { swalConfirm, swalErr, swalNotify, swalLoading, swalClose} from '@/lib/swal'
+import axios from 'axios'
 
 export type Cotizacion = {
   id: number
@@ -106,26 +107,41 @@ export function useCotizacionPanel(opts: { initialFilters?: Partial<Filters>; ba
     return !!p && c.status === 'activo'
   }
 
-  // CAMBIO CLAVE: ya no mailto, ahora backend envía correo real
-  async function sendEmail(c: Cotizacion) {
+    async function sendEmail(c: Cotizacion) {
     if (!isEmail(c.email_destino)) return swalErr('Falta correo válido.')
 
     const { isConfirmed } = await swalConfirm(
-      `El sistema enviará la cotización ${c.folio} a ${String(c.email_destino).trim()}.`,
-      { title: 'Enviar por correo', confirmText: 'Enviar' }
+        `El sistema enviará la cotización ${c.folio} a ${String(c.email_destino).trim()}.`,
+        { title: 'Enviar por correo', confirmText: 'Enviar' }
     )
     if (!isConfirmed) return
 
-    router.post(
-      `${opts.baseUrl}/${c.id}/send-email`,
-      { email: String(c.email_destino).trim() },
-      {
-        preserveScroll: true,
-        onSuccess: () => swalNotify('Correo enviado y cotización marcada como ENVIADA', 'success'),
-        onError: () => swalErr('No se pudo enviar el correo. Revisa configuración de mail y reintenta.'),
-      }
-    )
-  }
+    // tu helper swalLoading (según tu TS) recibe 1 argumento
+    swalLoading('Espere, se está enviando el correo...')
+
+    try {
+        const to = String(c.email_destino).trim()
+
+        const { data } = await axios.post(
+        `${opts.baseUrl}/${c.id}/send-email`,
+        { email: to },
+        { headers: { Accept: 'application/json' } }
+        )
+
+        // 1) cierra loading
+        swalClose()
+        // 2) ahora sí muestra éxito (ya no se “mata”)
+        swalNotify(`Correo enviado a ${data?.to ?? to}`, 'success')
+
+        // refresca listado sin romper tu UX
+        apply()
+    } catch (err: any) {
+        // cierra loading también en error
+        swalClose()
+        const msg = err?.response?.data?.message ?? 'No se pudo enviar el correo. Revisa logs.'
+        swalErr(msg)
+    }
+    }
 
   // WhatsApp sigue siendo “abrir WA” y luego marcar ENVIADA (manual)
   async function sendWhatsapp(c: Cotizacion) {

@@ -13,14 +13,17 @@ use App\Http\Requests\Panel\CotizacionUpdateRequest;
 use App\Mail\CotizacionEnviadaMail;
 use App\Models\Cotizacion;
 use App\Models\CotizacionDetalle;
-use App\Models\Log;
+use App\Models\Log as LogModel;
 use App\Models\Producto;
 use App\Models\Servicio;
+use Illuminate\Support\Facades\Log as LaravelLog;
 use App\Services\Cotizaciones\CotizacionCreator;
 use App\Services\Cotizaciones\CotizacionTotals;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class CotizacionPanelController extends Controller {
 
@@ -289,30 +292,129 @@ class CotizacionPanelController extends Controller {
     }
 
     // NUEVO: manda correo desde el sistema y marca ENVIADA
-    public function sendEmail(CotizacionSendEmailRequest $request, Cotizacion $cotizacion) {
-        $this->ensurePanelActor();
-        abort_unless($cotizacion->status === 'activo', 404);
-        // si ya está ENVIADA, no reenviar/reciclar estado aquí
-        if (strtoupper((string) $cotizacion->estatus) === 'ENVIADA') {
-            return back(303);
+    public function sendEmail(Request $request, Cotizacion $cotizacion) {
+        $data = $request->validate([
+            'email' => ['required', 'email'],
+        ]);
+        // Actualiza destino (si quieres permitir cambiarlo desde panel)
+        $cotizacion->email_destino = $data['email'];
+        // Construye todo lo necesario para el correo
+        $url = route('cotizacion.public.show', $cotizacion->token);
+        $cliente = $this->buildClienteInfo($cotizacion);
+        $detalles = $this->buildDetallesForMail($cotizacion->id);
+        try {
+            Mail::to($cotizacion->email_destino)
+                ->send(new CotizacionEnviadaMail(
+                    cotizacion: $cotizacion,
+                    detalles: $detalles,
+                    publicUrl: $url,
+                    cliente: $cliente
+                ));
+            // Solo si se envió sin explotar, marcamos ENVIADA
+            $cotizacion->estatus = 'ENVIADA';
+            $cotizacion->save();
+            // Si quieres auditar en tu tabla logs:
+            // $this->logAction('ENVIAR_CORREO', 'cotizacions', $cotizacion->id, 'Enviado a ' . $cotizacion->email_destino);
+            return response()->json([
+                'ok' => true,
+                'to' => $cotizacion->email_destino,
+                'estatus' => $cotizacion->estatus,
+            ], 200);
+        } catch (\Throwable $e) {
+            report($e);
+            LaravelLog::error('Fallo enviando cotización', [
+                'cotizacion_id' => $cotizacion->id,
+                'to' => $cotizacion->email_destino,
+                'error' => $e->getMessage(),
+            ]);
+            // Si quieres auditar error en tu tabla logs:
+            // $this->logAction('ERROR_ENVIO_CORREO', 'cotizacions', $cotizacion->id, $e->getMessage());
+            return response()->json([
+                'message' => 'No se pudo enviar el correo. Revisa logs.',
+            ], 500);
         }
-        $email = trim((string) ($request->input('email') ?: $cotizacion->email_destino));
-        abort_unless($email !== '', 422);
-        $url = route('cotizacion.public.show', ['token' => $cotizacion->token]);
-        Mail::to($email)->send(new CotizacionEnviadaMail($cotizacion->fresh(), $url));
-        $cotizacion->estatus = 'ENVIADA';
-        $cotizacion->save();
-        $this->log('update', 'cotizacions', $cotizacion->id, 'Enviada por correo (sistema).');
-        return back(303);
+    }
+
+    private function buildDetallesForMail(int $cotizacionId): array
+    {
+        $rows = DB::table('cotizacion_detalles as cd')
+            ->leftJoin('productos as p', 'cd.producto_id', '=', 'p.id')
+            ->leftJoin('marcas as m', 'p.marca_id', '=', 'm.id')
+            ->leftJoin('servicios as s', 'cd.servicio_id', '=', 's.id')
+            ->where('cd.cotizacion_id', $cotizacionId)
+            ->where('cd.status', 'activo')
+            ->orderBy('cd.id')
+            ->select([
+                'cd.id',
+                'cd.cantidad',
+                'cd.precio_unitario',
+                'cd.total_linea',
+                'p.sku as producto_sku',
+                'p.nombre as producto_nombre',
+                'm.nombre as marca_nombre',
+                's.nombre as servicio_nombre',
+            ])
+            ->get();
+
+        $out = [];
+        foreach ($rows as $i => $r) {
+            $isServicio = !empty($r->servicio_nombre);
+
+            $desc = $isServicio
+                ? $r->servicio_nombre
+                : trim(
+                    ($r->producto_nombre ?? 'Producto')
+                    . (!empty($r->marca_nombre) ? " ({$r->marca_nombre})" : '')
+                    . (!empty($r->producto_sku) ? " - {$r->producto_sku}" : '')
+                );
+
+            $out[] = [
+                'n' => $i + 1,
+                'tipo' => $isServicio ? 'Servicio' : 'Producto',
+                'descripcion' => $desc ?: '—',
+                'cantidad' => (float) ($r->cantidad ?? 1),
+                'precio_unitario' => (float) ($r->precio_unitario ?? 0),
+                'total_linea' => (float) ($r->total_linea ?? 0),
+            ];
+        }
+
+        return $out;
+    }
+
+    private function buildClienteInfo(Cotizacion $cotizacion): array
+    {
+        $nombre = null;
+        $empresa = null;
+
+        if (!empty($cotizacion->persona_id)) {
+            $p = DB::table('personas')
+                ->where('id', $cotizacion->persona_id)
+                ->select(['nombre', 'apellido_paterno', 'apellido_materno', 'empresa'])
+                ->first();
+
+            if ($p) {
+                $nombre = trim(
+                    ($p->nombre ?? '') . ' ' . ($p->apellido_paterno ?? '') . ' ' . ($p->apellido_materno ?? '')
+                );
+                $empresa = trim((string)($p->empresa ?? '')) ?: null;
+            }
+        }
+
+        return [
+            'nombre' => $nombre ?: '—',
+            'empresa' => $empresa ?: '—',
+            'email' => $cotizacion->email_destino ?: '—',
+            'telefono' => $cotizacion->telefono_destino ?: '—',
+        ];
     }
 
     private function log(string $accion, string $tabla, ?int $registroId, ?string $detalle): void {
-        Log::create([
+        LogModel::create([
             'usuario_id' => auth()->id(),
-            'accion' => Str::limit($accion, 30, ''),
-            'tabla' => Str::limit($tabla, 80, ''),
+            'accion' => $accion,
+            'tabla' => $tabla,
             'registro_id' => $registroId,
-            'detalle' => $detalle ? Str::limit($detalle, 255, '') : null,
+            'detalle' => $detalle,
             'status' => 'activo',
         ]);
     }
