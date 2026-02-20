@@ -84,22 +84,6 @@ const ymLabel = (ym: string) => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex h-full flex-1 flex-col gap-6 overflow-x-hidden p-4">
 
-            <!-- HEADER -->
-            <div class="space-y-1">
-                <h1 class="text-2xl font-semibold tracking-tight">
-                    Dashboard
-                </h1>
-                <p class="text-sm text-muted-foreground">
-                    Hola {{ me?.name ?? 'equipo' }} ·
-                    <span v-if="props.role === 'admin'">
-                        Vista ejecutiva
-                    </span>
-                    <span v-else>
-                        Vista comercial
-                    </span>
-                </p>
-            </div>
-
             <!-- KPIs -->
             <div class="grid gap-4 md:grid-cols-3">
 

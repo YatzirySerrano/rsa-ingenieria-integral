@@ -1,7 +1,5 @@
 import { computed, reactive, watch } from 'vue'
 import { router } from '@inertiajs/vue3'
-
-// Ajusta la ruta según donde guardaste tus helpers
 import { swalConfirm, swalErr, swalNotify } from '@/lib/swal'
 
 export type Cotizacion = {
@@ -80,12 +78,13 @@ export function useCotizacionPanel(opts: { initialFilters?: Partial<Filters>; ba
     apply()
   }
 
+  // FIX: ENVIADA no es DEVUELTA
   function uiEstatus(c: Pick<Cotizacion, 'estatus'>) {
     const e = String(c.estatus ?? '').toUpperCase()
     if (e === 'BORRADOR') return 'NUEVA'
     if (e === 'EN_REVISION') return 'EN_REVISION'
     if (e === 'DEVUELTA') return 'DEVUELTA'
-    if (e === 'ENVIADA') return 'DEVUELTA'
+    if (e === 'ENVIADA') return 'ENVIADA'
     return 'NUEVA'
   }
 
@@ -94,46 +93,44 @@ export function useCotizacionPanel(opts: { initialFilters?: Partial<Filters>; ba
   }
 
   function replyFlow(c: Pick<Cotizacion, 'id'>) {
-    // Te manda al show; ahí haces ajustes y respondes
     router.visit(`${opts.baseUrl}/${c.id}?reply=1`)
   }
 
+  // Permite enviar desde EN_REVISION / DEVUELTA / ENVIADA (reenviar) / BORRADOR si es interna
   function canSendEmail(c: Cotizacion) {
-    return isEmail(c.email_destino) && (c.estatus === 'DEVUELTA' || c.estatus === 'ENVIADA')
+    return isEmail(c.email_destino) && c.status === 'activo'
   }
 
   function canSendWhatsapp(c: Cotizacion) {
     const p = cleanPhone(c.telefono_destino)
-    return !!p && (c.estatus === 'DEVUELTA' || c.estatus === 'ENVIADA')
+    return !!p && c.status === 'activo'
   }
 
+  // CAMBIO CLAVE: ya no mailto, ahora backend envía correo real
   async function sendEmail(c: Cotizacion) {
     if (!isEmail(c.email_destino)) return swalErr('Falta correo válido.')
-    if (!(c.estatus === 'DEVUELTA' || c.estatus === 'ENVIADA')) {
-      return swalErr('Primero responde (marca DEVUELTA) y luego envías.')
-    }
 
-    const { isConfirmed } = await swalConfirm(`Se abrirá tu cliente de correo para enviar la cotización ${c.folio}.`, {
-      title: 'Enviar por correo',
-      confirmText: 'Abrir correo',
-    })
+    const { isConfirmed } = await swalConfirm(
+      `El sistema enviará la cotización ${c.folio} a ${String(c.email_destino).trim()}.`,
+      { title: 'Enviar por correo', confirmText: 'Enviar' }
+    )
     if (!isConfirmed) return
 
-    const link = `${window.location.origin}/cotizacion/${c.token}`
-    const subject = `Cotización ${c.folio}`
-    const body = `Hola, te comparto tu cotización ${c.folio}.\n\nVer cotización: ${link}\n\nSaludos.`
-    window.open(`mailto:${encodeURIComponent(String(c.email_destino))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank')
-
-    router.post(`${opts.baseUrl}/${c.id}/mark-sent`, { channel: 'email' }, { preserveScroll: true })
-    swalNotify('Listo, correo abierto', 'success')
+    router.post(
+      `${opts.baseUrl}/${c.id}/send-email`,
+      { email: String(c.email_destino).trim() },
+      {
+        preserveScroll: true,
+        onSuccess: () => swalNotify('Correo enviado y cotización marcada como ENVIADA', 'success'),
+        onError: () => swalErr('No se pudo enviar el correo. Revisa configuración de mail y reintenta.'),
+      }
+    )
   }
 
+  // WhatsApp sigue siendo “abrir WA” y luego marcar ENVIADA (manual)
   async function sendWhatsapp(c: Cotizacion) {
     const phone = cleanPhone(c.telefono_destino)
     if (!phone) return swalErr('Falta teléfono válido.')
-    if (!(c.estatus === 'DEVUELTA' || c.estatus === 'ENVIADA')) {
-      return swalErr('Primero responde (marca DEVUELTA) y luego envías.')
-    }
 
     const { isConfirmed } = await swalConfirm(`Se abrirá WhatsApp para enviar la cotización ${c.folio}.`, {
       title: 'Enviar por WhatsApp',
@@ -146,7 +143,7 @@ export function useCotizacionPanel(opts: { initialFilters?: Partial<Filters>; ba
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank')
 
     router.post(`${opts.baseUrl}/${c.id}/mark-sent`, { channel: 'whatsapp' }, { preserveScroll: true })
-    swalNotify('Listo, WhatsApp abierto', 'success')
+    swalNotify('WhatsApp abierto, cotización marcada como ENVIADA', 'success')
   }
 
   return {

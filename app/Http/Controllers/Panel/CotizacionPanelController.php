@@ -6,14 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Panel\CotizacionAddItemRequest;
 use App\Http\Requests\Panel\CotizacionIndexRequest;
 use App\Http\Requests\Panel\CotizacionMarkSentRequest;
+use App\Http\Requests\Panel\CotizacionPanelStoreRequest;
 use App\Http\Requests\Panel\CotizacionReplyRequest;
+use App\Http\Requests\Panel\CotizacionSendEmailRequest;
 use App\Http\Requests\Panel\CotizacionUpdateRequest;
+use App\Mail\CotizacionEnviadaMail;
 use App\Models\Cotizacion;
 use App\Models\CotizacionDetalle;
+use App\Models\Log;
 use App\Models\Producto;
 use App\Models\Servicio;
-use App\Models\Log;
+use App\Services\Cotizaciones\CotizacionCreator;
 use App\Services\Cotizaciones\CotizacionTotals;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -21,7 +26,14 @@ class CotizacionPanelController extends Controller {
 
     public function __construct(private CotizacionTotals $totals) {}
 
+    private function ensurePanelActor(): void {
+        $u = auth()->user();
+        $rol = $u?->rol;
+        abort_unless($u && in_array($rol, ['admin', 'vendedor'], true), 403);
+    }
+
     public function index(CotizacionIndexRequest $request) {
+        $this->ensurePanelActor();
         $q = trim((string) $request->input('q', ''));
         $estatus = $request->input('estatus');
         $perPage = (int) ($request->input('per_page') ?: 15);
@@ -41,11 +53,11 @@ class CotizacionPanelController extends Controller {
         $items = $query->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString()
-            // CLAVE: esto mantiene links como ARRAY (Inertia paginator)
             ->through(function (Cotizacion $c) {
                 $calc = (float) ($c->total_calculado ?? 0);
                 $diff = round(((float) $c->total) - $calc, 2);
                 $diff = (abs($diff) >= 0.01) ? $diff : 0;
+
                 return [
                     'id' => $c->id,
                     'folio' => $c->folio,
@@ -61,7 +73,7 @@ class CotizacionPanelController extends Controller {
                     'created_at' => optional($c->created_at)->toISOString(),
                 ];
             });
-        return Inertia::render('cotizaciones/Index', [
+        return Inertia::render('Cotizaciones/Index', [
             'items' => $items,
             'filters' => [
                 'q' => $q ?: null,
@@ -73,12 +85,46 @@ class CotizacionPanelController extends Controller {
         ]);
     }
 
+    // NUEVO: pantalla para crear cotización desde panel
+    public function create() {
+        $this->ensurePanelActor();
+        $productos = Producto::query()
+            ->where('status','activo')
+            ->orderBy('nombre')
+            ->get(['id','sku','nombre','precio_venta']);
+        $servicios = Servicio::query()
+            ->where('status','activo')
+            ->orderBy('nombre')
+            ->get(['id','nombre','precio']);
+        return Inertia::render('Cotizaciones/Create', [
+            'meta' => [
+                'productos' => $productos,
+                'servicios' => $servicios,
+            ],
+        ]);
+    }
+
+    // NUEVO: crea en BD (admin/vendedor)
+    public function store(CotizacionPanelStoreRequest $request, CotizacionCreator $creator) {
+        $this->ensurePanelActor();
+        $cotizacion = $creator->create(
+            auth()->id(),
+            $request->input('persona_id'),
+            $request->input('email_destino'),
+            $request->input('telefono_destino'),
+            (array) $request->input('items', [])
+        );
+        $this->log('create', 'cotizacions', $cotizacion->id, 'Creada desde panel.');
+        return redirect()->route('cotizaciones.show', ['cotizacion' => $cotizacion->id], 303);
+    }
+
     public function show(Cotizacion $cotizacion) {
+        $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
         $cotizacion->load([
             'detalles' => fn ($q) => $q->orderBy('id')->where('status','activo')->with(['producto','servicio']),
         ]);
-        return Inertia::render('cotizaciones/Show', [
+        return Inertia::render('Cotizaciones/Show', [
             'item' => [
                 'id' => $cotizacion->id,
                 'folio' => $cotizacion->folio,
@@ -114,8 +160,8 @@ class CotizacionPanelController extends Controller {
         ]);
     }
 
-    public function update(CotizacionUpdateRequest $request, Cotizacion $cotizacion)
-    {
+    public function update(CotizacionUpdateRequest $request, Cotizacion $cotizacion) {
+        $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
         $cotizacion->fill($request->only(['email_destino','telefono_destino','estatus']));
         if (!$cotizacion->estatus) $cotizacion->estatus = 'EN_REVISION';
@@ -125,6 +171,7 @@ class CotizacionPanelController extends Controller {
     }
 
     public function destroy(Cotizacion $cotizacion) {
+        $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
         $cotizacion->status = 'inactivo';
         $cotizacion->save();
@@ -133,6 +180,7 @@ class CotizacionPanelController extends Controller {
     }
 
     public function addItem(CotizacionAddItemRequest $request, Cotizacion $cotizacion) {
+        $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
         $tipo = $request->input('tipo');
         $cantidad = (float) $request->input('cantidad');
@@ -178,6 +226,7 @@ class CotizacionPanelController extends Controller {
     }
 
     public function reply(CotizacionReplyRequest $request, Cotizacion $cotizacion) {
+        $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
         $cotizacion->fill($request->only(['email_destino','telefono_destino']));
         $cotizacion->estatus = 'DEVUELTA';
@@ -186,11 +235,27 @@ class CotizacionPanelController extends Controller {
         return back(303);
     }
 
+    // OJO: este NO manda correo. Es para cuando tú ya la mandaste por WhatsApp y solo quieres marcar.
     public function markSent(CotizacionMarkSentRequest $request, Cotizacion $cotizacion) {
+        $this->ensurePanelActor();
         abort_unless($cotizacion->status === 'activo', 404);
         $cotizacion->estatus = 'ENVIADA';
         $cotizacion->save();
-        $this->log('update', 'cotizacions', $cotizacion->id, 'Marcada ENVIADA.');
+        $this->log('update', 'cotizacions', $cotizacion->id, 'Marcada ENVIADA (manual).');
+        return back(303);
+    }
+
+    // NUEVO: manda correo desde el sistema y marca ENVIADA
+    public function sendEmail(CotizacionSendEmailRequest $request, Cotizacion $cotizacion) {
+        $this->ensurePanelActor();
+        abort_unless($cotizacion->status === 'activo', 404);
+        $email = trim((string) ($request->input('email') ?: $cotizacion->email_destino));
+        abort_unless($email !== '', 422);
+        $url = route('cotizacion.public.show', ['token' => $cotizacion->token]);
+        Mail::to($email)->send(new CotizacionEnviadaMail($cotizacion->fresh(), $url));
+        $cotizacion->estatus = 'ENVIADA';
+        $cotizacion->save();
+        $this->log('update', 'cotizacions', $cotizacion->id, 'Enviada por correo (sistema).');
         return back(303);
     }
 
