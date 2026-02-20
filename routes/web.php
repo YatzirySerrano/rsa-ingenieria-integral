@@ -3,7 +3,6 @@
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
-
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\ServicioController;
 use App\Http\Controllers\CategoriaController;
@@ -12,6 +11,7 @@ use App\Http\Controllers\PersonaController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\PublicProductoController;
 use App\Http\Controllers\Panel\CotizacionPanelController;
+use App\Http\Controllers\Panel\CotizacionDetalleController;
 
 // Index del sitio web
 Route::get('/', function () {
@@ -83,18 +83,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('productos.toggleStatus');
 
     // -------------------------
-    // Cotizaciones (Panel)
+    // Cotizaciones
     // -------------------------
-    Route::get('/cotizaciones', [CotizacionPanelController::class, 'index'])
-        ->name('cotizaciones.index');
-    Route::get('/cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'show'])
-        ->name('cotizaciones.show');
-    Route::put('/cotizaciones/{cotizacion}/reply', [CotizacionPanelController::class, 'reply'])
-        ->name('cotizaciones.reply');
-    Route::post('/cotizaciones/{cotizacion}/send-email', [CotizacionPanelController::class, 'sendEmail'])
-        ->name('cotizaciones.sendEmail');
-    Route::post('/cotizaciones/{cotizacion}/send-whatsapp', [CotizacionPanelController::class, 'sendWhatsapp'])
-        ->name('cotizaciones.sendWhatsapp');
+    Route::get('cotizaciones', [CotizacionPanelController::class, 'index'])->name('cotizaciones.index');
+    Route::get('cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'show'])->name('cotizaciones.show');
+    Route::put('cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'update'])->name('cotizaciones.update');
+    Route::delete('cotizaciones/{cotizacion}', [CotizacionPanelController::class, 'destroy'])->name('cotizaciones.destroy');
+
+    Route::post('cotizaciones/{cotizacion}/add-item', [CotizacionPanelController::class, 'addItem'])->name('cotizaciones.addItem');
+    Route::post('cotizaciones/{cotizacion}/send', [CotizacionPanelController::class, 'send'])->name('cotizaciones.send');
+    Route::post('cotizaciones/{cotizacion}/mark-sent', [CotizacionPanelController::class, 'markSent'])->name('cotizaciones.markSent');
+
+    Route::put('cotizaciones/detalles/{detalle}', [CotizacionDetalleController::class, 'update'])->name('cotizaciones.detalles.update');
+    Route::delete('cotizaciones/detalles/{detalle}', [CotizacionDetalleController::class, 'destroy'])->name('cotizaciones.detalles.destroy');
 });
 
 require __DIR__ . '/settings.php';
