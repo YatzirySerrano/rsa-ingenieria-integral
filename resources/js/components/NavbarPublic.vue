@@ -18,9 +18,20 @@ const props = withDefaults(
 )
 
 /**
+ * ✅ Assets build-safe (Vite)
+ * No strings "/img/..." ni "@/img/..." dentro de objetos.
+ */
+import cctvImg from '@/img/cctv.jpg'
+import alarmasImg from '@/img/alarmas.png'
+import gpsImg from '@/img/gps.jpg'
+import cercaImg from '@/img/cerca-electrica.png'
+import controlAccesoImg from '@/img/control-acceso.png'
+import dashcamImg from '@/img/dashcam.png'
+
+/**
  * ====== Submenús ======
- * Servicios: mismas imágenes que Welcome.vue (serviciosTiles.image)
- * Ajusta hrefs a tus rutas finales cuando las crees.
+ * Servicios: mismas imágenes que Welcome.vue
+ * Ajusta hrefs a tus rutas finales cuando las tengas.
  */
 type ServicioItem = { label: string; desc: string; image: string; href: string }
 
@@ -28,50 +39,39 @@ const serviceItems: readonly ServicioItem[] = [
   {
     label: 'Cámaras de seguridad (CCTV)',
     desc: 'Videovigilancia profesional',
-    image: '/img/cctv.jpg',
+    image: cctvImg,
     href: '/servicios/cctv',
   },
   {
     label: 'Alarmas para casa y negocios',
     desc: 'Detección y disuasión',
-    image: '/img/alarmas.png',
+    image: alarmasImg,
     href: '/servicios/alarmas',
   },
   {
     label: 'GPS y rastreo vehicular',
     desc: 'Control en tiempo real',
-    image: '/img/gps.jpg',
+    image: gpsImg,
     href: '/servicios/gps',
   },
   {
     label: 'Cercas eléctricas',
     desc: 'Perímetro reforzado',
-    image: '/img/cerca-electrica.png',
+    image: cercaImg,
     href: '/servicios/cercas-electricas',
   },
   {
     label: 'Control de acceso',
     desc: 'Trazabilidad y control',
-    image: '/img/control-acceso.png',
+    image: controlAccesoImg,
     href: '/servicios/control-de-acceso',
   },
   {
     label: 'Dash cam profesional',
     desc: 'Evidencia en ruta',
-    image: '/img/dashcam.png',
+    image: dashcamImg,
     href: '/servicios/dashcam',
   },
-]
-
-/**
- * Productos:
- * - Los más vendidos: mismo comportamiento que hoy (scroll a #productos en Welcome.vue)
- * - Todos los productos: página /productos
- */
-type ProductoItem = { label: string; desc: string; kind: 'scroll' | 'link'; id?: string; href?: string }
-const productsItems: readonly ProductoItem[] = [
-  { label: 'Los más vendidos', desc: 'Ir a la sección en inicio', kind: 'scroll', id: 'productos' },
-  { label: 'Todos los productos', desc: 'Ver catálogo completo', kind: 'link', href: '/productos' },
 ]
 
 /**
@@ -99,7 +99,7 @@ function scheduleClose(which: 'servicios' | 'productos') {
   closeTimer = window.setTimeout(() => {
     if (which === 'servicios') serviciosOpen.value = false
     if (which === 'productos') productosOpen.value = false
-  }, 110) // “grace delay” para evitar flicker
+  }, 110)
 }
 
 function openServicios() {
@@ -181,8 +181,7 @@ const pill =
   'shadow-[0_18px_60px_-40px_rgba(2,6,23,0.45)] ' +
   'dark:border-neutral-800/70 dark:bg-neutral-950/70'
 
-const pillInner =
-  'flex items-center justify-between gap-4 px-4 py-3 sm:gap-6 sm:px-6'
+const pillInner = 'flex items-center justify-between gap-4 px-4 py-3 sm:gap-6 sm:px-6'
 
 const itemBase =
   'relative text-sm font-medium text-slate-700 dark:text-slate-200 ' +
@@ -230,12 +229,12 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
             @click="go('servicios')"
             aria-label="Ir al inicio"
           >
-            <img :src="props.logoSrc" alt="RSA" class="h-9 w-15 object-contain" />
+            <img :src="props.logoSrc" alt="RSA" class="h-9 w-16 object-contain" />
           </button>
 
           <!-- Desktop nav -->
           <nav class="hidden items-center gap-7 md:flex">
-            <!-- ===== Servicios (Dropdown - stays open while hovered) ===== -->
+            <!-- ===== Servicios (Dropdown) ===== -->
             <div
               class="relative"
               @mouseenter="openServicios"
@@ -270,7 +269,6 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
               >
                 <div v-if="serviciosOpen" :class="ddPanel" class="w-[720px]">
                   <div class="p-3">
-                    <!-- Header del dropdown -->
                     <div class="flex items-center justify-between gap-3 px-2 pb-2">
                       <div>
                         <div class="text-sm font-semibold text-slate-950 dark:text-white">Servicios</div>
@@ -302,9 +300,7 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
                                hover:bg-slate-100/70 dark:hover:bg-white/5"
                         @click="closeAllDropdowns"
                       >
-                        <div
-                          class="h-12 w-12 overflow-hidden rounded-xl ring-1 ring-black/5 dark:ring-white/10"
-                        >
+                        <div class="h-12 w-12 overflow-hidden rounded-xl ring-1 ring-black/5 dark:ring-white/10">
                           <img :src="s.image" alt="" class="h-full w-full object-cover" />
                         </div>
 
@@ -338,7 +334,7 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
               {{ l.label }}
             </button>
 
-            <!-- ===== Productos (Dropdown - stays open while hovered) ===== -->
+            <!-- ===== Productos (Dropdown) ===== -->
             <div
               class="relative"
               @mouseenter="openProductos"
@@ -449,7 +445,7 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
       </div>
     </div>
 
-    <!--MOBILE SHEET -->
+    <!-- MOBILE SHEET -->
     <transition
       enter-active-class="transition duration-200 ease-out"
       enter-from-class="opacity-0"

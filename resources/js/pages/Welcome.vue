@@ -15,6 +15,22 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel'
 
+/**
+ * IMÁGENES (Vite build-safe)
+ * Tus assets están en: resources/js/img/*
+ * => Deben importarse. NO se usan como strings "@/img/..."
+ */
+import cctvImg from '@/img/cctv.jpg'
+import alarmasImg from '@/img/alarmas.png'
+import gpsImg from '@/img/gps.jpg'
+import cercaImg from '@/img/cerca-electrica.png'
+import accesoImg from '@/img/control-acceso.png'
+import dashcamImg from '@/img/dashcam.png'
+
+import carrusel1Img from '@/img/carrusel1.png'
+import carrusel2Img from '@/img/carrusel2.png'
+import carrusel3Img from '@/img/carrusel3.png'
+
 function goTo(id: string) {
   const el = document.getElementById(id)
   if (!el) return
@@ -89,10 +105,10 @@ const serviciosTiles: ServicioTile[] = [
     title: 'Cámaras de seguridad (CCTV)',
     subtitle: 'Videovigilancia profesional',
     desc: 'Instalación y mantenimiento con cobertura optimizada, grabación estable y evidencia confiable.',
-    image: '/img/cctv.jpg',
+    image: cctvImg,
     span: 'lg:col-span-2',
     theme: 'light',
-    href: '/Servicios/cctv',
+    href: '/servicios/cctv', // (case-sensitive en producción)
     ctas: [
       { k: 'HD/4MP/8MP', v: 'calidad según proyecto' },
       { k: 'NVR/DVR', v: 'grabación y respaldo' },
@@ -102,7 +118,7 @@ const serviciosTiles: ServicioTile[] = [
     title: 'Alarmas para casa y negocios',
     subtitle: 'Detección y disuasión',
     desc: 'Sensores, paneles y sirenas con instalación limpia, pruebas y configuración profesional.',
-    image: '/img/alarmas.png',
+    image: alarmasImg,
     span: 'lg:col-span-1',
     theme: 'dark',
     href: '/servicios/alarmas',
@@ -111,7 +127,7 @@ const serviciosTiles: ServicioTile[] = [
     title: 'GPS y rastreo vehicular',
     subtitle: 'Control en tiempo real',
     desc: 'Monitoreo desde app, alertas y soporte para flotillas y vehículos particulares.',
-    image: '/img/gps.jpg',
+    image: gpsImg,
     span: 'lg:col-span-1',
     theme: 'light',
     href: '/servicios/gps',
@@ -120,7 +136,7 @@ const serviciosTiles: ServicioTile[] = [
     title: 'Cercas eléctricas',
     subtitle: 'Perímetro reforzado',
     desc: 'Protección disuasiva con instalación segura, señalización y mantenimiento preventivo.',
-    image: '/img/cerca-electrica.png',
+    image: cercaImg,
     span: 'lg:col-span-2',
     theme: 'light',
     href: '/servicios/cercas-electricas',
@@ -129,7 +145,7 @@ const serviciosTiles: ServicioTile[] = [
     title: 'Control de acceso',
     subtitle: 'Trazabilidad y control',
     desc: 'Acceso por tarjeta/biometría con administración y reportes para empresa y fraccionamientos.',
-    image: '/img/control-acceso.png',
+    image: accesoImg,
     span: 'lg:col-span-2',
     theme: 'light',
     href: '/servicios/control-de-acceso',
@@ -139,7 +155,7 @@ const serviciosTiles: ServicioTile[] = [
     title: 'Dash cam profesional',
     subtitle: 'Evidencia en ruta',
     desc: 'Cámaras vehiculares con grabación continua, configuración y soporte profesional.',
-    image: '/img/dashcam.png',
+    image: dashcamImg,
     span: 'lg:col-span-1',
     theme: 'light',
     href: '/servicios/dashcam',
@@ -151,9 +167,21 @@ const serviciosTiles: ServicioTile[] = [
  */
 type ProductoCard = { title: string; desc: string; image: string }
 const productos: ProductoCard[] = [
-  { title: 'CCTV / Videovigilancia', desc: 'Cámaras, DVR/NVR, almacenamiento y accesorios. Instalación opcional.', image: '/img/cctv.jpg' },
-  { title: 'Control de acceso', desc: 'Lectores, tags, aperturas, casetas y control administrativo.', image: '/img/control-acceso.png' },
-  { title: 'GPS / Seguimiento', desc: 'Dispositivos y soporte para rastreo desde aplicación.', image: '/img/gps.jpg' },
+  {
+    title: 'CCTV / Videovigilancia',
+    desc: 'Cámaras, DVR/NVR, almacenamiento y accesorios. Instalación opcional.',
+    image: cctvImg,
+  },
+  {
+    title: 'Control de acceso',
+    desc: 'Lectores, tags, aperturas, casetas y control administrativo.',
+    image: accesoImg,
+  },
+  {
+    title: 'GPS / Seguimiento',
+    desc: 'Dispositivos y soporte para rastreo desde aplicación.',
+    image: gpsImg,
+  },
 ]
 
 const activeProduct = ref<number | null>(null)
@@ -163,10 +191,10 @@ const activeProduct = ref<number | null>(null)
  */
 type Testimonio = {
   name: string
-  meta: string // ej: "9 opiniones · 6 fotos"
-  time: string // ej: "Hace un mes"
+  meta: string
+  time: string
   text: string
-  rating: number // 1-5
+  rating: number
 }
 
 const testimonios: Testimonio[] = [
@@ -236,14 +264,42 @@ function stars(n: number) {
 /**
  * Razones
  */
-type Reason = { title: string; desc: string; icon: 'check' | 'shield' | 'scale' | 'clock' | 'chat' | 'tool' }
+type Reason = {
+  title: string
+  desc: string
+  icon: 'check' | 'shield' | 'scale' | 'clock' | 'chat' | 'tool'
+}
 const reasons: readonly Reason[] = [
-  { title: 'Ejecución limpia', desc: 'Instalación con orden, pruebas y entrega documentada. Cableado y terminaciones profesionales.', icon: 'check' },
-  { title: 'Soporte preventivo', desc: 'Mantenimientos programados, atención correctiva y reportes ejecutivos para administración.', icon: 'tool' },
-  { title: 'Escalabilidad', desc: 'Soluciones que crecen contigo: casa, negocio o corporativo, con arquitectura lista para expandir.', icon: 'scale' },
-  { title: 'Continuidad operativa', desc: 'Diseño orientado a disponibilidad: configuraciones estables, recomendaciones técnicas y mejores prácticas.', icon: 'clock' },
-  { title: 'Atención y seguimiento', desc: 'Comunicación clara, puntualidad y acompañamiento post-instalación para cierre completo.', icon: 'chat' },
-  { title: 'Seguridad reforzada', desc: 'Criterios de hardening, prevención y disuasión para proteger perímetro, accesos y evidencia.', icon: 'shield' },
+  {
+    title: 'Ejecución limpia',
+    desc: 'Instalación con orden, pruebas y entrega documentada. Cableado y terminaciones profesionales.',
+    icon: 'check',
+  },
+  {
+    title: 'Soporte preventivo',
+    desc: 'Mantenimientos programados, atención correctiva y reportes ejecutivos para administración.',
+    icon: 'tool',
+  },
+  {
+    title: 'Escalabilidad',
+    desc: 'Soluciones que crecen contigo: casa, negocio o corporativo, con arquitectura lista para expandir.',
+    icon: 'scale',
+  },
+  {
+    title: 'Continuidad operativa',
+    desc: 'Diseño orientado a disponibilidad: configuraciones estables, recomendaciones técnicas y mejores prácticas.',
+    icon: 'clock',
+  },
+  {
+    title: 'Atención y seguimiento',
+    desc: 'Comunicación clara, puntualidad y acompañamiento post-instalación para cierre completo.',
+    icon: 'chat',
+  },
+  {
+    title: 'Seguridad reforzada',
+    desc: 'Criterios de hardening, prevención y disuasión para proteger perímetro, accesos y evidencia.',
+    icon: 'shield',
+  },
 ] as const
 
 function iconSvg(kind: Reason['icon']) {
@@ -251,15 +307,23 @@ function iconSvg(kind: Reason['icon']) {
     case 'check':
       return { d: 'M9.2 16.2 4.8 11.8 3.4 13.2l5.8 5.8L20.6 7.6 19.2 6.2z' }
     case 'shield':
-      return { d: 'M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 18c-3.1-1.2-6-4.6-6-9V6.3L12 4l6 2.3V11c0 4.4-2.9 7.8-6 9z' }
+      return {
+        d: 'M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3zm0 18c-3.1-1.2-6-4.6-6-9V6.3L12 4l6 2.3V11c0 4.4-2.9 7.8-6 9z',
+      }
     case 'scale':
-      return { d: 'M12 2h2v4h4v2h-4v14h-2V8H6V6h6V2zm-7 7h4l-2 5-2-5zm10 0h4l-2 5-2-5zM7 16c-1.7 0-3-1.3-3-3h6c0 1.7-1.3 3-3 3zm10 0c-1.7 0-3-1.3-3-3h6c0 1.7-1.3 3-3 3z' }
+      return {
+        d: 'M12 2h2v4h4v2h-4v14h-2V8H6V6h6V2zm-7 7h4l-2 5-2-5zm10 0h4l-2 5-2-5zM7 16c-1.7 0-3-1.3-3-3h6c0 1.7-1.3 3-3 3zm10 0c-1.7 0-3-1.3-3-3h6c0 1.7-1.3 3-3 3z',
+      }
     case 'clock':
-      return { d: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm1-13h-2v6l5 3 1-1.7-4-2.3z' }
+      return {
+        d: 'M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm1-13h-2v6l5 3 1-1.7-4-2.3z',
+      }
     case 'chat':
       return { d: 'M4 4h16v11H7l-3 3V4zm2 2v8.2L6.8 13H18V6H6z' }
     case 'tool':
-      return { d: 'M22 19l-6.2-6.2a6 6 0 0 1-7.6-7.6L10 7l3-3-1.8-1.8a6 6 0 0 1 7.6 7.6L25 16l-3 3zM5 21l6-6 2 2-6 6H5z' }
+      return {
+        d: 'M22 19l-6.2-6.2a6 6 0 0 1-7.6-7.6L10 7l3-3-1.8-1.8a6 6 0 0 1 7.6 7.6L25 16l-3 3zM5 21l6-6 2 2-6 6H5z',
+      }
   }
 }
 
@@ -304,9 +368,9 @@ const sectionSubtitle = 'mt-1 text-sm text-slate-600 dark:text-slate-300'
  */
 type WhyImage = { src: string; alt: string; caption?: string }
 const whyImages: WhyImage[] = [
-  { src: '/img/carrusel1.png', alt: 'Instalación profesional RSA', caption: 'Instalación limpia y ordenada' },
-  { src: '/img/carrusel2.png', alt: 'Monitoreo y operación', caption: 'Control y monitoreo en operación' },
-  { src: '/img/carrusel3.png', alt: 'Evidencia y trazabilidad', caption: 'Evidencia y trazabilidad' },
+  { src: carrusel1Img, alt: 'Instalación profesional RSA', caption: 'Instalación limpia y ordenada' },
+  { src: carrusel2Img, alt: 'Monitoreo y operación', caption: 'Control y monitoreo en operación' },
+  { src: carrusel3Img, alt: 'Evidencia y trazabilidad', caption: 'Evidencia y trazabilidad' },
 ]
 
 const whyIndex = ref(0)
@@ -373,7 +437,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Head title="RSA Ingeniería Integral" />
+  <Head title="" />
 
   <PublicLayout>
     <div class="relative w-full overflow-x-hidden">
@@ -603,90 +667,89 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-<!-- TESTIMONIOS (Autoplay + flechas abajo en mobile, laterales en md+) -->
-  <section id="testimonios" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
-    <div class="flex items-end justify-between gap-6" data-reveal>
-      <div>
-        <h2 :class="sectionTitle">Testimonios</h2>
-        <p :class="sectionSubtitle">Opiniones de Google Maps: confianza validada por clientes.</p>
-      </div>
-    </div>
-
-    <div class="mt-6" data-reveal>
-      <Carousel
-        class="relative w-full"
-        :opts="{ align: 'start' }"
-        :plugins="prefersReducedMotion() ? [] : [testiPlugin]"
-        @mouseenter="!prefersReducedMotion() && testiPlugin.stop()"
-        @mouseleave="!prefersReducedMotion() && (testiPlugin.reset(), testiPlugin.play())"
-      >
-        <CarouselContent class="-ml-4">
-          <CarouselItem
-            v-for="t in testimonios"
-            :key="t.name + t.time"
-            class="pl-4 md:basis-1/2 lg:basis-1/3"
-          >
-            <Card
-              class="h-full border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
-              :class="softHoverCard"
-            >
-              <CardContent class="p-6">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="min-w-0">
-                    <div class="truncate text-sm font-semibold text-slate-950 dark:text-white">
-                      {{ t.name }}
-                    </div>
-                    <div class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                      {{ t.meta }}
-                    </div>
-                  </div>
-
-                  <div class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
-                    {{ t.time }}
-                  </div>
-                </div>
-
-                <!-- rating -->
-                <div class="mt-4 flex items-center gap-1">
-                  <span
-                    v-for="(on, i) in stars(t.rating)"
-                    :key="i"
-                    class="text-sm"
-                    :class="on ? 'text-yellow-500' : 'text-slate-200 dark:text-neutral-800'"
-                    aria-hidden="true"
-                  >
-                    ★
-                  </span>
-                  <span class="ml-2 text-xs text-slate-500 dark:text-slate-400">
-                    {{ t.rating.toFixed(1) }}
-                  </span>
-                </div>
-
-                <!--texto: padding extra lateral para que jamás “choque” con flechas en layouts raros -->
-                <p class="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300 pr-1">
-                  “{{ t.text }}”
-                </p>
-
-                <div class="mt-5 text-xs text-slate-500 dark:text-slate-400">
-                  Fuente: Google Maps
-                </div>
-              </CardContent>
-            </Card>
-          </CarouselItem>
-        </CarouselContent>
-
-        <!-- Desktop: laterales -->
-        <CarouselPrevious class="hidden md:flex testi-nav testi-nav-left" />
-        <CarouselNext class="hidden md:flex testi-nav testi-nav-right" />
-
-        <!-- Mobile: abajo -->
-        <div class="mt-5 flex items-center justify-center gap-3 md:hidden">
-          <CarouselPrevious class="testi-nav testi-nav-bottom" />
-          <CarouselNext class="testi-nav testi-nav-bottom" />
+      <!-- TESTIMONIOS (Autoplay + flechas abajo en mobile, laterales en md+) -->
+      <section id="testimonios" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+        <div class="flex items-end justify-between gap-6" data-reveal>
+          <div>
+            <h2 :class="sectionTitle">Testimonios</h2>
+            <p :class="sectionSubtitle">Opiniones de Google Maps: confianza validada por clientes.</p>
+          </div>
         </div>
-      </Carousel>
-    </div>
-  </section>
+
+        <div class="mt-6" data-reveal>
+          <Carousel
+            class="relative w-full"
+            :opts="{ align: 'start' }"
+            :plugins="prefersReducedMotion() ? [] : [testiPlugin]"
+            @mouseenter="!prefersReducedMotion() && testiPlugin.stop()"
+            @mouseleave="!prefersReducedMotion() && (testiPlugin.reset(), testiPlugin.play())"
+          >
+            <CarouselContent class="-ml-4">
+              <CarouselItem
+                v-for="t in testimonios"
+                :key="t.name + t.time"
+                class="pl-4 md:basis-1/2 lg:basis-1/3"
+              >
+                <Card
+                  class="h-full border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950"
+                  :class="softHoverCard"
+                >
+                  <CardContent class="p-6">
+                    <div class="flex items-start justify-between gap-4">
+                      <div class="min-w-0">
+                        <div class="truncate text-sm font-semibold text-slate-950 dark:text-white">
+                          {{ t.name }}
+                        </div>
+                        <div class="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+                          {{ t.meta }}
+                        </div>
+                      </div>
+
+                      <div class="shrink-0 text-xs text-slate-500 dark:text-slate-400">
+                        {{ t.time }}
+                      </div>
+                    </div>
+
+                    <!-- rating -->
+                    <div class="mt-4 flex items-center gap-1">
+                      <span
+                        v-for="(on, i) in stars(t.rating)"
+                        :key="i"
+                        class="text-sm"
+                        :class="on ? 'text-yellow-500' : 'text-slate-200 dark:text-neutral-800'"
+                        aria-hidden="true"
+                      >
+                        ★
+                      </span>
+                      <span class="ml-2 text-xs text-slate-500 dark:text-slate-400">
+                        {{ t.rating.toFixed(1) }}
+                      </span>
+                    </div>
+
+                    <p class="mt-4 text-sm leading-relaxed text-slate-600 dark:text-slate-300 pr-1">
+                      “{{ t.text }}”
+                    </p>
+
+                    <div class="mt-5 text-xs text-slate-500 dark:text-slate-400">
+                      Fuente: Google Maps
+                    </div>
+                  </CardContent>
+                </Card>
+              </CarouselItem>
+            </CarouselContent>
+
+            <!-- Desktop: laterales -->
+            <CarouselPrevious class="hidden md:flex testi-nav testi-nav-left" />
+            <CarouselNext class="hidden md:flex testi-nav testi-nav-right" />
+
+            <!-- Mobile: abajo -->
+            <div class="mt-5 flex items-center justify-center gap-3 md:hidden">
+              <CarouselPrevious class="testi-nav testi-nav-bottom" />
+              <CarouselNext class="testi-nav testi-nav-bottom" />
+            </div>
+          </Carousel>
+        </div>
+      </section>
 
       <!-- PRODUCTOS (cards glass como navbar) -->
       <section id="productos" class="relative py-14">
@@ -863,7 +926,7 @@ onBeforeUnmount(() => {
   animation: caretBlink 900ms infinite;
 }
 
-/* ✅ Testimonios: estilo pro para flechas (y que no tapen contenido) */
+/* Testimonios: estilo pro para flechas (y que no tapen contenido) */
 .testi-nav {
   z-index: 50 !important;
   opacity: 1 !important;
