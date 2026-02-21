@@ -1,8 +1,12 @@
-<script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+<script setup>
+import { onBeforeUnmount, onMounted, ref, nextTick, watch } from 'vue'
+import { router, usePage } from '@inertiajs/vue3'
 import NavbarPublic from '@/components/NavbarPublic.vue'
 import FooterPublic from '@/components/FooterPublic.vue'
 import { RSA_PUBLIC } from '@/config/rsaPublic'
+import { home } from '@/routes'
+
+const page = usePage()
 
 const showTop = ref(false)
 
@@ -14,18 +18,106 @@ function scrollToTop() {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-function goTo(id: string) {
-  const el = document.getElementById(id)
-  if (!el) return
+function getEl(id) {
+  const safe = String(id ?? '').trim()
+  if (!safe) return null
+  return document.getElementById(safe)
+}
+
+function doScroll(el) {
   const headerOffset = 84
   const top = el.getBoundingClientRect().top + window.scrollY - headerOffset
   window.scrollTo({ top, behavior: 'smooth' })
 }
 
+function scrollNow(id) {
+  const el = getEl(id)
+  if (!el) return false
+  doScroll(el)
+  return true
+}
+
+const SCROLL_KEY = 'rsa_scroll_to'
+
+function setPending(id) {
+  sessionStorage.setItem(SCROLL_KEY, String(id))
+}
+
+function getPending() {
+  return sessionStorage.getItem(SCROLL_KEY) || ''
+}
+
+function clearPending() {
+  sessionStorage.removeItem(SCROLL_KEY)
+}
+
+function scrollWhenReady(id) {
+  const target = String(id ?? '').trim()
+  if (!target) return
+
+  const maxTries = 90
+  let tries = 0
+
+  const tick = () => {
+    const el = getEl(target)
+    if (el) {
+      doScroll(el)
+
+      if (getPending() === target) clearPending()
+
+      try {
+        const homeUrl = home().url
+        const urlWithHash = `${homeUrl}#${encodeURIComponent(target)}`
+        window.history.replaceState({}, '', urlWithHash)
+      } catch (_) {}
+
+      return
+    }
+
+    tries++
+    if (tries >= maxTries) return
+    requestAnimationFrame(tick)
+  }
+
+  requestAnimationFrame(tick)
+}
+
+function applyScrollTargets() {
+  const pending = getPending()
+
+  const rawHash = window.location.hash || ''
+  const hashId = decodeURIComponent(rawHash.replace('#', '')).trim()
+
+  const target = pending || hashId
+  if (!target) return
+
+  nextTick(() => {
+    setTimeout(() => scrollWhenReady(target), 0)
+  })
+}
+
+function goTo(id) {
+  if (scrollNow(id)) return
+
+  setPending(id)
+
+  const homeUrl = home().url
+  router.visit(homeUrl, {
+    preserveScroll: false,
+    preserveState: false,
+  })
+}
+
 onMounted(() => {
   updateShowTop()
   window.addEventListener('scroll', updateShowTop, { passive: true })
+  applyScrollTargets()
 })
+
+watch(
+  () => page.component,
+  () => applyScrollTargets()
+)
 
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', updateShowTop)
@@ -44,10 +136,9 @@ onBeforeUnmount(() => {
       :links="RSA_PUBLIC.links"
       :on-nav="goTo"
       :wa-link="RSA_PUBLIC.waLink"
-      :logo-src="RSA_PUBLIC.logoSrc"
+      :logo-blanco-src="RSA_PUBLIC.logoBlancoSrc"
     />
 
-    <!-- WhatsApp flotante -->
     <a
       :href="RSA_PUBLIC.waLink"
       target="_blank"
@@ -63,7 +154,6 @@ onBeforeUnmount(() => {
       </svg>
     </a>
 
-    <!-- Subir -->
     <button
       v-show="showTop"
       type="button"

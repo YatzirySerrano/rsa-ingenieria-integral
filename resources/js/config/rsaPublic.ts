@@ -1,5 +1,3 @@
-// resources/js/config/rsaPublic.ts
-
 export type NavLink = { label: string; id: string }
 
 // Vite build-safe: importar assets (NO strings "@/img/...")

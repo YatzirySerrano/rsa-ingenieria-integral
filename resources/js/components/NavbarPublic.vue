@@ -2,6 +2,10 @@
 import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { RSA_PUBLIC } from '@/config/rsaPublic'
+import { home } from '@/routes'
+
+// Route helpers (Wayfinder) para SERVICIOS
+import * as ServiciosRoutes from '@/routes/Servicios'
 
 type NavLink = { label: string; id: string }
 
@@ -18,8 +22,7 @@ const props = withDefaults(
 )
 
 /**
- * ✅ Assets build-safe (Vite)
- * No strings "/img/..." ni "@/img/..." dentro de objetos.
+ * Assets build-safe (Vite)
  */
 import cctvImg from '@/img/cctv.jpg'
 import alarmasImg from '@/img/alarmas.png'
@@ -29,61 +32,114 @@ import controlAccesoImg from '@/img/control-acceso.png'
 import dashcamImg from '@/img/dashcam.png'
 
 /**
- * ====== Submenús ======
- * Servicios: mismas imágenes que Welcome.vue
- * Ajusta hrefs a tus rutas finales cuando las tengas.
+ * =========================
+ * Base URL helper (subfolder-safe)
+ * =========================
+ */
+function homeBase(): string {
+  try {
+    const u = String(home().url ?? '/')
+    // quita slash final salvo que sea "/"
+    return u !== '/' ? u.replace(/\/+$/, '') : '/'
+  } catch {
+    return '/'
+  }
+}
+
+function withBase(path: string): string {
+  const base = homeBase()
+  const p = String(path ?? '').trim()
+  if (!p) return base || '/'
+  const clean = p.startsWith('/') ? p : `/${p}`
+  if (!base || base === '/') return clean
+  return `${base}${clean}`
+}
+
+/**
+ * Ziggy route helper si existe (no config adicional; si ya lo tienes, lo usa)
+ */
+function ziggyUrl(name: string, fallbackPath: string): string {
+  const r = (window as any)?.route
+  if (typeof r === 'function') {
+    try {
+      const out = r(name)
+      if (out) return String(out)
+    } catch {
+      // noop
+    }
+  }
+  return withBase(fallbackPath)
+}
+
+/**
+ * Wayfinder helper: intenta keys; si falla, fallback con base (NO a raíz)
+ */
+function urlFrom(mod: any, keys: string[], fallbackPath: string) {
+  for (const k of keys) {
+    const fn = mod?.[k]
+    if (typeof fn === 'function') {
+      try {
+        const r = fn()
+        const url = r?.url ?? r?.href
+        if (url) return String(url)
+      } catch {
+        // noop
+      }
+    }
+  }
+  return withBase(fallbackPath)
+}
+
+/**
+ * URLs internas (subfolder-safe)
+ */
+const AUTH_URL = {
+  login: ziggyUrl('login', '/login'),
+  register: ziggyUrl('register', '/register'),
+} as const
+
+const CATALOG_URL = ziggyUrl('catalogo.publico', '/catalogo')
+
+const SVC_URL = {
+  cctv: urlFrom(ServiciosRoutes as any, ['serviciosCctv', 'cctv'], '/servicios/cctv'),
+  alarmas: urlFrom(ServiciosRoutes as any, ['serviciosAlarmas', 'alarmas'], '/servicios/alarmas'),
+  gps: urlFrom(ServiciosRoutes as any, ['serviciosGps', 'gps'], '/servicios/gps'),
+  cercas: urlFrom(
+    ServiciosRoutes as any,
+    ['serviciosCercasElectricas', 'cercasElectricas', 'cercas_electricas'],
+    '/servicios/cercas-electricas'
+  ),
+  acceso: urlFrom(
+    ServiciosRoutes as any,
+    ['serviciosControlDeAcceso', 'controlDeAcceso', 'control_acceso'],
+    '/servicios/control-de-acceso'
+  ),
+  dashcam: urlFrom(ServiciosRoutes as any, ['serviciosDashcam', 'dashcam'], '/servicios/dashcam'),
+} as const
+
+/**
+ * Submenús
  */
 type ServicioItem = { label: string; desc: string; image: string; href: string }
 
 const serviceItems: readonly ServicioItem[] = [
-  {
-    label: 'Cámaras de seguridad (CCTV)',
-    desc: 'Videovigilancia profesional',
-    image: cctvImg,
-    href: '/servicios/cctv',
-  },
-  {
-    label: 'Alarmas para casa y negocios',
-    desc: 'Detección y disuasión',
-    image: alarmasImg,
-    href: '/servicios/alarmas',
-  },
-  {
-    label: 'GPS y rastreo vehicular',
-    desc: 'Control en tiempo real',
-    image: gpsImg,
-    href: '/servicios/gps',
-  },
-  {
-    label: 'Cercas eléctricas',
-    desc: 'Perímetro reforzado',
-    image: cercaImg,
-    href: '/servicios/cercas-electricas',
-  },
-  {
-    label: 'Control de acceso',
-    desc: 'Trazabilidad y control',
-    image: controlAccesoImg,
-    href: '/servicios/control-de-acceso',
-  },
-  {
-    label: 'Dash cam profesional',
-    desc: 'Evidencia en ruta',
-    image: dashcamImg,
-    href: '/servicios/dashcam',
-  },
+  { label: 'Cámaras de seguridad (CCTV)', desc: 'Videovigilancia profesional', image: cctvImg, href: SVC_URL.cctv },
+  { label: 'Alarmas para casa y negocios', desc: 'Detección y disuasión', image: alarmasImg, href: SVC_URL.alarmas },
+  { label: 'GPS y rastreo vehicular', desc: 'Control en tiempo real', image: gpsImg, href: SVC_URL.gps },
+  { label: 'Cercas eléctricas', desc: 'Perímetro reforzado', image: cercaImg, href: SVC_URL.cercas },
+  { label: 'Control de acceso', desc: 'Trazabilidad y control', image: controlAccesoImg, href: SVC_URL.acceso },
+  { label: 'Dash cam profesional', desc: 'Evidencia en ruta', image: dashcamImg, href: SVC_URL.dashcam },
 ]
 
 /**
- * ====== Estado general ======
+ * Estado general
  */
 const open = ref(false)
 const mobileServiciosOpen = ref(false)
 const mobileProductosOpen = ref(false)
 
 /**
- * ====== Dropdown state (desktop) ======
- * Se mantiene abierto mientras el mouse esté sobre trigger o panel.
+ * Dropdown state (desktop)
  */
 const serviciosOpen = ref(false)
 const productosOpen = ref(false)
@@ -121,7 +177,7 @@ function closeAllDropdowns() {
 }
 
 /**
- * ====== Navegación ======
+ * Navegación por secciones del home (scroll)
  */
 function go(id: string) {
   open.value = false
@@ -142,7 +198,6 @@ function onKeydown(e: KeyboardEvent) {
   }
 }
 
-// Scroll lock
 function setBodyLock(lock: boolean) {
   const body = document.body
   if (lock) {
@@ -165,16 +220,13 @@ onBeforeUnmount(() => {
   setBodyLock(false)
 })
 
-/**
- * Links base: “Servicios” y “Productos” se manejan manualmente
- */
 const otherLinks = computed(() =>
   (props.links ?? []).filter((l) => l.id !== 'servicios' && l.id !== 'productos')
 )
 
-/** =========
- *  Estilos base
- *  ========= */
+/**
+ * Estilos base
+ */
 const pill =
   'mx-auto w-fit max-w-[calc(100%-1rem)] rounded-full ' +
   'border border-slate-200/60 bg-white/70 backdrop-blur-xl ' +
@@ -204,9 +256,6 @@ const btnPrimary =
   'text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900 ' +
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300'
 
-/**
- * Dropdown panel (premium)
- */
 const ddPanel =
   'absolute left-1/2 top-full mt-3 -translate-x-1/2 overflow-hidden ' +
   'rounded-2xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur-xl ' +
@@ -234,12 +283,8 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
 
           <!-- Desktop nav -->
           <nav class="hidden items-center gap-7 md:flex">
-            <!-- ===== Servicios (Dropdown) ===== -->
-            <div
-              class="relative"
-              @mouseenter="openServicios"
-              @mouseleave="scheduleClose('servicios')"
-            >
+            <!-- Servicios (Dropdown) -->
+            <div class="relative" @mouseenter="openServicios" @mouseleave="scheduleClose('servicios')">
               <button
                 type="button"
                 :class="[itemBase, underline]"
@@ -294,7 +339,7 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
                     <div class="grid gap-2 sm:grid-cols-2">
                       <Link
                         v-for="s in serviceItems"
-                        :key="s.href"
+                        :key="s.label"
                         :href="s.href"
                         class="group flex items-center gap-3 rounded-xl p-3 transition
                                hover:bg-slate-100/70 dark:hover:bg-white/5"
@@ -323,7 +368,7 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
               </transition>
             </div>
 
-            <!-- ===== Links normales (sin productos) ===== -->
+            <!-- Links normales (sin productos) -->
             <button
               v-for="l in otherLinks"
               :key="l.id"
@@ -334,12 +379,8 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
               {{ l.label }}
             </button>
 
-            <!-- ===== Productos (Dropdown) ===== -->
-            <div
-              class="relative"
-              @mouseenter="openProductos"
-              @mouseleave="scheduleClose('productos')"
-            >
+            <!-- Productos (Dropdown) -->
+            <div class="relative" @mouseenter="openProductos" @mouseleave="scheduleClose('productos')">
               <button
                 type="button"
                 :class="[itemBase, underline]"
@@ -375,7 +416,6 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
                     </div>
 
                     <div class="space-y-1">
-                      <!-- Los más vendidos (scroll) -->
                       <button
                         type="button"
                         class="group flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition
@@ -387,24 +427,31 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
                           <div :class="ddTitle">Los más vendidos</div>
                           <div :class="ddDesc">Ir a la sección en inicio</div>
                         </div>
-                        <svg viewBox="0 0 24 24" class="ml-auto h-4 w-4 fill-slate-400 group-hover:fill-slate-600 dark:fill-slate-400" aria-hidden="true">
+                        <svg
+                          viewBox="0 0 24 24"
+                          class="ml-auto h-4 w-4 fill-slate-400 group-hover:fill-slate-600 dark:fill-slate-400"
+                          aria-hidden="true"
+                        >
                           <path d="M9 18l6-6-6-6-1.4 1.4L12.2 12l-4.6 4.6L9 18z" />
                         </svg>
                       </button>
 
-                      <!-- Todos los productos (link) -->
                       <Link
-                        href="/productos"
+                        :href="CATALOG_URL"
                         class="group flex items-start gap-3 rounded-xl px-3 py-3 transition
                                hover:bg-slate-100/70 dark:hover:bg-white/5"
                         @click="closeAllDropdowns"
                       >
                         <div class="mt-0.5 h-9 w-9 rounded-xl bg-blue-500/12 ring-1 ring-blue-500/15 dark:bg-white/5 dark:ring-white/10" />
                         <div class="min-w-0">
-                          <div :class="ddTitle">Todos los productos</div>
-                          <div :class="ddDesc">Ver catálogo completo</div>
+                          <div :class="ddTitle">Catálogo</div>
+                          <div :class="ddDesc">Ver productos públicos</div>
                         </div>
-                        <svg viewBox="0 0 24 24" class="ml-auto h-4 w-4 fill-slate-400 group-hover:fill-slate-600 dark:fill-slate-400" aria-hidden="true">
+                        <svg
+                          viewBox="0 0 24 24"
+                          class="ml-auto h-4 w-4 fill-slate-400 group-hover:fill-slate-600 dark:fill-slate-400"
+                          aria-hidden="true"
+                        >
                           <path d="M9 18l6-6-6-6-1.4 1.4L12.2 12l-4.6 4.6L9 18z" />
                         </svg>
                       </Link>
@@ -414,18 +461,15 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
               </transition>
             </div>
 
-            <!-- CTAs -->
             <div class="ml-2 flex items-center gap-2">
-              <Link href="/login" :class="btnSoft">Iniciar sesión</Link>
-              <Link href="/register" :class="btnPrimary">Registrarse</Link>
+              <Link :href="AUTH_URL.login" :class="btnSoft">Iniciar sesión</Link>
+              <Link :href="AUTH_URL.register" :class="btnPrimary">Registrarse</Link>
             </div>
           </nav>
 
-          <!-- Mobile: Logo | Login | Hamburguesa -->
+          <!-- Mobile -->
           <div class="flex items-center gap-2 md:hidden">
-            <Link href="/login" :class="btnSoft">
-              Iniciar sesión
-            </Link>
+            <Link :href="AUTH_URL.login" :class="btnSoft">Iniciar sesión</Link>
 
             <button
               type="button"
@@ -455,7 +499,6 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
       leave-to-class="opacity-0"
     >
       <div v-if="open" class="fixed inset-0 z-[70] md:hidden">
-        <!-- overlay -->
         <button
           type="button"
           class="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
@@ -463,7 +506,6 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
           @click="closeMobile"
         />
 
-        <!-- panel -->
         <transition
           enter-active-class="transition duration-250 ease-out"
           enter-from-class="translate-x-full"
@@ -505,7 +547,6 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
             <div class="px-5 pb-6">
               <div class="rounded-2xl border border-slate-200 bg-white/70 p-2 dark:border-neutral-800 dark:bg-white/5">
                 <nav class="flex flex-col">
-                  <!-- Servicios (collapsible con imágenes) -->
                   <button
                     type="button"
                     class="flex items-center justify-between rounded-xl px-4 py-3 text-left
@@ -514,7 +555,11 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
                     @click="mobileServiciosOpen = !mobileServiciosOpen"
                   >
                     <span>Servicios</span>
-                    <svg viewBox="0 0 24 24" class="h-4 w-4 fill-slate-400 dark:fill-slate-300 transition" :class="mobileServiciosOpen ? 'rotate-180' : ''">
+                    <svg
+                      viewBox="0 0 24 24"
+                      class="h-4 w-4 fill-slate-400 dark:fill-slate-300 transition"
+                      :class="mobileServiciosOpen ? 'rotate-180' : ''"
+                    >
                       <path d="M7 10l5 5 5-5H7z" />
                     </svg>
                   </button>
@@ -538,7 +583,7 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
 
                       <Link
                         v-for="s in serviceItems"
-                        :key="s.href"
+                        :key="s.label"
                         :href="s.href"
                         class="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-slate-100/80
                                dark:hover:bg-white/10"
@@ -555,7 +600,6 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
                     </div>
                   </transition>
 
-                  <!-- Links normales (sin productos) -->
                   <button
                     v-for="l in otherLinks"
                     :key="l.id"
@@ -571,7 +615,6 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
                     </svg>
                   </button>
 
-                  <!-- Productos (collapsible) -->
                   <button
                     type="button"
                     class="flex items-center justify-between rounded-xl px-4 py-3 text-left
@@ -580,7 +623,11 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
                     @click="mobileProductosOpen = !mobileProductosOpen"
                   >
                     <span>Productos</span>
-                    <svg viewBox="0 0 24 24" class="h-4 w-4 fill-slate-400 dark:fill-slate-300 transition" :class="mobileProductosOpen ? 'rotate-180' : ''">
+                    <svg
+                      viewBox="0 0 24 24"
+                      class="h-4 w-4 fill-slate-400 dark:fill-slate-300 transition"
+                      :class="mobileProductosOpen ? 'rotate-180' : ''"
+                    >
                       <path d="M7 10l5 5 5-5H7z" />
                     </svg>
                   </button>
@@ -603,12 +650,12 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
                       </button>
 
                       <Link
-                        href="/productos"
+                        :href="CATALOG_URL"
                         class="block rounded-xl px-3 py-2 text-left text-sm font-semibold text-slate-900 hover:bg-slate-100/80 transition
                                dark:text-white dark:hover:bg-white/10"
                         @click="closeMobile"
                       >
-                        Todos los productos
+                        Ver catálogo
                       </Link>
                     </div>
                   </transition>
@@ -616,9 +663,7 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
               </div>
 
               <div class="mt-4">
-                <Link href="/register" :class="btnPrimary" @click="closeMobile">
-                  Registrarse
-                </Link>
+                <Link :href="AUTH_URL.register" :class="btnPrimary" @click="closeMobile">Registrarse</Link>
               </div>
 
               <div class="mt-4 text-xs text-slate-600 dark:text-slate-300">

@@ -5,6 +5,10 @@ import Autoplay from 'embla-carousel-autoplay'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import { RSA_PUBLIC } from '@/config/rsaPublic'
 
+// Route helpers (Wayfinder) para SERVICIOS (sin hardcodear paths)
+import * as ServiciosRoutes from '@/routes/Servicios'
+import * as CotizarRoutes from '@/routes/cotizar'
+
 // shadcn-vue
 import { Card, CardContent } from '@/components/ui/card'
 import {
@@ -30,6 +34,47 @@ import dashcamImg from '@/img/dashcam.png'
 import carrusel1Img from '@/img/carrusel1.png'
 import carrusel2Img from '@/img/carrusel2.png'
 import carrusel3Img from '@/img/carrusel3.png'
+
+const COTIZAR_URL = urlFrom(CotizarRoutes as any, ['create', 'cotizarCreate'], '/cotizar')
+
+/**
+ * ===== Helpers para URL con route helpers =====
+ * - Prioriza tus exports (serviciosCctv/cctv, etc.)
+ * - Si NO existe el helper por algún motivo, cae a fallback.
+ *   (fallback solo para que no truene build; lo ideal es que el helper exista.)
+ */
+function urlFrom(mod: any, keys: string[], fallback: string) {
+  for (const k of keys) {
+    const fn = mod?.[k]
+    if (typeof fn === 'function') {
+      try {
+        const r = fn()
+        const url = r?.url ?? r?.href
+        if (url) return String(url)
+      } catch {
+        // noop
+      }
+    }
+  }
+  return fallback
+}
+
+const SVC_URL = {
+  cctv: urlFrom(ServiciosRoutes as any, ['serviciosCctv', 'cctv'], '/servicios/cctv'),
+  alarmas: urlFrom(ServiciosRoutes as any, ['serviciosAlarmas', 'alarmas'], '/servicios/alarmas'),
+  gps: urlFrom(ServiciosRoutes as any, ['serviciosGps', 'gps'], '/servicios/gps'),
+  cercas: urlFrom(
+    ServiciosRoutes as any,
+    ['serviciosCercasElectricas', 'cercasElectricas', 'cercas_electricas'],
+    '/servicios/cercas-electricas'
+  ),
+  acceso: urlFrom(
+    ServiciosRoutes as any,
+    ['serviciosControlDeAcceso', 'controlDeAcceso', 'control_acceso'],
+    '/servicios/control-de-acceso'
+  ),
+  dashcam: urlFrom(ServiciosRoutes as any, ['serviciosDashcam', 'dashcam'], '/servicios/dashcam'),
+} as const
 
 function goTo(id: string) {
   const el = document.getElementById(id)
@@ -85,7 +130,7 @@ async function runTyping() {
 }
 
 /**
- * Servicios (agrego href como en navbar)
+ * Servicios
  */
 type ServicioCta = { k: string; v: string }
 type ServicioTile = {
@@ -108,7 +153,7 @@ const serviciosTiles: ServicioTile[] = [
     image: cctvImg,
     span: 'lg:col-span-2',
     theme: 'light',
-    href: '/servicios/cctv', // (case-sensitive en producción)
+    href: SVC_URL.cctv,
     ctas: [
       { k: 'HD/4MP/8MP', v: 'calidad según proyecto' },
       { k: 'NVR/DVR', v: 'grabación y respaldo' },
@@ -121,7 +166,7 @@ const serviciosTiles: ServicioTile[] = [
     image: alarmasImg,
     span: 'lg:col-span-1',
     theme: 'dark',
-    href: '/servicios/alarmas',
+    href: SVC_URL.alarmas,
   },
   {
     title: 'GPS y rastreo vehicular',
@@ -130,7 +175,7 @@ const serviciosTiles: ServicioTile[] = [
     image: gpsImg,
     span: 'lg:col-span-1',
     theme: 'light',
-    href: '/servicios/gps',
+    href: SVC_URL.gps,
   },
   {
     title: 'Cercas eléctricas',
@@ -139,7 +184,7 @@ const serviciosTiles: ServicioTile[] = [
     image: cercaImg,
     span: 'lg:col-span-2',
     theme: 'light',
-    href: '/servicios/cercas-electricas',
+    href: SVC_URL.cercas,
   },
   {
     title: 'Control de acceso',
@@ -148,7 +193,7 @@ const serviciosTiles: ServicioTile[] = [
     image: accesoImg,
     span: 'lg:col-span-2',
     theme: 'light',
-    href: '/servicios/control-de-acceso',
+    href: SVC_URL.acceso,
     pill: 'OBTENER PRESUPUESTO',
   },
   {
@@ -158,7 +203,7 @@ const serviciosTiles: ServicioTile[] = [
     image: dashcamImg,
     span: 'lg:col-span-1',
     theme: 'light',
-    href: '/servicios/dashcam',
+    href: SVC_URL.dashcam,
   },
 ]
 
@@ -394,8 +439,6 @@ function stopWhyAuto() {
 
 /**
  * Testimonios: autoplay plugin embla
- * - stopOnMouseEnter: true
- * - stopOnInteraction: false
  */
 const testiPlugin = Autoplay({
   delay: 4200,
@@ -564,15 +607,14 @@ onBeforeUnmount(() => {
                   </svg>
                 </Link>
 
-                <a
-                  v-if="tile.pill"
-                  :href="waLink"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex items-center justify-center rounded-full bg-white px-5 py-2 text-xs font-semibold text-blue-950 shadow-sm transition-colors duration-300 hover:bg-slate-50"
-                >
-                  {{ tile.pill }}
-                </a>
+                <Link
+                    href="/cotizar"
+                    class="inline-flex h-11 items-center justify-center rounded-xl bg-blue-950 px-5 text-sm font-semibold text-white shadow-sm
+                            transition-all duration-300 ease-out hover:bg-blue-900 hover:shadow-md
+                            focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                    >
+                    Solicitar cotización
+                    </Link>
               </div>
             </div>
           </article>
@@ -667,7 +709,7 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <!-- TESTIMONIOS (Autoplay + flechas abajo en mobile, laterales en md+) -->
+      <!-- TESTIMONIOS -->
       <section id="testimonios" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div class="flex items-end justify-between gap-6" data-reveal>
           <div>
@@ -710,7 +752,6 @@ onBeforeUnmount(() => {
                       </div>
                     </div>
 
-                    <!-- rating -->
                     <div class="mt-4 flex items-center gap-1">
                       <span
                         v-for="(on, i) in stars(t.rating)"
@@ -738,11 +779,9 @@ onBeforeUnmount(() => {
               </CarouselItem>
             </CarouselContent>
 
-            <!-- Desktop: laterales -->
             <CarouselPrevious class="hidden md:flex testi-nav testi-nav-left" />
             <CarouselNext class="hidden md:flex testi-nav testi-nav-right" />
 
-            <!-- Mobile: abajo -->
             <div class="mt-5 flex items-center justify-center gap-3 md:hidden">
               <CarouselPrevious class="testi-nav testi-nav-bottom" />
               <CarouselNext class="testi-nav testi-nav-bottom" />
@@ -751,7 +790,7 @@ onBeforeUnmount(() => {
         </div>
       </section>
 
-      <!-- PRODUCTOS (cards glass como navbar) -->
+      <!-- PRODUCTOS -->
       <section id="productos" class="relative py-14">
         <div class="absolute inset-0 -z-10 bg-slate-50 dark:bg-neutral-900/40" aria-hidden="true" />
 
@@ -772,7 +811,6 @@ onBeforeUnmount(() => {
             </a>
           </div>
 
-          <!-- Mobile/tablet -->
           <div class="mt-8 grid gap-5 sm:grid-cols-2 lg:hidden">
             <article
               v-for="p in productos"
@@ -792,7 +830,6 @@ onBeforeUnmount(() => {
             </article>
           </div>
 
-          <!-- Desktop expand -->
           <div class="mt-8 hidden gap-5 lg:flex" data-reveal>
             <article
               v-for="(p, i) in productos"
@@ -846,17 +883,58 @@ onBeforeUnmount(() => {
               </p>
 
               <div class="mt-5">
-                <a
-                  :href="waLink"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="inline-flex h-11 items-center justify-center rounded-xl bg-blue-950 px-5 text-sm font-semibold text-white shadow-sm
-                         transition-all duration-300 ease-out hover:bg-blue-900 hover:shadow-md
-                         focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300"
+                <Link
+                    :href="COTIZAR_URL"
+                    class="group relative inline-flex items-center justify-center gap-2
+                        h-12 px-5 rounded-2xl font-extrabold tracking-tight
+                        text-white
+                        bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600
+                        shadow-[0_14px_40px_-20px_rgba(37,99,235,.65)]
+                        ring-1 ring-white/15
+                        transition-all duration-200
+                        hover:-translate-y-0.5 hover:shadow-[0_18px_55px_-22px_rgba(37,99,235,.85)]
+                        hover:ring-white/25
+                        active:translate-y-0 active:scale-[.99]
+                        focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400/50"
                 >
-                  Solicitar cotización
-                </a>
-              </div>
+                    <span
+                    class="absolute inset-0 rounded-2xl opacity-0 blur-xl
+                            bg-gradient-to-r from-sky-500/40 via-blue-500/40 to-indigo-500/40
+                            transition-opacity duration-300 group-hover:opacity-100"
+                    aria-hidden="true"
+                    />
+                    <span
+                    class="absolute inset-0 rounded-2xl opacity-70
+                            bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,.35),transparent_60%)]
+                            transition-opacity duration-300 group-hover:opacity-100"
+                    aria-hidden="true"
+                    />
+                    <span
+                    class="pointer-events-none absolute -left-10 top-0 h-full w-24 rotate-12
+                            bg-white/25 blur-md opacity-0
+                            transition-all duration-500
+                            group-hover:opacity-100 group-hover:left-[110%]"
+                    aria-hidden="true"
+                    />
+
+                    <span class="relative">Solicitar cotización</span>
+
+                    <svg
+                    class="relative h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    aria-hidden="true"
+                    >
+                    <path
+                        d="M13 5l7 7-7 7M20 12H4"
+                        stroke="currentColor"
+                        stroke-width="2.5"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    />
+                    </svg>
+                </Link>
+                </div>
             </div>
 
             <div class="rounded-2xl bg-slate-50 p-6 dark:bg-neutral-900/40">
@@ -879,7 +957,6 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-/* Reveal base */
 [data-reveal] {
   opacity: 0;
   transform: translateY(14px);
@@ -893,7 +970,6 @@ onBeforeUnmount(() => {
   transform: translateY(0);
 }
 
-/* slider why */
 .whyfade-enter-active,
 .whyfade-leave-active {
   transition: opacity 520ms ease, transform 720ms cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -916,7 +992,6 @@ onBeforeUnmount(() => {
   transform: scale(1.01);
 }
 
-/* caret typing */
 @keyframes caretBlink {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0; }
@@ -926,14 +1001,11 @@ onBeforeUnmount(() => {
   animation: caretBlink 900ms infinite;
 }
 
-/* Testimonios: estilo pro para flechas (y que no tapen contenido) */
 .testi-nav {
   z-index: 50 !important;
   opacity: 1 !important;
   pointer-events: auto !important;
 }
-
-/* Desktop: laterales y centradas */
 .testi-nav-left {
   position: absolute !important;
   left: -0.25rem !important;
@@ -946,14 +1018,11 @@ onBeforeUnmount(() => {
   top: 50% !important;
   transform: translateY(-50%) !important;
 }
-
-/* Mobile: botones abajo (no overlay) */
 .testi-nav-bottom {
   position: static !important;
   transform: none !important;
 }
 
-/* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
   [data-reveal] {
     opacity: 1 !important;

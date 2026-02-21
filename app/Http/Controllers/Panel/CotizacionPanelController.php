@@ -76,7 +76,7 @@ class CotizacionPanelController extends Controller {
                     'created_at' => optional($c->created_at)->toISOString(),
                 ];
             });
-        return Inertia::render('Cotizaciones/Index', [
+        return Inertia::render('cotizaciones/Index', [
             'items' => $items,
             'filters' => [
                 'q' => $q ?: null,
@@ -122,7 +122,7 @@ class CotizacionPanelController extends Controller {
             ->where('status','activo')
             ->orderBy('nombre')
             ->get(['id','nombre','precio']);
-        return Inertia::render('Cotizaciones/Create', [
+        return Inertia::render('cotizaciones/Create', [
             'meta' => [
                 'productos' => $productos,
                 'servicios' => $servicios,
@@ -181,7 +181,7 @@ class CotizacionPanelController extends Controller {
             ->where('status','activo')
             ->orderBy('nombre')
             ->get(['id','nombre','precio']);
-        return Inertia::render('Cotizaciones/Show', [
+        return Inertia::render('cotizaciones/Show', [
             'item' => $cotizacion,
             'meta' => [
                 'estatuses' => ['NUEVA','EN_REVISION','DEVUELTA','ENVIADA'],

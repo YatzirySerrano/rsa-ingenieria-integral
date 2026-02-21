@@ -6,12 +6,28 @@ import PublicLayout from '@/layouts/PublicLayout.vue'
 import { RSA_PUBLIC } from '@/config/rsaPublic'
 
 /**
+ * IMÁGENES (Vite build-safe)
+ * Tus assets están en: resources/js/img/*
+ * => Deben importarse. NO se usan como strings "/img/..."
+ */
+import cctvHeroImg from '@/img/cctv.jpg'
+
+/**
  * Navegación interna (respeta header fijo)
  */
+function getHeaderOffset() {
+  const raw =
+    typeof window !== 'undefined'
+      ? getComputedStyle(document.documentElement).getPropertyValue('--rsa-header')
+      : ''
+  const n = Number(String(raw || '').replace('px', '').trim())
+  return Number.isFinite(n) && n > 0 ? n : 84
+}
+
 function goTo(id: string) {
   const el = document.getElementById(id)
   if (!el) return
-  const headerOffset = 84
+  const headerOffset = getHeaderOffset()
   const top = el.getBoundingClientRect().top + window.scrollY - headerOffset
   window.scrollTo({ top, behavior: 'smooth' })
 }
@@ -193,7 +209,7 @@ const softHover =
       <!-- HERO -->
       <section
         class="relative w-full overflow-hidden bg-cover bg-center bg-no-repeat"
-        :style="{ backgroundImage: `url('/img/cctv.jpg')` }"
+        :style="{ backgroundImage: `url('${cctvHeroImg}')` }"
       >
         <div class="absolute inset-0 bg-black/45" aria-hidden="true" />
         <div class="absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/55" aria-hidden="true" />
@@ -294,7 +310,7 @@ const softHover =
                         <div class="mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10">
                           <svg viewBox="0 0 24 24" class="h-5 w-5 fill-white/90" aria-hidden="true">
                             <path
-                              d="M22 19l-6.2-6.2a6 6 0 0 1-7.6-7.6L10 7l3-3-1.8-1.8a6 6 0 0 1 7.6 7.6L25 16l-3 3zM5 21l6-6 2 2-6 6H5z"
+                              d="M21.3 19.9 15.6 14.2a6.2 6.2 0 0 1-7.7-7.7l2.2 2.2 2.1-2.1-2.2-2.2a6.2 6.2 0 0 1 7.7 7.7l5.7 5.7-2.1 2.1zM3 21v-2.2l6.4-6.4 2.2 2.2L5.2 21H3z"
                             />
                           </svg>
                         </div>
@@ -396,39 +412,39 @@ const softHover =
       </section>
 
       <!-- MARCAS -->
-    <section id="marcas" class="relative py-16 bg-slate-50">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="text-center" data-reveal>
-        <div class="text-xs font-semibold tracking-wide text-slate-500">
-            Trusted by
-        </div>
+      <section id="marcas" class="relative py-16 bg-slate-50 dark:bg-neutral-900/40">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="text-center" data-reveal>
+            <div class="text-xs font-semibold tracking-wide text-slate-500 dark:text-slate-400">
+              Trusted by
+            </div>
 
-        <h2 class="mt-3 text-2xl font-semibold text-slate-950">
-            Marcas con las que trabajamos
-        </h2>
+            <h2 class="mt-3 text-2xl font-semibold text-slate-950 dark:text-white">
+              Marcas con las que trabajamos
+            </h2>
 
-        <p class="mt-2 text-sm text-slate-600">
-            Si quieres, reemplazamos estos nombres por logos y queda nivel “enterprise”.
-        </p>
-        </div>
+            <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              Si quieres, reemplazamos estos nombres por logos y queda nivel “enterprise”.
+            </p>
+          </div>
 
-        <div
-        class="mt-12 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4"
-        data-reveal
-        >
-        <div
-            v-for="b in brands"
-            :key="b.name"
-            class="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-7
-                text-slate-800 font-semibold shadow-sm transition
-                hover:shadow-md hover:-translate-y-[1px]"
-        >
-            {{ b.name }}
+          <div
+            class="mt-12 grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4"
+            data-reveal
+          >
+            <div
+              v-for="b in brands"
+              :key="b.name"
+              class="flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-6 py-7
+                     text-slate-800 font-semibold shadow-sm transition
+                     hover:shadow-md hover:-translate-y-[1px]
+                     dark:border-neutral-800 dark:bg-neutral-950 dark:text-slate-100"
+            >
+              {{ b.name }}
+            </div>
+          </div>
         </div>
-        </div>
-    </div>
-    </section>
-
+      </section>
 
       <!-- BENEFICIOS -->
       <section
@@ -445,7 +461,7 @@ const softHover =
         <div class="grid gap-8 lg:grid-cols-12 lg:items-stretch">
           <div class="lg:col-span-5" data-reveal>
             <div class="relative h-[320px] overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-950">
-              <img src="/img/cctv.jpg" alt="" class="absolute inset-0 h-full w-full object-cover" />
+              <img :src="cctvHeroImg" alt="" class="absolute inset-0 h-full w-full object-cover" />
               <div class="absolute inset-0 bg-gradient-to-r from-black/60 via-black/25 to-transparent" />
               <div class="relative p-7">
                 <div class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white backdrop-blur">
@@ -512,84 +528,72 @@ const softHover =
       </section>
 
       <!-- PASOS PARA CONTRATAR -->
-    <section id="pasos" class="relative py-16 bg-white">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <!-- Header -->
-        <div class="mb-10" data-reveal>
-        <h2 class="text-2xl font-semibold text-slate-950">
-            Pasos para contratar
-        </h2>
-        <p class="mt-2 text-sm text-slate-600">
-            Proceso claro, sin fricción: de diagnóstico a continuidad operativa.
-        </p>
-        </div>
-
-        <!-- Steps container -->
-        <div
-        class="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50"
-        data-reveal
-        >
-        <div
-            v-for="(s, idx) in steps"
-            :key="s.n"
-            class="grid gap-6 px-6 py-8 sm:px-8 lg:grid-cols-12
-                border-b border-slate-200 last:border-b-0"
-        >
-            <!-- Número + título -->
-            <div class="lg:col-span-5">
-            <div class="flex items-start gap-4">
-                <div
-                class="flex h-10 w-10 items-center justify-center rounded-xl
-                        bg-blue-950 text-sm font-semibold text-white"
-                >
-                {{ s.n }}
-                </div>
-
-                <div>
-                <div class="text-lg font-semibold text-slate-950">
-                    {{ s.title }}
-                </div>
-                <div
-                    v-if="s.note"
-                    class="mt-1 text-xs text-slate-500"
-                >
-                    {{ s.note }}
-                </div>
-                </div>
-            </div>
-            </div>
-
-            <!-- Descripción -->
-            <div class="lg:col-span-7">
-            <p class="text-sm leading-relaxed text-slate-600">
-                {{ s.text }}
+      <section id="pasos" class="relative py-16 bg-white dark:bg-neutral-950">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div class="mb-10" data-reveal>
+            <h2 class="text-2xl font-semibold text-slate-950 dark:text-white">
+              Pasos para contratar
+            </h2>
+            <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              Proceso claro, sin fricción: de diagnóstico a continuidad operativa.
             </p>
+          </div>
+
+          <div
+            class="overflow-hidden rounded-3xl border border-slate-200 bg-slate-50 dark:border-neutral-800 dark:bg-neutral-900/40"
+            data-reveal
+          >
+            <div
+              v-for="s in steps"
+              :key="s.n"
+              class="grid gap-6 px-6 py-8 sm:px-8 lg:grid-cols-12 border-b border-slate-200 last:border-b-0
+                     dark:border-neutral-800"
+            >
+              <div class="lg:col-span-5">
+                <div class="flex items-start gap-4">
+                  <div
+                    class="flex h-10 w-10 items-center justify-center rounded-xl
+                           bg-blue-950 text-sm font-semibold text-white"
+                  >
+                    {{ s.n }}
+                  </div>
+
+                  <div>
+                    <div class="text-lg font-semibold text-slate-950 dark:text-white">
+                      {{ s.title }}
+                    </div>
+                    <div v-if="s.note" class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      {{ s.note }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="lg:col-span-7">
+                <p class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                  {{ s.text }}
+                </p>
+              </div>
             </div>
-        </div>
-        </div>
+          </div>
 
-        <!-- CTA -->
-        <div class="mt-10 flex flex-wrap gap-3" data-reveal>
-        <button
-            type="button"
-            :class="primaryBtn"
-            @click="openContact"
-        >
-            Contáctanos
-        </button>
+          <div class="mt-10 flex flex-wrap gap-3" data-reveal>
+            <button type="button" :class="primaryBtn" @click="openContact">
+              Contáctanos
+            </button>
 
-        <Link
-            href="/"
-            class="inline-flex h-11 items-center justify-center rounded-xl
-                border border-slate-200 px-6 text-sm font-semibold text-slate-950
-                transition hover:bg-slate-50"
-        >
-            Volver al inicio
-        </Link>
+            <Link
+              href="/"
+              class="inline-flex h-11 items-center justify-center rounded-xl
+                     border border-slate-200 px-6 text-sm font-semibold text-slate-950
+                     transition hover:bg-slate-50
+                     dark:border-neutral-800 dark:text-white dark:hover:bg-neutral-900/40"
+            >
+              Volver al inicio
+            </Link>
+          </div>
         </div>
-    </div>
-    </section>
-
+      </section>
 
       <!-- CTA final -->
       <section class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
@@ -687,7 +691,6 @@ const softHover =
 </template>
 
 <style scoped>
-/* Reveal base */
 [data-reveal] {
   opacity: 0;
   transform: translateY(14px);
@@ -701,7 +704,6 @@ const softHover =
   transform: translateY(0);
 }
 
-/* Reduce motion */
 @media (prefers-reduced-motion: reduce) {
   [data-reveal] {
     opacity: 1 !important;
