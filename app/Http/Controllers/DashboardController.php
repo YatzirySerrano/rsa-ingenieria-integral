@@ -14,30 +14,19 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class DashboardController extends Controller
-{
-    public function index(Request $request): Response
-    {
+class DashboardController extends Controller {
+
+    public function index(Request $request): Response {
         $user = $request->user();
-
-        // El sistema NO está abierto a clientes (por ahora)
-        if ($user->rol === 'cliente') {
-            abort(403);
-        }
-
         $isAdmin = $user->rol === 'admin';
-
         // Base: cotizaciones activas
         $base = Cotizacion::query()->where('status', 'activo');
-
         // Vendedor ve solo lo suyo
         if (!$isAdmin) {
             $base->where('usuario_id', $user->id);
         }
-
         $cotizacionesTotal = (clone $base)->count();
         $montoTotal = (float) ((clone $base)->sum('total') ?? 0);
-
         $byStatus = (clone $base)
             ->select('estatus', DB::raw('COUNT(*) as total'))
             ->groupBy('estatus')
@@ -48,12 +37,10 @@ class DashboardController extends Controller
                 'total' => (int) $r->total,
             ])
             ->values();
-
         // Últimos 6 meses (rellena huecos)
         $monthsBack = 6;
         $from = now()->subMonths($monthsBack - 1)->startOfMonth();
         $to = now()->startOfMonth();
-
         $rawMonthly = (clone $base)
             ->where('created_at', '>=', $from)
             ->selectRaw("DATE_FORMAT(created_at, '%Y-%m') as ym, COUNT(*) as total, COALESCE(SUM(total),0) as revenue")
@@ -61,7 +48,6 @@ class DashboardController extends Controller
             ->orderBy('ym')
             ->get()
             ->keyBy('ym');
-
         $monthly = collect();
         foreach (CarbonPeriod::create($from, '1 month', $to) as $dt) {
             $ym = $dt->format('Y-m');
@@ -73,7 +59,6 @@ class DashboardController extends Controller
                 'revenue' => (float) ($row->revenue ?? 0),
             ]);
         }
-
         $recent = (clone $base)
             ->with([
                 'persona:id,nombre,apellido_paterno,apellido_materno',
@@ -98,7 +83,6 @@ class DashboardController extends Controller
                 ] : null,
             ])
             ->values();
-
         $admin = null;
         if ($isAdmin) {
             // OJO: esto NO truena aunque no exista scopeActivo
@@ -109,7 +93,6 @@ class DashboardController extends Controller
                 'vendedores_activos' => $this->qActivo(User::class)->where('rol', 'vendedor')->count(),
             ];
         }
-
         return Inertia::render('Dashboard', [
             'role' => $isAdmin ? 'admin' : 'vendedor',
             'kpis' => [
@@ -123,13 +106,12 @@ class DashboardController extends Controller
         ]);
     }
 
-    private function qActivo(string $modelClass): Builder
-    {
+    private function qActivo(string $modelClass): Builder {
         $q = $modelClass::query();
-
         // Si tienes scopeActivo, úsalo. Si no, cae a where directo sin romper prod.
         return method_exists($modelClass, 'scopeActivo')
             ? $q->activo()
             : $q->where('status', 'activo');
     }
+
 }

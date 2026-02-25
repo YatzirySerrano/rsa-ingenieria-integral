@@ -317,7 +317,7 @@ onMounted(() => {
                 @click="submitReply"
               >
                 <Send class="h-4 w-4" />
-                Marcar DEVUELTA
+                Finalizar cotización
             </Button>
 
         </div>
@@ -667,10 +667,7 @@ onMounted(() => {
           <!-- Reply inline -->
           <div id="reply-card" class="rounded-3xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-4 sm:p-5 dark:bg-white/5 dark:border-white/10">
             <h3 class="font-black text-slate-900 dark:text-zinc-100">Contacto del cliente</h3>
-            <p class="mt-1 text-xs text-slate-600 dark:text-zinc-400">
-              Captura correo o teléfono y marca DEVUELTA para ajustar antes de reenviar.
-            </p>
-
+            
             <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div class="space-y-1">
                 <label class="text-xs font-extrabold text-slate-700 dark:text-zinc-300">Correo</label>
@@ -711,7 +708,7 @@ onMounted(() => {
                 @click="cart.markSent"
             >
                 <CheckCircle2 class="h-4 w-4" />
-                Marcar ENVIADA
+                Lista para enviar
             </Button>
 
             <Button
@@ -721,7 +718,7 @@ onMounted(() => {
                 disabled
             >
                 <CheckCircle2 class="h-4 w-4" />
-                Enviada
+                Finalizada
             </Button>
             </div>
           </div>

@@ -95,6 +95,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/create', [CotizacionPanelController::class, 'create'])->name('create');
         Route::post('/', [CotizacionPanelController::class, 'store'])->name('store');
 
+        Route::get('/clientes-lookup', [CotizacionPanelController::class, 'clientesLookup'])
+        ->name('clientesLookup');
+
         // Detalles: editar SOLO cantidad + quitar (status inactivo)    a
         Route::match(['put', 'patch'], '/detalles/{detalle}', [CotizacionDetalleController::class, 'update'])
             ->name('detalles.update');

@@ -16,33 +16,29 @@ use App\Models\CotizacionDetalle;
 use App\Models\Log as LogModel;
 use App\Models\Producto;
 use App\Models\Servicio;
-use Illuminate\Support\Facades\Log as LaravelLog;
+use App\Models\User;
 use App\Services\Cotizaciones\CotizacionCreator;
 use App\Services\Cotizaciones\CotizacionTotals;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
-use Inertia\Inertia;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log as LaravelLog;
+use Illuminate\Support\Facades\Mail;
+use Inertia\Inertia;
 
-class CotizacionPanelController extends Controller {
-
+class CotizacionPanelController extends Controller
+{
     public function __construct(private CotizacionTotals $totals) {}
 
-    private function ensurePanelActor(): void {
-        $u = auth()->user();
-        $rol = $u?->rol;
-        abort_unless($u && in_array($rol, ['admin', 'vendedor'], true), 403);
-    }
-
-    public function index(CotizacionIndexRequest $request) {
-        $this->ensurePanelActor();
+    public function index(CotizacionIndexRequest $request)
+    {
         $q = trim((string) $request->input('q', ''));
         $estatus = $request->input('estatus');
         $perPage = (int) ($request->input('per_page') ?: 15);
+
         $query = Cotizacion::query()
             ->where('status', 'activo')
             ->withSum(['detalles as total_calculado' => fn ($dq) => $dq->where('status', 'activo')], 'total_linea');
+
         if ($q !== '') {
             $query->where(function ($w) use ($q) {
                 $w->where('folio', 'like', "%{$q}%")
@@ -50,9 +46,11 @@ class CotizacionPanelController extends Controller {
                     ->orWhere('telefono_destino', 'like', "%{$q}%");
             });
         }
+
         if ($estatus && $estatus !== '__all__') {
             $query->where('estatus', $estatus);
         }
+
         $items = $query->orderByDesc('id')
             ->paginate($perPage)
             ->withQueryString()
@@ -76,6 +74,7 @@ class CotizacionPanelController extends Controller {
                     'created_at' => optional($c->created_at)->toISOString(),
                 ];
             });
+
         return Inertia::render('cotizaciones/Index', [
             'items' => $items,
             'filters' => [
@@ -83,33 +82,32 @@ class CotizacionPanelController extends Controller {
                 'estatus' => $estatus ?: '__all__',
             ],
             'meta' => [
-                'estatuses' => ['BORRADOR','EN_REVISION','DEVUELTA','ENVIADA'],
+                'estatuses' => ['BORRADOR', 'EN_REVISION', 'DEVUELTA', 'ENVIADA'],
             ],
         ]);
     }
 
-    // NUEVO: pantalla para crear cotización desde panel
-    public function create() {
-        $this->ensurePanelActor();
+    public function create()
+    {
         $toPublic = fn (?string $path) => $path ? '/storage/' . ltrim($path, '/') : null;
+
         $productos = Producto::query()
-            ->where('status','activo')
-            ->with(['medias' => fn($q) => $q->where('status','activo')->orderByDesc('principal')->orderBy('orden')])
+            ->where('status', 'activo')
+            ->with(['medias' => fn ($q) => $q->where('status', 'activo')->orderByDesc('principal')->orderBy('orden')])
             ->orderBy('nombre')
-            ->get(['id','sku','nombre','precio_venta'])
+            ->get(['id', 'sku', 'nombre', 'precio_venta'])
             ->map(function (Producto $p) use ($toPublic) {
                 $imgPath =
                     $p->medias->firstWhere('principal', 1)?->url
                     ?: $p->medias->first()?->url;
+
                 return [
                     'id' => $p->id,
                     'sku' => $p->sku,
                     'nombre' => $p->nombre,
                     'precio_venta' => $p->precio_venta,
-                    // clave: relativo
                     'image_url' => $toPublic($imgPath),
-                    //  clave: relativos también
-                    'medias' => $p->medias->map(fn($m) => [
+                    'medias' => $p->medias->map(fn ($m) => [
                         'id' => $m->id,
                         'url' => $toPublic($m->url),
                         'principal' => (bool) $m->principal,
@@ -118,57 +116,121 @@ class CotizacionPanelController extends Controller {
                     ])->values(),
                 ];
             });
+
         $servicios = Servicio::query()
-            ->where('status','activo')
+            ->where('status', 'activo')
             ->orderBy('nombre')
-            ->get(['id','nombre','precio']);
+            ->get(['id', 'nombre', 'precio']);
+
         return Inertia::render('cotizaciones/Create', [
             'meta' => [
                 'productos' => $productos,
                 'servicios' => $servicios,
+                'estatuses' => ['BORRADOR', 'EN_REVISION', 'DEVUELTA', 'ENVIADA'],
             ],
         ]);
     }
 
-    // NUEVO: crea en BD (admin/vendedor)
-    public function store(CotizacionPanelStoreRequest $request, CotizacionCreator $creator) {
-        $this->ensurePanelActor();
+    public function store(CotizacionPanelStoreRequest $request, CotizacionCreator $creator)
+    {
+        $actor = $request->user(); // admin/vendedor/cliente
+
+        $usuarioId = null;
+        $personaId = null;
+        $emailDestino = null;
+        $telefonoDestino = null;
+
+        if ($actor->rol === 'cliente') {
+            $actor->load('persona');
+
+            if (!$actor->persona) {
+                abort(422, 'Tu cuenta no tiene datos de persona vinculados.');
+            }
+
+            $usuarioId = $actor->id;
+            $personaId = $actor->persona->id;
+            $emailDestino = $actor->email;
+            $telefonoDestino = $actor->persona->telefono;
+        } else {
+            // staff: puede ser usuario existente (de cualquier rol) O lead no registrado
+            $clienteUserIdRaw = $request->input('cliente_usuario_id');
+
+            if ($clienteUserIdRaw) {
+                $clienteUserId = (int) $clienteUserIdRaw;
+
+                $u = User::query()
+                    ->where('id', $clienteUserId)
+                    ->where('status', 'activo')
+                    ->with('persona:id,usuario_id,telefono')
+                    ->firstOrFail();
+
+                $usuarioId = $u->id;
+                $personaId = $u->persona?->id;
+                $emailDestino = $u->email;
+                $telefonoDestino = $u->persona?->telefono ?: null;
+
+                // Si por alguna razón ese usuario no tiene correo y tampoco teléfono, no hay a dónde mandar nada
+                if (trim((string) $emailDestino) === '' && trim((string) $telefonoDestino) === '') {
+                    abort(422, 'Ese usuario no tiene correo ni teléfono. Usa modo "No registrado" y captura contacto.');
+                }
+            } else {
+                // lead NO REGISTRADO
+                $emailDestino = trim((string) $request->input('email_destino', ''));
+                $telefonoDestino = trim((string) $request->input('telefono_destino', ''));
+
+                if ($emailDestino === '' && $telefonoDestino === '') {
+                    abort(422, 'Captura al menos correo o teléfono del cliente no registrado.');
+                }
+
+                $usuarioId = null;
+                $personaId = null;
+            }
+        }
+
+        $items = (array) $request->input('items', []);
+        if (!count($items)) {
+            abort(422, 'Agrega al menos 1 item.');
+        }
+
         $cotizacion = $creator->create(
-            auth()->id(),
-            $request->input('persona_id'),
-            $request->input('email_destino'),
-            $request->input('telefono_destino'),
-            (array) $request->input('items', [])
+            $usuarioId,
+            $personaId,
+            $emailDestino,
+            $telefonoDestino,
+            $items
         );
+
         $this->log('create', 'cotizacions', $cotizacion->id, 'Creada desde panel.');
         return redirect()->route('cotizaciones.show', ['cotizacion' => $cotizacion->id], 303);
     }
 
-    public function show(Cotizacion $cotizacion) {
-        $this->ensurePanelActor();
+    public function show(Cotizacion $cotizacion)
+    {
         $cotizacion->load([
-            'detalles' => fn($q) => $q->where('status','activo')->orderBy('id'),
+            'detalles' => fn ($q) => $q->where('status', 'activo')->orderBy('id'),
             'detalles.producto:id,sku,nombre',
             'detalles.servicio:id,nombre',
         ]);
-        // Catálogo (para agregar ítems desde el Show sin pedir "ID")
+
         $toPublic = fn (?string $path) => $path ? '/storage/' . ltrim($path, '/') : null;
+
         $productos = Producto::query()
-            ->where('status','activo')
-            ->with(['medias' => fn($q) => $q->where('status','activo')->orderByDesc('principal')->orderBy('orden')])
+            ->where('status', 'activo')
+            ->with(['medias' => fn ($q) => $q->where('status', 'activo')->orderByDesc('principal')->orderBy('orden')])
             ->orderBy('nombre')
-            ->get(['id','sku','nombre','precio_venta'])
+            ->get(['id', 'sku', 'nombre', 'precio_venta'])
             ->map(function (Producto $p) use ($toPublic) {
                 $imgPath =
                     $p->medias->firstWhere('principal', 1)?->url
                     ?: $p->medias->first()?->url;
+
                 return [
                     'id' => $p->id,
                     'sku' => $p->sku,
                     'nombre' => $p->nombre,
                     'precio_venta' => $p->precio_venta,
                     'image_url' => $toPublic($imgPath),
-                    'medias' => $p->medias->map(fn($m) => [
+                    'medias' => $p->medias->map(fn ($m) => [
                         'id' => $m->id,
                         'url' => $toPublic($m->url),
                         'principal' => (bool) $m->principal,
@@ -177,71 +239,87 @@ class CotizacionPanelController extends Controller {
                     ])->values(),
                 ];
             });
+
         $servicios = Servicio::query()
-            ->where('status','activo')
+            ->where('status', 'activo')
             ->orderBy('nombre')
-            ->get(['id','nombre','precio']);
+            ->get(['id', 'nombre', 'precio']);
+
         return Inertia::render('cotizaciones/Show', [
             'item' => $cotizacion,
             'meta' => [
-                'estatuses' => ['NUEVA','EN_REVISION','DEVUELTA','ENVIADA'],
+                'estatuses' => ['BORRADOR', 'EN_REVISION', 'DEVUELTA', 'ENVIADA'],
                 'productos' => $productos,
                 'servicios' => $servicios,
             ],
         ]);
     }
 
-    public function update(CotizacionUpdateRequest $request, Cotizacion $cotizacion) {
-        $this->ensurePanelActor();
+    public function update(CotizacionUpdateRequest $request, Cotizacion $cotizacion)
+    {
         abort_unless($cotizacion->status === 'activo', 404);
         $this->guardNotSent($cotizacion);
 
-        $cotizacion->fill($request->only(['email_destino','telefono_destino','estatus']));
-        if (!$cotizacion->estatus) $cotizacion->estatus = 'EN_REVISION';
+        $cotizacion->fill($request->only(['email_destino', 'telefono_destino', 'estatus']));
+        if (!$cotizacion->estatus) {
+            $cotizacion->estatus = 'EN_REVISION';
+        }
         $cotizacion->save();
+
         $this->log('update', 'cotizacions', $cotizacion->id, 'Update cabecera/estatus.');
         return back(303);
     }
 
-    public function destroy(Cotizacion $cotizacion) {
-        $this->ensurePanelActor();
+    public function destroy(Cotizacion $cotizacion)
+    {
         abort_unless($cotizacion->status === 'activo', 404);
         $this->guardNotSent($cotizacion);
+
         $cotizacion->status = 'inactivo';
         $cotizacion->save();
+
         $this->log('delete', 'cotizacions', $cotizacion->id, 'Baja lógica.');
         return redirect()->route('cotizaciones.index', [], 303);
     }
 
-    public function addItem(CotizacionAddItemRequest $request, Cotizacion $cotizacion) {
-        $this->ensurePanelActor();
+    public function addItem(CotizacionAddItemRequest $request, Cotizacion $cotizacion)
+    {
         abort_unless($cotizacion->status === 'activo', 404);
         $this->guardNotSent($cotizacion);
-        $tipo = $request->input('tipo');
+
+        $tipo = (string) $request->input('tipo');
         $cantidad = (float) $request->input('cantidad');
+
         $productoId = $tipo === 'PRODUCTO' ? (int) $request->input('producto_id') : null;
         $servicioId = $tipo === 'SERVICIO' ? (int) $request->input('servicio_id') : null;
+
         $precio = 0.0;
+
         if ($tipo === 'PRODUCTO') {
-            $p = Producto::where('id', $productoId)->where('status','activo')->firstOrFail();
+            $p = Producto::where('id', $productoId)->where('status', 'activo')->firstOrFail();
             $precio = (float) $p->precio_venta;
         } else {
-            $s = Servicio::where('id', $servicioId)->where('status','activo')->firstOrFail();
+            $s = Servicio::where('id', $servicioId)->where('status', 'activo')->firstOrFail();
             $precio = (float) $s->precio;
         }
+
         $detalle = CotizacionDetalle::query()
             ->where('cotizacion_id', $cotizacion->id)
-            ->where('status','activo')
-            ->when($productoId, fn ($q) => $q->where('producto_id',$productoId)->whereNull('servicio_id'))
-            ->when($servicioId, fn ($q) => $q->where('servicio_id',$servicioId)->whereNull('producto_id'))
+            ->where('status', 'activo')
+            ->when($productoId, fn ($q) => $q->where('producto_id', $productoId)->whereNull('servicio_id'))
+            ->when($servicioId, fn ($q) => $q->where('servicio_id', $servicioId)->whereNull('producto_id'))
             ->first();
+
+        $detalleId = null;
+
         if ($detalle) {
             $detalle->cantidad = (float) $detalle->cantidad + $cantidad;
             $detalle->precio_unitario = $precio;
             $detalle->total_linea = round(((float) $detalle->cantidad) * $precio, 2);
             $detalle->save();
+            $detalleId = $detalle->id;
         } else {
-            CotizacionDetalle::create([
+            $new = CotizacionDetalle::create([
                 'cotizacion_id' => $cotizacion->id,
                 'producto_id' => $productoId,
                 'servicio_id' => $servicioId,
@@ -250,71 +328,80 @@ class CotizacionPanelController extends Controller {
                 'total_linea' => round($cantidad * $precio, 2),
                 'status' => 'activo',
             ]);
+            $detalleId = $new->id;
         }
+
         if ($cotizacion->estatus === 'BORRADOR') {
             $cotizacion->estatus = 'EN_REVISION';
             $cotizacion->save();
         }
+
         $this->totals->recalc($cotizacion);
-        $this->log('create', 'cotizacion_detalles', $cotizacion->id, 'Add item.');
+        $this->log('create', 'cotizacion_detalles', $detalleId, 'Add item.');
         return back(303);
     }
 
-    public function reply(CotizacionReplyRequest $request, Cotizacion $cotizacion) {
-        $this->ensurePanelActor();
+    public function reply(CotizacionReplyRequest $request, Cotizacion $cotizacion)
+    {
         abort_unless($cotizacion->status === 'activo', 404);
         $this->guardNotSent($cotizacion);
-        $cotizacion->fill($request->only(['email_destino','telefono_destino']));
+
+        $cotizacion->fill($request->only(['email_destino', 'telefono_destino']));
         $cotizacion->estatus = 'DEVUELTA';
         $cotizacion->save();
+
         $this->log('update', 'cotizacions', $cotizacion->id, 'Marcada DEVUELTA.');
         return back(303);
     }
 
-   // OJO: este NO manda correo. Es para cuando tú ya la mandaste por WhatsApp y solo quieres marcar.
-    public function markSent(CotizacionMarkSentRequest $request, Cotizacion $cotizacion) {
-        $this->ensurePanelActor();
+    public function markSent(CotizacionMarkSentRequest $request, Cotizacion $cotizacion)
+    {
         abort_unless($cotizacion->status === 'activo', 404);
-        // si ya está ENVIADA, no permitir “marcar otra vez”
+
         if (strtoupper((string) $cotizacion->estatus) === 'ENVIADA') {
             return back(303);
         }
+
         $cotizacion->estatus = 'ENVIADA';
         $cotizacion->save();
+
         $this->log('update', 'cotizacions', $cotizacion->id, 'Marcada ENVIADA (manual).');
         return back(303);
     }
 
-    private function guardNotSent(Cotizacion $cotizacion): void {
+    private function guardNotSent(Cotizacion $cotizacion): void
+    {
         if (strtoupper((string) $cotizacion->estatus) === 'ENVIADA') {
             abort(422, 'La cotización ya fue marcada como ENVIADA.');
         }
     }
 
-    // NUEVO: manda correo desde el sistema y marca ENVIADA
-    public function sendEmail(Request $request, Cotizacion $cotizacion) {
-        $data = $request->validate([
-            'email' => ['required', 'email'],
-        ]);
-        // Actualiza destino (si quieres permitir cambiarlo desde panel)
-        $cotizacion->email_destino = $data['email'];
-        // Construye todo lo necesario para el correo
+    public function sendEmail(CotizacionSendEmailRequest $request, Cotizacion $cotizacion)
+    {
+        $this->guardNotSent($cotizacion);
+
+        $email = (string) $request->validated('email');
+        $cotizacion->email_destino = $email;
+
         $url = route('cotizacion.public.show', $cotizacion->token);
         $cliente = $this->buildClienteInfo($cotizacion);
         $detalles = $this->buildDetallesForMail($cotizacion->id);
+
         try {
-            Mail::to($cotizacion->email_destino)
-                ->send(new CotizacionEnviadaMail(
+            Mail::to($cotizacion->email_destino)->send(
+                new CotizacionEnviadaMail(
                     cotizacion: $cotizacion,
                     detalles: $detalles,
                     publicUrl: $url,
                     cliente: $cliente
-                ));
-            // Solo si se envió sin explotar, marcamos ENVIADA
+                )
+            );
+
             $cotizacion->estatus = 'ENVIADA';
             $cotizacion->save();
-            // Si quieres auditar en tu tabla logs:
-            // $this->logAction('ENVIAR_CORREO', 'cotizacions', $cotizacion->id, 'Enviado a ' . $cotizacion->email_destino);
+
+            $this->log('update', 'cotizacions', $cotizacion->id, 'Correo enviado y marcada ENVIADA.');
+
             return response()->json([
                 'ok' => true,
                 'to' => $cotizacion->email_destino,
@@ -327,8 +414,7 @@ class CotizacionPanelController extends Controller {
                 'to' => $cotizacion->email_destino,
                 'error' => $e->getMessage(),
             ]);
-            // Si quieres auditar error en tu tabla logs:
-            // $this->logAction('ERROR_ENVIO_CORREO', 'cotizacions', $cotizacion->id, $e->getMessage());
+
             return response()->json([
                 'message' => 'No se pudo enviar el correo. Revisa logs.',
             ], 500);
@@ -396,7 +482,7 @@ class CotizacionPanelController extends Controller {
                 $nombre = trim(
                     ($p->nombre ?? '') . ' ' . ($p->apellido_paterno ?? '') . ' ' . ($p->apellido_materno ?? '')
                 );
-                $empresa = trim((string)($p->empresa ?? '')) ?: null;
+                $empresa = trim((string) ($p->empresa ?? '')) ?: null;
             }
         }
 
@@ -408,7 +494,8 @@ class CotizacionPanelController extends Controller {
         ];
     }
 
-    private function log(string $accion, string $tabla, ?int $registroId, ?string $detalle): void {
+    private function log(string $accion, string $tabla, ?int $registroId, ?string $detalle): void
+    {
         LogModel::create([
             'usuario_id' => auth()->id(),
             'accion' => $accion,
@@ -419,4 +506,45 @@ class CotizacionPanelController extends Controller {
         ]);
     }
 
+    public function clientesLookup(Request $request)
+{
+    $q = trim((string) $request->get('q', ''));
+
+    // Si viene algo, mínimo 2 chars. Si viene vacío, devolvemos top 50.
+    if ($q !== '' && mb_strlen($q) < 2) {
+        return response()->json(['data' => []]);
+    }
+
+    $roles = ['cliente', 'admin', 'vendedor'];
+
+    $users = User::query()
+        // status robusto: acepta activo/ACTIVO/Activo...
+        ->whereRaw('LOWER(status) = ?', ['activo'])
+        // SOLO estos roles
+        ->whereIn('rol', $roles)
+        ->with('persona:id,usuario_id,telefono')
+        ->when($q !== '', function ($qq) use ($q) {
+            $qq->where(function ($w) use ($q) {
+                $w->where('name', 'like', "%{$q}%")
+                  ->orWhere('email', 'like', "%{$q}%")
+                  ->orWhere('rol', 'like', "%{$q}%");
+            });
+        })
+        ->orderBy('name')
+        ->limit(50)
+        ->get(['id', 'name', 'email', 'rol']);
+
+    return response()->json([
+        'data' => $users->map(fn ($u) => [
+            'id' => $u->id,
+            'label' => "{$u->name} — {$u->email}",
+            'email' => $u->email,
+            'telefono' => $u->persona?->telefono,
+            'persona_id' => $u->persona?->id,
+            'rol' => (string) ($u->rol ?? ''),
+            'has_persona' => (bool) $u->persona,
+        ])->values(),
+    ]);
+}
+    
 }

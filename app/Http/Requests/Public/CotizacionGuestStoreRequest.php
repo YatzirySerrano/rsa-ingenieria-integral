@@ -8,8 +8,7 @@ class CotizacionGuestStoreRequest extends FormRequest {
 
     public function authorize(): bool { return true; }
 
-    public function rules(): array
-    {
+    public function rules(): array {
         return [
             'email_destino' => ['nullable','email','max:190'],
             'telefono_destino' => ['nullable','string','max:30'],
@@ -22,8 +21,7 @@ class CotizacionGuestStoreRequest extends FormRequest {
         ];
     }
 
-    public function withValidator($validator)
-    {
+    public function withValidator($validator) {
         $validator->after(function ($v) {
             $email = trim((string) $this->input('email_destino',''));
             $tel = trim((string) $this->input('telefono_destino',''));
@@ -32,4 +30,5 @@ class CotizacionGuestStoreRequest extends FormRequest {
             }
         });
     }
+
 }
