@@ -13,25 +13,37 @@ defineProps<{
 
 <template>
 
-<section class="mx-auto max-w-7xl px-4 py-14">
+<!-- section FULL WIDTH -->
+<section id="marcas" class="bg-slate-50 dark:bg-neutral-900/40 py-14">
 
-<div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+  <!-- container (limita el contenido) -->
+  <div class="mx-auto max-w-7xl px-4">
 
-<div
-v-for="b in brands"
-:key="b.name"
-class="border rounded-xl p-6 flex items-center justify-center"
->
+    <!-- title -->
+    <div class="text-center mb-10">
+      <h2 class="text-2xl font-semibold text-slate-950 dark:text-white">
+        Marcas con las que trabajamos
+      </h2>
+    </div>
 
-<img
-:src="b.logo"
-:alt="b.name"
-class="max-h-10 object-contain"
-/>
+    <!-- brands -->
+    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
 
-</div>
+      <div
+        v-for="b in brands"
+        :key="b.name"
+        class="border rounded-xl p-6 flex items-center justify-center bg-white dark:bg-neutral-900"
+      >
+        <img
+          :src="b.logo"
+          :alt="b.name"
+          class="max-h-10 object-contain"
+        />
+      </div>
 
-</div>
+    </div>
+
+  </div>
 
 </section>
 

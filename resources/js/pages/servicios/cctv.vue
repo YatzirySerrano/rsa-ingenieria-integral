@@ -80,12 +80,11 @@ els.forEach(el=>observer.observe(el))
 />
 
 <ServiceBenefits
-:tabs="cctvService.benefits"
-:active="activeBenefit"
-primaryBtn="bg-blue-600 text-white px-6 h-11 rounded-xl"
-:goCotizar="goCotizarServicios"
-:goTo="goTo"
-@update:activeBenefit="activeBenefit = $event"
+    :tabs="cctvService.benefits"
+    :active="activeBenefit"
+    :goCotizar="goCotizarServicios"
+    :goTo="goTo"
+    @update:active="activeBenefit = $event"
 />
 
 <ServiceSteps
