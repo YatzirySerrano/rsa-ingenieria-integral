@@ -27,6 +27,11 @@ Route::get('/servicios/cctv', function () {
     return Inertia::render('servicios/cctv');
 })->name('Servicios.cctv');
 
+// Página pública de servicios gps
+Route::get('/servicios/gps', function () {
+    return Inertia::render('servicios/Gps');
+})->name('Servicios.gps');
+
 Route::get('/catalogo', [PublicProductoController::class, 'index'])
     ->name('catalogo.publico');
 

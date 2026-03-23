@@ -12,28 +12,76 @@ import ubiquitiLogo from '@/img/brands/ubiquiti.svg'
 import zktecoLogo from '@/img/brands/zkTeco.svg'
 
 export const cctvService = {
-
   hero: {
-    title: 'Cámaras de seguridad (CCTV)',
-    subtitle: 'Videovigilancia profesional',
+    badge: 'RSA · Videovigilancia profesional',
+    title: 'Cámaras de seguridad\n(CCTV)',
     description:
-      'Control visual 24/7 con evidencia confiable. Diseñamos e instalamos sistemas estables con cobertura optimizada y grabación continua.',
-    image: cctvHeroImg
+      'Control visual 24/7 con evidencia confiable. Diseñamos e instalamos sistemas estables con cobertura optimizada y grabación continua, ajustados al nivel de riesgo de cada proyecto.',
+    image: cctvHeroImg,
+    applications: ['Residencial', 'Comercial', 'Corporativo', 'Industrial'],
+    highlights: [
+      { title: 'HD / 4MP / 8MP', text: 'Calidad según el proyecto' },
+      { title: 'NVR / DVR', text: 'Respaldo seguro de evidencia' },
+      { title: 'Acceso local y remoto', text: 'Monitoreo estable desde app' },
+      { title: 'Soporte técnico', text: 'Mantenimiento y seguimiento' }
+    ],
+    bottomText:
+      'Incluye: configuración por ingeniería, pruebas completas y entrega documentada.'
   },
 
-  features: [
-    { title: 'HD / 4MP / 8MP', text: 'Calidad según el proyecto' },
-    { title: 'NVR / DVR', text: 'Respaldo seguro de evidencia' },
-    { title: 'Acceso remoto', text: 'Monitoreo desde app' },
-    { title: 'Soporte técnico', text: 'Mantenimiento y seguimiento' }
-  ],
+  details: {
+    sectionText: 'Componentes y alcance operativo del servicio CCTV.',
+    includes: [
+      {
+        title: 'Cámaras profesionales',
+        text: 'HD / 4MP / 8MP según el nivel de riesgo, cobertura y necesidades del proyecto.'
+      },
+      {
+        title: 'NVR / DVR',
+        text: 'Grabación continua con respaldo seguro de evidencia para consulta y seguimiento.'
+      },
+      {
+        title: 'Acceso local y remoto',
+        text: 'Operación desde sitio y monitoreo desde app o computadora con configuración estable.'
+      },
+      {
+        title: 'Ingeniería + soporte',
+        text: 'Configuración, pruebas, entrega, ajustes y mantenimiento para continuidad operativa.'
+      }
+    ],
+    resultTitle: 'Resultado esperado',
+    resultText:
+      'Un sistema de videovigilancia estable y escalable, con cobertura optimizada, evidencia utilizable y una operación diaria clara. Diseñado para prevenir, documentar y responder.',
+    resultCards: [
+      {
+        title: 'Enfoque',
+        text: 'Continuidad + evidencia + prevención.'
+      },
+      {
+        title: 'Entregables',
+        text: 'Pruebas, ajustes y guía operativa.'
+      }
+    ]
+  },
 
-  includes: [
-    'Cámaras profesionales',
-    'Grabación con NVR / DVR',
-    'Acceso desde app',
-    'Instalación profesional'
-  ],
+  benefitsSection: {
+    image: cctvHeroImg,
+    badge: 'RSA • CCTV',
+    imageTitles: [
+      'Evidencia que sí sirve.',
+      'Grabación útil y confiable.',
+      'Monitoreo desde donde estés.',
+      'Instalación limpia y profesional.',
+      'Continuidad operativa real.'
+    ],
+    imageTexts: [
+      'Menos “instalación”, más solución operativa.',
+      'Respaldo visual pensado para cuando realmente se necesita.',
+      'Consulta local o remota con configuración estable.',
+      'Orden, canalización y puesta en marcha profesional.',
+      'Seguimiento preventivo para mantener el sistema disponible.'
+    ]
+  },
 
   benefits: [
     {
@@ -86,16 +134,21 @@ export const cctvService = {
     }
   ],
 
+  cta: {
+    title: '¿Listo para videovigilancia profesional?',
+    text: 'Te armamos propuesta por riesgo y presupuesto, con instalación limpia y evidencia confiable.'
+  },
+
   brands: [
     { name: 'Hikvision', logo: hikvisionLogo },
-    { name: 'Epcom', logo: epcomLogo, navyCard: true },
+    { name: 'Epcom', logo: epcomLogo },
     { name: 'SYSCOM', logo: syscomLogo },
     { name: 'Hilook', logo: hilookLogo },
     { name: 'EZVIZ', logo: ezvizLogo },
     { name: 'TP-Link', logo: tpLinkLogo },
     { name: 'Ubiquiti', logo: ubiquitiLogo },
     { name: 'ZKTeco', logo: zktecoLogo },
-    { name: 'Ruptela', logo: ruptelaLogo, navyCard: true },
+    { name: 'Ruptela', logo: ruptelaLogo },
     { name: 'AccessPro', logo: accessproLogo }
   ]
 }

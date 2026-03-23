@@ -1,7 +1,21 @@
 <script setup lang="ts">
+type IncludeItem = {
+  title: string
+  text: string
+}
+
+type ResultCard = {
+  title: string
+  text: string
+}
 
 defineProps<{
   goCotizar: () => void
+  sectionText: string
+  includes: IncludeItem[]
+  resultTitle: string
+  resultText: string
+  resultCards: ResultCard[]
 }>()
 
 const goMarcas = () => {
@@ -13,126 +27,80 @@ const goMarcas = () => {
     behavior: 'smooth'
   })
 }
-
 </script>
 
 <template>
+  <section id="detalles" class="mx-auto max-w-7xl px-4 py-16">
+    <div class="grid items-start gap-10 lg:grid-cols-2">
+      <!-- LEFT -->
+      <div>
+        <h2 class="mb-2 text-3xl font-semibold text-gray-900">
+          Qué incluye
+        </h2>
 
-<section id="detalles" class="mx-auto max-w-7xl px-4 py-16">
+        <p class="mb-8 text-gray-500">
+          {{ sectionText }}
+        </p>
 
-  <div class="grid lg:grid-cols-2 gap-10 items-start">
+        <div class="space-y-5">
+          <div
+            v-for="(item, index) in includes"
+            :key="`${item.title}-${index}`"
+            class="rounded-2xl border bg-white p-5 shadow-sm"
+          >
+            <h3 class="font-semibold text-gray-900">
+              {{ item.title }}
+            </h3>
 
-    <!-- LEFT -->
-    <div>
-
-      <h2 class="text-3xl font-semibold text-gray-900 mb-2">
-        Qué incluye
-      </h2>
-
-      <p class="text-gray-500 mb-8">
-        Componentes y alcance operativo del servicio CCTV.
-      </p>
-
-      <div class="space-y-5">
-
-        <div class="border rounded-2xl p-5 bg-white shadow-sm">
-          <h3 class="font-semibold text-gray-900">
-            Cámaras profesionales
-          </h3>
-          <p class="text-gray-500 text-sm mt-1">
-            HD / 4MP / 8MP según el nivel de riesgo y cobertura.
-          </p>
+            <p class="mt-1 text-sm text-gray-500">
+              {{ item.text }}
+            </p>
+          </div>
         </div>
-
-        <div class="border rounded-2xl p-5 bg-white shadow-sm">
-          <h3 class="font-semibold text-gray-900">
-            NVR / DVR
-          </h3>
-          <p class="text-gray-500 text-sm mt-1">
-            Grabación continua con respaldo seguro de evidencia.
-          </p>
-        </div>
-
-        <div class="border rounded-2xl p-5 bg-white shadow-sm">
-          <h3 class="font-semibold text-gray-900">
-            Acceso local y remoto
-          </h3>
-          <p class="text-gray-500 text-sm mt-1">
-            Operación desde sitio y monitoreo desde app.
-          </p>
-        </div>
-
-        <div class="border rounded-2xl p-5 bg-white shadow-sm">
-          <h3 class="font-semibold text-gray-900">
-            Ingeniería + soporte
-          </h3>
-          <p class="text-gray-500 text-sm mt-1">
-            Configuración, pruebas, entrega y mantenimiento.
-          </p>
-        </div>
-
       </div>
 
+      <!-- RIGHT -->
+      <div class="rounded-3xl bg-gray-50 p-8 shadow-sm">
+        <h3 class="mb-3 text-xl font-semibold text-gray-900">
+          {{ resultTitle }}
+        </h3>
+
+        <p class="mb-8 text-gray-600">
+          {{ resultText }}
+        </p>
+
+        <div class="mb-8 grid gap-4 sm:grid-cols-2">
+          <div
+            v-for="(card, index) in resultCards"
+            :key="`${card.title}-${index}`"
+            class="rounded-2xl border bg-white p-4"
+          >
+            <h4 class="mb-1 text-sm font-semibold text-gray-900">
+              {{ card.title }}
+            </h4>
+
+            <p class="text-sm text-gray-500">
+              {{ card.text }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3">
+          <button
+            class="h-11 rounded-xl bg-blue-900 px-6 font-medium text-white transition hover:bg-blue-900"
+            @click="goCotizar"
+          >
+            Solicitar cotización
+          </button>
+
+          <button
+            class="h-11 rounded-xl border px-6 text-gray-700 transition hover:bg-gray-100"
+            @click="goMarcas"
+          >
+            Ver marcas
+          </button>
+        </div>
+      </div>
     </div>
-
-
-    <!-- RIGHT -->
-    <div class="border rounded-3xl p-8 bg-gray-50 shadow-sm">
-
-      <h3 class="text-xl font-semibold text-gray-900 mb-3">
-        Resultado esperado
-      </h3>
-
-      <p class="text-gray-600 mb-8">
-        Un sistema de videovigilancia estable y escalable, con cobertura optimizada,
-        evidencia utilizable y una operación diaria clara. Diseñado para prevenir,
-        documentar y responder.
-      </p>
-
-      <div class="grid sm:grid-cols-2 gap-4 mb-8">
-
-        <div class="border rounded-2xl p-4 bg-white">
-          <h4 class="font-semibold text-gray-900 text-sm mb-1">
-            Enfoque
-          </h4>
-          <p class="text-gray-500 text-sm">
-            Continuidad + evidencia + prevención.
-          </p>
-        </div>
-
-        <div class="border rounded-2xl p-4 bg-white">
-          <h4 class="font-semibold text-gray-900 text-sm mb-1">
-            Entregables
-          </h4>
-          <p class="text-gray-500 text-sm">
-            Pruebas, ajustes y guía operativa.
-          </p>
-        </div>
-
-      </div>
-
-      <div class="flex flex-wrap gap-3">
-
-        <button
-          class="bg-blue-900 hover:bg-blue-900 text-white px-6 h-11 rounded-xl font-medium transition"
-          @click="goCotizar"
-        >
-          Solicitar cotización
-        </button>
-
-        <button
-          class="border px-6 h-11 rounded-xl text-gray-700 hover:bg-gray-100 transition"
-          @click="goMarcas"
-        >
-          Ver marcas
-        </button>
-
-      </div>
-
-    </div>
-
-  </div>
-
-</section>
-
+  </section>
 </template>

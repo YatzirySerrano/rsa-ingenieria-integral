@@ -11,7 +11,7 @@ import ServiceSteps from '@/components/servicios/ServiceSteps.vue'
 import ServiceCTA from '@/components/servicios/ServiceCTA.vue'
 
 import { RSA_PUBLIC } from '@/config/rsaPublic'
-import { cctvService } from '@/data/servicios/cctv'
+import { gpsService } from '@/data/servicios/gps'
 
 const waLink = RSA_PUBLIC.waLink
 const activeBenefit = ref(0)
@@ -49,57 +49,57 @@ onMounted(() => {
 </script>
 
 <template>
-  <Head title="CCTV | RSA" />
+  <Head title="GPS y rastreo vehicular | RSA" />
 
   <PublicLayout>
     <ServiceHero
-      :image="cctvService.hero.image"
+      :image="gpsService.hero.image"
       :goCotizar="goCotizarServicios"
       :goTo="goTo"
       :waLink="waLink"
-      :badge="cctvService.hero.badge"
-      :title="cctvService.hero.title"
-      :description="cctvService.hero.description"
-      :applications="cctvService.hero.applications"
-      :highlights="cctvService.hero.highlights"
-      :bottomText="cctvService.hero.bottomText"
+      :badge="gpsService.hero.badge"
+      :title="gpsService.hero.title"
+      :description="gpsService.hero.description"
+      :applications="gpsService.hero.applications"
+      :highlights="gpsService.hero.highlights"
+      :bottomText="gpsService.hero.bottomText"
     />
 
     <ServiceDetails
       :goCotizar="goCotizarServicios"
-      :sectionText="cctvService.details.sectionText"
-      :includes="cctvService.details.includes"
-      :resultTitle="cctvService.details.resultTitle"
-      :resultText="cctvService.details.resultText"
-      :resultCards="cctvService.details.resultCards"
+      :sectionText="gpsService.details.sectionText"
+      :includes="gpsService.details.includes"
+      :resultTitle="gpsService.details.resultTitle"
+      :resultText="gpsService.details.resultText"
+      :resultCards="gpsService.details.resultCards"
     />
 
     <ServiceBrands
-      :brands="cctvService.brands"
+      :brands="gpsService.brands"
     />
 
     <ServiceBenefits
-      :tabs="cctvService.benefits"
+      :tabs="gpsService.benefits"
       :active="activeBenefit"
       :goCotizar="goCotizarServicios"
       :goTo="goTo"
-      :image="cctvService.benefitsSection.image"
-      :badge="cctvService.benefitsSection.badge"
-      :imageTitles="cctvService.benefitsSection.imageTitles"
-      :imageTexts="cctvService.benefitsSection.imageTexts"
+      :image="gpsService.benefitsSection.image"
+      :badge="gpsService.benefitsSection.badge"
+      :imageTitles="gpsService.benefitsSection.imageTitles"
+      :imageTexts="gpsService.benefitsSection.imageTexts"
       @update:active="activeBenefit = $event"
     />
 
     <ServiceSteps
-      :steps="cctvService.steps"
+      :steps="gpsService.steps"
       :goCotizar="goCotizarServicios"
     />
 
     <ServiceCTA
       :waLink="waLink"
       :goCotizar="goCotizarServicios"
-      :title="cctvService.cta.title"
-      :text="cctvService.cta.text"
+      :title="gpsService.cta.title"
+      :text="gpsService.cta.text"
     />
   </PublicLayout>
 </template>
