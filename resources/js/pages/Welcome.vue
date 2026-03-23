@@ -65,13 +65,13 @@ const SVC_URL = {
   gps: urlFrom(ServiciosRoutes as any, ['serviciosGps', 'gps'], '/servicios/gps'),
   cercas: urlFrom(
     ServiciosRoutes as any,
-    ['serviciosCercasElectricas', 'cercasElectricas', 'cercas_electricas'],
-    '/servicios/cercas-electricas'
+    ['serviciosCercasElectricas', 'CercasElectricas', 'cercas_electricas'],
+    '/servicios/CercasElectricas'
   ),
   acceso: urlFrom(
     ServiciosRoutes as any,
-    ['serviciosControlDeAcceso', 'controlDeAcceso', 'control_acceso'],
-    '/servicios/control-de-acceso'
+    ['serviciosControlDeAcceso', 'ControlAcceso', 'control_acceso'],
+    '/servicios/ControlAcceso'
   ),
   dashcam: urlFrom(ServiciosRoutes as any, ['serviciosDashcam', 'dashcam'], '/servicios/dashcam'),
 } as const
@@ -945,7 +945,7 @@ onBeforeUnmount(() => {
               <div class="mt-4 text-sm text-slate-600 dark:text-slate-300">
                 Correo:
                 <a class="underline underline-offset-4" href="mailto:rsaingenieriaintegral@gmail.com">
-                  rsaingenieriaintegral@gmail.com
+                  contacto@rsaingenieria.com
                 </a>
               </div>
             </div>

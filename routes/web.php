@@ -32,6 +32,26 @@ Route::get('/servicios/gps', function () {
     return Inertia::render('servicios/Gps');
 })->name('Servicios.gps');
 
+// Página pública de servicios control acceso
+Route::get('/servicios/ControlAcceso', function () {
+    return Inertia::render('servicios/ControlAcceso');
+})->name('Servicios.ControlAcceso');
+
+// Página pública de servicios alarmas
+Route::get('/servicios/alarmas', function () {
+    return Inertia::render('servicios/Alarmas');
+})->name('Servicios.alarmas');
+
+// Página pública de servicios cercas electricas
+Route::get('/servicios/CercasElectricas', function () {
+    return Inertia::render('servicios/CercasElectricas');
+})->name('Servicios.CercasElectricas');
+
+// Página pública de servicios dashcam
+Route::get('/servicios/dashcam', function () {
+    return Inertia::render('servicios/Dashcam');
+})->name('Servicios.dashcam');
+
 Route::get('/catalogo', [PublicProductoController::class, 'index'])
     ->name('catalogo.publico');
 
