@@ -506,7 +506,7 @@ onBeforeUnmount(() => {
             content="Diseñamos, instalamos y mantenemos sistemas profesionales de seguridad electrónica para hogares, negocios y empresas."
         />
         <meta property="og:url" content="https://rsaingenieria.com" />
-        <meta property="og:image" content="https://rsaingenieria.com/apple-touch-icon.png" />
+        <meta property="og:image" content="https://rsaingenieria.com/logoOg.jpeg" />
 
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="RSA Ingeniería Integral | Soluciones de seguridad electrónica" />
@@ -514,7 +514,7 @@ onBeforeUnmount(() => {
             name="twitter:description"
             content="CCTV, alarmas, GPS, cercas eléctricas, control de acceso y dashcam."
         />
-        <meta name="twitter:image" content="https://rsaingenieria.com/apple-touch-icon.png" />
+        <meta name="twitter:image" content="https://rsaingenieria.com/logoOg.jpeg" />
     </Head>
 
   <PublicLayout>

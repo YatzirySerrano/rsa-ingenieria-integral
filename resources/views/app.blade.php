@@ -47,13 +47,13 @@
         <meta property="og:title" content="RSA Ingeniería Integral">
         <meta property="og:description" content="Soluciones de seguridad electrónica para empresas y hogares.">
         <meta property="og:url" content="{{ config('app.url') }}">
-        <meta property="og:image" content="{{ asset('apple-touch-icon.png') }}">
+        <meta property="og:image" content="{{ asset('logoOg.jpeg') }}">
 
         {{-- Twitter --}}
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="RSA Ingeniería Integral">
         <meta name="twitter:description" content="Soluciones de seguridad electrónica para empresas y hogares.">
-        <meta name="twitter:image" content="{{ asset('apple-touch-icon.png') }}">
+        <meta name="twitter:image" content="{{ asset('logoOg.jpeg') }}">
 
         {{-- Iconos --}}
         <link rel="icon" href="{{ asset('favicon.png') }}" sizes="any">
