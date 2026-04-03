@@ -463,7 +463,6 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
 
             <div class="ml-2 flex items-center gap-2">
               <Link :href="AUTH_URL.login" :class="btnSoft">Iniciar sesión</Link>
-              <Link :href="AUTH_URL.register" :class="btnPrimary">Registrarse</Link>
             </div>
           </nav>
 
@@ -660,10 +659,6 @@ const ddDesc = 'text-xs text-slate-600 dark:text-slate-300'
                     </div>
                   </transition>
                 </nav>
-              </div>
-
-              <div class="mt-4">
-                <Link :href="AUTH_URL.register" :class="btnPrimary" @click="closeMobile">Registrarse</Link>
               </div>
 
               <div class="mt-4 text-xs text-slate-600 dark:text-slate-300">

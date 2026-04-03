@@ -55,13 +55,13 @@
 
                     <!-- Brand encima (solo móvil) -->
                     <div class="absolute left-1/2 top-6 -translate-x-1/2">
-                        <Link href="/" class="inline-flex items-center 
-                        gap-2 rounded-2xl bg-white/85 px-3 py-2 shadow-sm 
+                        <Link href="/" class="inline-flex items-center
+                        gap-2 rounded-2xl bg-white/85 px-3 py-2 shadow-sm
                         ring-1 ring-black/10 backdrop-blur
-                        transition hover:bg-white/95 dark:bg-black/55 
+                        transition hover:bg-white/95 dark:bg-black/55
                         dark:hover:bg-black/65 dark:ring-white/10">
-                        <div class="flex h-7 w-7 items-center 
-                        justify-center rounded-md bg-primary 
+                        <div class="flex h-7 w-7 items-center
+                        justify-center rounded-md bg-primary
                         text-primary-foreground">
                             <GalleryVerticalEnd class="size-4" />
                         </div>
@@ -79,9 +79,9 @@
             <div class="flex flex-1 items-start justify-center pt-6 lg:items-center lg:pt-0">
                 <div class="w-full max-w-sm sm:max-w-md -mt-24 sm:-mt-28 lg:mt-0">
                     <!-- Card SOLO en móvil -->
-                    <div class="rounded-3xl border bg-background/95 p-8 
-                    shadow-xl backdrop-blur lg:rounded-none lg:border-0 
-                    lg:bg-transparent lg:p-0 lg:shadow-none 
+                    <div class="rounded-3xl border bg-background/95 p-8
+                    shadow-xl backdrop-blur lg:rounded-none lg:border-0
+                    lg:bg-transparent lg:p-0 lg:shadow-none
                     lg:backdrop-blur-0">
                         <div class="flex flex-col gap-6">
                             <!-- Heading -->
@@ -93,29 +93,29 @@
                             </div>
 
                             <!-- Status -->
-                            <div v-if="status" class="rounded-lg border 
-                            border-green-500/20 bg-green-500/10 px-3 py-2 
-                            text-center text-sm font-medium text-green-600 
+                            <div v-if="status" class="rounded-lg border
+                            border-green-500/20 bg-green-500/10 px-3 py-2
+                            text-center text-sm font-medium text-green-600
                             dark:text-green-400">
                                 {{ status }}
                             </div>
 
                             <!-- Form -->
-                            <Form v-bind="store.form()" 
+                            <Form v-bind="store.form()"
                             :reset-on-success="['password']"
                             v-slot="{ errors, processing }"
                             class="grid gap-6">
                                 <!-- Email -->
                                 <div class="grid gap-2">
                                     <Label for="email">Correo electrónico</Label>
-                                    <Input id="email" type="email" 
+                                    <Input id="email" type="email"
                                     name="email" required autofocus
                                     autocomplete="email"
                                     placeholder="m@ejemplo.com"
-                                    :tabindex="1" class="transition 
-                                    focus-visible:ring-2 
-                                    focus-visible:ring-primary/40 
-                                    focus-visible:ring-offset-2 
+                                    :tabindex="1" class="transition
+                                    focus-visible:ring-2
+                                    focus-visible:ring-primary/40
+                                    focus-visible:ring-offset-2
                                     focus-visible:ring-offset-background"/>
                                     <InputError :message="errors.email" />
                                 </div>
@@ -126,7 +126,7 @@
                                         <Label for="password">Contraseña</Label>
 
                                         <TextLink v-if="canResetPassword"
-                                        :href="request()" class="text-sm 
+                                        :href="request()" class="text-sm
                                         transition hover:text-foreground"
                                         :tabindex="5">
                                             ¿Olvidaste tu contraseña?
@@ -137,24 +137,24 @@
                                     name="password" required
                                     autocomplete="current-password"
                                     placeholder="********"
-                                    :tabindex="2" class="transition 
-                                    focus-visible:ring-2 
-                                    focus-visible:ring-primary/40 
-                                    focus-visible:ring-offset-2 
+                                    :tabindex="2" class="transition
+                                    focus-visible:ring-2
+                                    focus-visible:ring-primary/40
+                                    focus-visible:ring-offset-2
                                     focus-visible:ring-offset-background"/>
                                     <InputError :message="errors.password" />
                                 </div>
 
                                 <!-- Remember -->
                                 <div class="flex items-center gap-2">
-                                    <Checkbox id="remember" 
+                                    <Checkbox id="remember"
                                     :checked="remember"
                                     @update:checked="remember = !!$event"
                                     :tabindex="3"/>
                                     <Label for="remember"
-                                    class="cursor-pointer select-none 
-                                    text-sm font-normal 
-                                    text-muted-foreground 
+                                    class="cursor-pointer select-none
+                                    text-sm font-normal
+                                    text-muted-foreground
                                     hover:text-foreground transition">
                                         Recordarme
                                     </Label>
@@ -163,23 +163,15 @@
                                 </div>
 
                                 <!-- Submit -->
-                                <Button type="submit"  class="w-full 
-                                transition-all hover:-translate-y-[1px] 
-                                hover:shadow-md 
+                                <Button type="submit"  class="w-full
+                                transition-all hover:-translate-y-[1px]
+                                hover:shadow-md
                                 disabled:hover:translate-y-0"
                                 :tabindex="4" :disabled="processing"
                                 data-test="login-button" >
                                     <Spinner v-if="processing" class="mr-2" />
                                     Iniciar sesión
                                 </Button>
-
-                                <!-- Register -->
-                                <div v-if="canRegister" class="text-center text-sm text-muted-foreground">
-                                    ¿No tienes una cuenta?
-                                    <TextLink :href="register()" class="ml-1 transition hover:text-foreground" :tabindex="6">
-                                        Registrarse
-                                    </TextLink>
-                                </div>
                             </Form>
                         </div>
                     </div>
