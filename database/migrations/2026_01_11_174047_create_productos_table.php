@@ -37,19 +37,19 @@ return new class extends Migration
             // Auditoría (quién hizo algo)
             $table->foreignId('created_by')
                 ->nullable()
-                ->constrained('usuarios')
+                ->constrained('users')
                 ->nullOnDelete()
                 ->cascadeOnUpdate();
 
             $table->foreignId('updated_by')
                 ->nullable()
-                ->constrained('usuarios')
+                ->constrained('users')
                 ->nullOnDelete()
                 ->cascadeOnUpdate();
 
             $table->foreignId('deleted_by')
                 ->nullable()
-                ->constrained('usuarios')
+                ->constrained('users')
                 ->nullOnDelete()
                 ->cascadeOnUpdate();
 
