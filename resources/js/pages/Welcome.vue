@@ -480,7 +480,42 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <Head title="" />
+    <Head>
+        <title></title>
+
+        <meta
+            name="description"
+            content="RSA Ingeniería Integral ofrece soluciones de seguridad electrónica: cámaras CCTV, alarmas, GPS, cercas eléctricas, control de acceso y dashcam para hogares, negocios y empresas."
+        />
+
+        <meta
+            name="keywords"
+            content="RSA Ingeniería Integral, seguridad electrónica, CCTV, cámaras de seguridad, alarmas, GPS vehicular, cercas eléctricas, control de acceso, dashcam, cotización"
+        />
+
+        <meta name="robots" content="index, follow" />
+        <meta name="author" content="RSA Ingeniería Integral" />
+
+        <link rel="canonical" href="https://rsaingenieria.com" />
+
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="RSA Ingeniería Integral" />
+        <meta property="og:title" content="RSA Ingeniería Integral | Soluciones de seguridad electrónica" />
+        <meta
+            property="og:description"
+            content="Diseñamos, instalamos y mantenemos sistemas profesionales de seguridad electrónica para hogares, negocios y empresas."
+        />
+        <meta property="og:url" content="https://rsaingenieria.com" />
+        <meta property="og:image" content="https://rsaingenieria.com/apple-touch-icon.png" />
+
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="RSA Ingeniería Integral | Soluciones de seguridad electrónica" />
+        <meta
+            name="twitter:description"
+            content="CCTV, alarmas, GPS, cercas eléctricas, control de acceso y dashcam."
+        />
+        <meta name="twitter:image" content="https://rsaingenieria.com/apple-touch-icon.png" />
+    </Head>
 
   <PublicLayout>
     <div class="relative w-full overflow-x-hidden">
