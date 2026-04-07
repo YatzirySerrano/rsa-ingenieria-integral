@@ -149,7 +149,7 @@ watch(
                   class="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-5"
                 >
                   <button
-                    v-for="(img, i) in images.slice(0, 10)"
+                    v-for="(img, i) in images"
                     :key="`${product.id}-${i}`"
                     type="button"
                     class="overflow-hidden rounded-2xl border bg-white transition-all duration-200 dark:bg-neutral-950"

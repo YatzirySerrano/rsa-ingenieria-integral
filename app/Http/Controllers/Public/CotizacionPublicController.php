@@ -69,7 +69,18 @@ class CotizacionPublicController extends Controller {
             ->where('status','activo')
             ->firstOrFail();
         $cotizacion->load([
-            'detalles' => fn ($q) => $q->orderBy('id')->where('status','activo')->with(['producto','servicio']),
+            'detalles' => fn ($q) => $q->orderBy('id')
+                ->where('status', 'activo')
+                ->with([
+                    'producto.medias' => function ($q) {
+                        $q->select('id', 'producto_id', 'url', 'tipo', 'principal', 'orden', 'status')
+                        ->where('status', 'activo')
+                        ->where('tipo', 'imagen')
+                        ->orderByDesc('principal')
+                        ->orderBy('orden');
+                    },
+                    'servicio',
+                ]),
         ]);
         return Inertia::render('cotizaciones/GuestShow', [
             'item' => [
@@ -85,7 +96,19 @@ class CotizacionPublicController extends Controller {
                     'cantidad' => $d->cantidad,
                     'precio_unitario' => $d->precio_unitario,
                     'total_linea' => $d->total_linea,
-                    'producto' => $d->producto ? ['sku'=>$d->producto->sku,'nombre'=>$d->producto->nombre] : null,
+                    'producto' => $d->producto ? [
+                        'id' => $d->producto->id,
+                        'sku' => $d->producto->sku,
+                        'nombre' => $d->producto->nombre,
+                        'medias' => $d->producto->medias->map(fn ($m) => [
+                            'id' => $m->id,
+                            'url' => $m->url,
+                            'tipo' => $m->tipo,
+                            'principal' => $m->principal,
+                            'orden' => $m->orden,
+                            'status' => $m->status,
+                        ])->values(),
+                    ] : null,
                     'servicio' => $d->servicio ? ['nombre'=>$d->servicio->nombre] : null,
                 ])->values(),
             ],
