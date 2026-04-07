@@ -1,11 +1,18 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, reactive } from 'vue'
 import PublicLayout from '@/layouts/PublicLayout.vue'
 import * as CotizarRoutes from '@/routes/cotizar'
+import ProductDetailModal from '@/components/catalogo/ProductDetailModal.vue'
 import { Search, SlidersHorizontal, ArrowRight, Loader2, X } from 'lucide-vue-next'
+import type { ProductDetailItem } from '@/types/product-detail'
+import { useQuoteCart } from '@/composables/useQuoteCart'
 
 const COTIZAR_URL = urlFrom(CotizarRoutes as any, ['create', 'cotizarCreate'], '/cotizar')
+
+import {
+  ShoppingCart,
+} from 'lucide-vue-next'
 
 function urlFrom(mod: any, keys: string[], fallback: string) {
   for (const k of keys) {
@@ -23,31 +30,27 @@ function urlFrom(mod: any, keys: string[], fallback: string) {
   return fallback
 }
 
+const toast = reactive({
+  show: false,
+  title: '',
+  subtitle: '',
+})
+
+let tToast: number | null = null
+
+function showToast(title: string, subtitle = '') {
+  toast.title = title
+  toast.subtitle = subtitle
+  toast.show = true
+
+  if (tToast) window.clearTimeout(tToast)
+  tToast = window.setTimeout(() => {
+    toast.show = false
+  }, 1400)
+}
+
 type MarcaLite = { id: number; nombre: string }
 type CategoriaLite = { id: number; nombre: string }
-
-type ProductoMedia = {
-  id: number
-  url: string
-  tipo?: 'imagen' | 'video'
-  principal: boolean
-  orden: number
-  status: 'activo' | 'inactivo'
-}
-
-type Producto = {
-  id: number
-  sku?: string | null
-  nombre: string
-  descripcion?: string | null
-  stock?: number | null
-  costo_lista?: string | number | null
-  precio_venta?: string | number | null
-  status: 'activo' | 'inactivo'
-  marca?: { id: number; nombre: string } | null
-  categoria?: { id: number; nombre: string } | null
-  medias?: ProductoMedia[]
-}
 
 type ResourceCollection<T> = {
   data: T[]
@@ -56,10 +59,12 @@ type ResourceCollection<T> = {
 }
 
 const props = defineProps<{
-  items: ResourceCollection<Producto>
+  items: ResourceCollection<ProductDetailItem>
   filters: { q?: string; marca_id?: string | number | null; categoria_id?: string | number | null }
   meta: { marcas: ResourceCollection<MarcaLite>; categorias: ResourceCollection<CategoriaLite> }
 }>()
+
+const { addProducto, itemsCount } = useQuoteCart()
 
 const q = ref(String(props.filters?.q ?? ''))
 const marcaId = ref<any>(props.filters?.marca_id ?? '')
@@ -79,7 +84,30 @@ function normalizeStorageUrl(url: string): string {
   return `/storage/${clean}`
 }
 
-function firstImage(p: Producto) {
+const showProductModal = ref(false)
+const selectedProduct = ref<ProductDetailItem | null>(null)
+
+function openProductModal(p: ProductDetailItem) {
+  selectedProduct.value = p
+  showProductModal.value = true
+}
+
+function closeProductModal() {
+  showProductModal.value = false
+  selectedProduct.value = null
+}
+
+function addProductFromModal(product: ProductDetailItem) {
+  addProducto(product.id)
+  showToast('Producto agregado correctamente', product.nombre)
+  closeProductModal()
+}
+
+function goToCart() {
+  router.visit(COTIZAR_URL)
+}
+
+function firstImage(p: ProductDetailItem) {
   const medias = (p.medias ?? []).filter((m) => m.status === 'activo' && (m.tipo ?? 'imagen') === 'imagen')
   if (!medias.length) return '/img/placeholder-product.png'
   const main =
@@ -131,7 +159,8 @@ watch([q, marcaId, categoriaId], () => {
 })
 
 // ----- Load more real (append) -----
-const list = ref<Producto[]>(props.items?.data ?? [])
+const list = ref<ProductDetailItem[]>(props.items?.data ?? [])
+
 const nextUrl = computed<string | null>(() => {
   const l = props.items?.links
   if (!l) return null
@@ -171,6 +200,34 @@ function loadMore() {
   <Head title="Catálogo | RSA" />
 
   <PublicLayout>
+
+    <Teleport to="body">
+        <button
+            v-if="itemsCount > 0"
+            type="button"
+            @click="goToCart"
+            class="fixed right-4 bottom-24 sm:right-5 sm:bottom-28 z-[9999]
+                inline-flex items-center gap-3
+                rounded-full bg-sky-600 text-white
+                px-4 py-3 sm:px-5
+                shadow-[0_18px_40px_-12px_rgba(2,132,199,.55)]
+                ring-1 ring-white/20
+                transition-all duration-200
+                hover:bg-sky-500 hover:-translate-y-0.5
+                active:scale-[.98]"
+        >
+            <ShoppingCart class="h-5 w-5 shrink-0" />
+
+            <div class="flex flex-col leading-tight text-left">
+            <span class="text-[11px] font-semibold text-white/80">
+                Ir al carrito
+            </span>
+            <span class="text-sm font-black">
+                {{ itemsCount }} item{{ itemsCount === 1 ? '' : 's' }}
+            </span>
+            </div>
+        </button>
+        </Teleport>
     <section class="relative w-full pt-24 sm:pt-28">
       <!-- Background -->
       <div
@@ -465,16 +522,17 @@ function loadMore() {
                     </span>
                   </div>
 
-                  <Link
-                    :href="COTIZAR_URL"
-                    class="inline-flex h-10 items-center justify-center gap-2 rounded-2xl px-4 text-xs font-extrabold
-                           bg-sky-600 text-white shadow-sm transition-all duration-200
-                           hover:-translate-y-0.5 hover:bg-sky-500 hover:shadow-md
-                           active:scale-[.99]"
-                  >
-                    Cotizar
-                    <ArrowRight class="h-4 w-4" />
-                  </Link>
+                    <button
+                        type="button"
+                        @click="openProductModal(p)"
+                        class="inline-flex h-10 items-center justify-center gap-2 rounded-2xl px-4 text-xs font-extrabold
+                                border border-slate-200 bg-white text-slate-900 shadow-sm transition-all duration-200
+                                hover:-translate-y-0.5 hover:bg-slate-50 hover:shadow-md
+                                dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+                        >
+                        Ver detalles
+                        <ArrowRight class="h-4 w-4" />
+                    </button>
                 </div>
               </div>
             </article>
@@ -531,7 +589,41 @@ function loadMore() {
         </div>
       </div>
     </section>
+    <Teleport to="body">
+    <Transition
+        enter-active-class="transition-all duration-200"
+        enter-from-class="opacity-0 translate-y-2 scale-95"
+        enter-to-class="opacity-100 translate-y-0 scale-100"
+        leave-active-class="transition-all duration-200"
+        leave-from-class="opacity-100 translate-y-0 scale-100"
+        leave-to-class="opacity-0 translate-y-2 scale-95"
+    >
+        <div
+        v-if="toast.show"
+        class="fixed left-1/2 top-24 z-[9999] -translate-x-1/2
+                rounded-2xl border border-emerald-200 bg-white px-4 py-3 shadow-xl
+                dark:border-emerald-500/20 dark:bg-zinc-950"
+        >
+        <p class="text-sm font-black text-slate-900 dark:text-zinc-100">
+            {{ toast.title }}
+        </p>
+        <p
+            v-if="toast.subtitle"
+            class="text-xs font-semibold text-slate-500 dark:text-zinc-400"
+        >
+            {{ toast.subtitle }}
+        </p>
+        </div>
+    </Transition>
+    </Teleport>
   </PublicLayout>
+
+  <ProductDetailModal
+  :open="showProductModal"
+  :product="selectedProduct"
+  @close="closeProductModal"
+  @add-to-cart="addProductFromModal"
+/>
 </template>
 
 <style scoped>

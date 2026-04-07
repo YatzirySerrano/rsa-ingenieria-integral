@@ -279,7 +279,10 @@ export function useProductoCrud(opts: UseProductoCrudOptions = {}) {
       marca_id: filters.marca_id !== ALL ? filters.marca_id : undefined,
       categoria_id: filters.categoria_id !== ALL ? filters.categoria_id : undefined,
       status: filters.status !== ALL ? filters.status : undefined,
-      per_page: filters.per_page ? Number(filters.per_page) : undefined,
+      per_page:
+        filters.per_page !== undefined && filters.per_page !== null && filters.per_page !== ''
+            ? Number(filters.per_page)
+            : undefined,
       ...extra,
     }
     Object.keys(q).forEach((k) => (q[k] === undefined ? delete q[k] : null))

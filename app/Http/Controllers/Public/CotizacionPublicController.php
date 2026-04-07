@@ -14,13 +14,37 @@ class CotizacionPublicController extends Controller {
 
     public function create() {
         $productos = Producto::query()
-            ->where('status','activo')
+            ->where('status', 'activo')
+            ->with([
+                'marca:id,nombre',
+                'categoria:id,nombre',
+                'medias' => function ($q) {
+                    $q->select('id', 'producto_id', 'url', 'tipo', 'principal', 'orden', 'status')
+                    ->where('status', 'activo')
+                    ->orderByDesc('principal')
+                    ->orderBy('orden');
+                },
+            ])
             ->orderBy('nombre')
-            ->get(['id','sku','nombre','precio_venta']);
+            ->get([
+                'id',
+                'marca_id',
+                'categoria_id',
+                'sku',
+                'nombre',
+                'descripcion',
+                'stock',
+                'costo_lista',
+                'precio_venta',
+                'status',
+                'image_url',
+            ]);
+
         $servicios = Servicio::query()
-            ->where('status','activo')
+            ->where('status', 'activo')
             ->orderBy('nombre')
-            ->get(['id','nombre','precio']);
+            ->get(['id', 'nombre', 'precio']);
+
         return Inertia::render('cotizaciones/GuestCreate', [
             'meta' => [
                 'productos' => $productos,

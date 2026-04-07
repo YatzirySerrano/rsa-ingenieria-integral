@@ -62,6 +62,12 @@
         } as Paginated<Producto> & { links: any[]; data: Producto[] }
     })
 
+    function onPerPageChange(value: number) {
+        ;(crud.filters as any).per_page = value
+        ;(crud.filters as any).page = 1
+        crud.applyFilters()
+    }
+
     const rows = computed<Producto[]>(() => items.value.data ?? [])
     const total = computed(() => (items.value.meta?.total ?? rows.value.length) as number)
 
@@ -83,12 +89,15 @@
 
     const perPage = computed<number>(() => {
         const n0 = Number((crud.filters as any).per_page ?? NaN)
-        if (Number.isFinite(n0)) return n0
+        if (Number.isFinite(n0) && n0 >= 0) return n0
+
         const n1 = Number(props.filters?.per_page ?? NaN)
-        if (Number.isFinite(n1)) return n1
+        if (Number.isFinite(n1) && n1 >= 0) return n1
+
         const n2 = Number((items.value.meta as any)?.per_page ?? NaN)
-        if (Number.isFinite(n2)) return n2
-        return 10
+        if (Number.isFinite(n2) && n2 >= 0) return n2
+
+        return 15
     })
 
     const marcaFilterModel = computed<any>({
@@ -425,12 +434,21 @@
               </span>
             </div>
 
-            <div v-if="rows.length" class="w-full sm:w-auto">
-              <PaginationLinks
-                :meta="items.meta"
-                :per-page="perPage"
-                @change-per-page="crud.setPerPage"
-              />
+            <div v-if="rows.length" class="w-full sm:w-auto flex justify-end">
+                <select
+                    :value="perPage"
+                    @change="onPerPageChange(Number(($event.target as HTMLSelectElement).value))"
+                    class="w-44 rounded-2xl border-2 border-slate-200/70 dark:border-white/10
+                        bg-white/90 dark:bg-white/5 px-3 py-2 text-sm font-semibold
+                        shadow-sm transition-all
+                        hover:border-emerald-400/50
+                        focus:border-emerald-500/60 focus:ring-4 focus:ring-emerald-500/20"
+                >
+                    <option :value="10">10 por página</option>
+                    <option :value="15">15 por página</option>
+                    <option :value="20">20 por página</option>
+                    <option :value="0">Todos</option>
+                </select>
             </div>
           </div>
         </div>
@@ -887,6 +905,13 @@
           </div>
         </div>
       </div>
+        <div v-if="rows.length" class="mt-8 flex justify-center">
+            <PaginationLinks
+                :meta="items.meta"
+                :links="items.links"
+                :hide-per-page="true"
+            />
+        </div>
     </div>
   </AppLayout>
 </template>
