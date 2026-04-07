@@ -37,7 +37,6 @@ class CotizacionPublicController extends Controller {
                 'costo_lista',
                 'precio_venta',
                 'status',
-                'image_url',
             ]);
 
         $servicios = Servicio::query()
