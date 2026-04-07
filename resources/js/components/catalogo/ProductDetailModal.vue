@@ -181,13 +181,6 @@ watch(
                 >
                   SKU: {{ product.sku || '—' }}
                 </span>
-
-                <span
-                  class="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-xs font-extrabold text-slate-700 ring-1 ring-slate-200
-                         dark:bg-white/5 dark:text-slate-200 dark:ring-white/10"
-                >
-                  Stock: {{ product.stock ?? '—' }}
-                </span>
               </div>
 
               <h2 class="text-2xl font-black tracking-tight text-slate-950 dark:text-white sm:text-3xl">

@@ -667,7 +667,7 @@ onMounted(() => {
           <!-- Reply inline -->
           <div id="reply-card" class="rounded-3xl border border-black/5 bg-white/80 backdrop-blur shadow-sm p-4 sm:p-5 dark:bg-white/5 dark:border-white/10">
             <h3 class="font-black text-slate-900 dark:text-zinc-100">Contacto del cliente</h3>
-            
+
             <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div class="space-y-1">
                 <label class="text-xs font-extrabold text-slate-700 dark:text-zinc-300">Correo</label>

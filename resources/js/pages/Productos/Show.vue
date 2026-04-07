@@ -484,13 +484,6 @@ function loadMore() {
                   >
                     {{ p.sku ? `SKU: ${p.sku}` : 'SKU: —' }}
                   </span>
-
-                  <span
-                    class="inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-extrabold text-white backdrop-blur"
-                  >
-                    <span v-if="p.stock != null">Stock: {{ p.stock }}</span>
-                    <span v-else>Stock: —</span>
-                  </span>
                 </div>
 
                 <div class="absolute right-3 top-3">

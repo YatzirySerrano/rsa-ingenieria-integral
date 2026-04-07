@@ -282,6 +282,9 @@ async function submit() {
             <p class="text-sm text-slate-600 dark:text-zinc-400">
                 Selecciona productos/servicios y envía tus datos. Te respondemos con la propuesta.
             </p>
+            <p class="text-sm text-dark dark:text-zinc-400">
+                Nota: Los productos están sujetos a disponibilidad al momento de confirmar la cotización.
+            </p>
             </div>
 
             <div class="hidden">
