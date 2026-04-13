@@ -30,6 +30,7 @@ import gpsImg from '@/img/gps.jpg'
 import cercaImg from '@/img/cerca-electrica.png'
 import controlAccesoImg from '@/img/control-acceso.png'
 import dashcamImg from '@/img/dashcam.png'
+import instalacionesElectricasImg from '@/img/instalaciones-electricas.png'
 
 /**
  * =========================
@@ -115,6 +116,11 @@ const SVC_URL = {
     '/servicios/ControlAcceso'
   ),
   dashcam: urlFrom(ServiciosRoutes as any, ['serviciosDashcam', 'dashcam'], '/servicios/dashcam'),
+  electricas: urlFrom(
+    ServiciosRoutes as any,
+    ['serviciosInstalacionesElectricas', 'InstalacionesElectricas'],
+    '/servicios/InstalacionesElectricas'
+  ),
 } as const
 
 /**
@@ -129,6 +135,12 @@ const serviceItems: readonly ServicioItem[] = [
   { label: 'Cercas eléctricas', desc: 'Perímetro reforzado', image: cercaImg, href: SVC_URL.cercas },
   { label: 'Control de acceso', desc: 'Trazabilidad y control', image: controlAccesoImg, href: SVC_URL.acceso },
   { label: 'Dash cam profesional', desc: 'Evidencia en ruta', image: dashcamImg, href: SVC_URL.dashcam },
+  {
+    label: 'Instalaciones eléctricas',
+    desc: 'Canalización, cableado y distribución',
+    image: instalacionesElectricasImg,
+    href: SVC_URL.electricas
+  },
 ]
 
 /**

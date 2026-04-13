@@ -4,9 +4,15 @@ type Brand = {
   logo?: string
 }
 
-defineProps<{
-  brands: Brand[]
-}>()
+withDefaults(
+  defineProps<{
+    brands: Brand[]
+    title?: string
+  }>(),
+  {
+    title: 'Marcas y tecnologías con las que trabajamos',
+  }
+)
 </script>
 
 <template>
@@ -14,7 +20,7 @@ defineProps<{
     <div class="mx-auto max-w-7xl px-4">
       <div class="mb-10 text-center">
         <h2 class="text-2xl font-semibold text-slate-950 dark:text-white">
-          Marcas y tecnologías con las que trabajamos
+          {{ title }}
         </h2>
       </div>
 

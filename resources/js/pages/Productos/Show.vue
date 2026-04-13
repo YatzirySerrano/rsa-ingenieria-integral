@@ -251,7 +251,7 @@ function loadMore() {
               Catálogo para cotización
             </h1>
             <p class="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              Filtra rápido, revisa precios/stock y manda tu solicitud. Sin fricción.
+              Explore nuestro catálogo y seleccione los productos que desea cotizar.
             </p>
             <p class="mt-2 text-xs font-semibold text-slate-500 dark:text-slate-400">
               Mostrando <span class="font-black text-slate-900 dark:text-white">{{ list.length }}</span> productos
@@ -536,7 +536,8 @@ function loadMore() {
             class="mt-10 rounded-3xl border border-slate-200 bg-white p-8 text-center text-slate-700
                    dark:border-white/10 dark:bg-neutral-950 dark:text-slate-200"
           >
-            No se encontraron productos con esos filtros.
+            ¿No encuentras el producto que buscas?
+            Contáctanos por WhatsApp o redes sociales y con gusto te ayudamos a revisar una opción de acuerdo con lo que necesitas.
           </div>
 
           <div v-if="hasNext" class="mt-10 flex justify-center">

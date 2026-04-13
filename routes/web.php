@@ -52,6 +52,11 @@ Route::get('/servicios/dashcam', function () {
     return Inertia::render('servicios/Dashcam');
 })->name('Servicios.dashcam');
 
+// Página pública de servicios instalaciones electricas
+Route::get('/servicios/InstalacionesElectricas', function () {
+    return Inertia::render('servicios/InstalacionesElectricas');
+})->name('Servicios.InstalacionesElectricas');
+
 Route::get('/catalogo', [PublicProductoController::class, 'index'])
     ->name('catalogo.publico');
 

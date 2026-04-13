@@ -30,6 +30,7 @@ import gpsImg from '@/img/gps.jpg'
 import cercaImg from '@/img/cerca-electrica.png'
 import accesoImg from '@/img/control-acceso.png'
 import dashcamImg from '@/img/dashcam.png'
+import instalacionesElectricasImg from '@/img/instalaciones-electricas.png'
 
 import carrusel1Img from '@/img/carrusel1.png'
 import carrusel2Img from '@/img/carrusel2.png'
@@ -74,6 +75,11 @@ const SVC_URL = {
     '/servicios/ControlAcceso'
   ),
   dashcam: urlFrom(ServiciosRoutes as any, ['serviciosDashcam', 'dashcam'], '/servicios/dashcam'),
+  electricas: urlFrom(
+    ServiciosRoutes as any,
+    ['serviciosInstalacionesElectricas', 'InstalacionesElectricas'],
+    '/servicios/InstalacionesElectricas'
+  ),
 } as const
 
 function goTo(id: string) {
@@ -90,9 +96,9 @@ const waLink = RSA_PUBLIC.waLink
  * HERO - typing en labels de stats
  */
 const stats = [
-  { value: '24/7', label: 'Enfoque en continuidad' },
-  { value: 'Mensual', label: 'Reportes a administración' },
-  { value: 'Formal', label: 'Contrato y facturación' },
+  { value: '8+ años', label: 'De experiencia' },
+  { value: 'Garantía', label: 'Respaldo en equipos e instalación' },
+  { value: 'Facturación', label: 'Servicio formal' },
 ] as const
 
 const typedLabels = ref<string[]>(stats.map(() => ''))
@@ -204,6 +210,15 @@ const serviciosTiles: ServicioTile[] = [
     span: 'lg:col-span-1',
     theme: 'light',
     href: SVC_URL.dashcam,
+  },
+  {
+    title: 'Instalaciones eléctricas',
+    subtitle: 'Canalización, cableado y distribución',
+    desc: 'Realizamos canalización en losa y muro, ranurado, acometidas, centros de carga, cableado e instalación de lámparas, contactos y apagadores para casa, negocio y obra.',
+    image: instalacionesElectricasImg,
+    span: 'lg:col-span-3',
+    theme: 'light',
+    href: SVC_URL.electricas,
   },
 ]
 
@@ -596,7 +611,7 @@ onBeforeUnmount(() => {
       <section id="servicios" class="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div class="mb-7" data-reveal>
           <h2 :class="sectionTitle">Servicios</h2>
-          <p :class="sectionSubtitle">Portafolio de seguridad y control, listo para escalar.</p>
+          <p :class="sectionSubtitle">Descubre nuestros servicios de seguridad electrónica para casa, negocio o empresa.</p>
         </div>
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -833,7 +848,7 @@ onBeforeUnmount(() => {
           <div class="flex items-end justify-between gap-6" data-reveal>
             <div>
               <h2 :class="sectionTitle">Productos</h2>
-              <p :class="sectionSubtitle">Los más vendidos: selección rápida de lo que más se instala.</p>
+              <p :class="sectionSubtitle">Conoce una selección de nuestros productos más solicitados. Tenemos más opciones disponibles para tu proyecto.</p>
             </div>
 
             <a
@@ -912,9 +927,9 @@ onBeforeUnmount(() => {
         <div class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm dark:border-neutral-800 dark:bg-neutral-950" data-reveal>
           <div class="grid gap-6 lg:grid-cols-2 lg:items-center">
             <div>
-              <h2 :class="sectionTitle">¿Listos para asegurar tu operación?</h2>
+              <h2 :class="sectionTitle">¿Requiere una cotización profesional para su proyecto?</h2>
               <p :class="sectionSubtitle">
-                Diagnóstico, propuesta y ejecución. Si ya tienes equipos, también damos mantenimiento.
+                Le ayudamos a encontrar una solución adecuada según sus necesidades. Si ya cuenta con equipo, también brindamos mantenimiento.
               </p>
 
               <div class="mt-5">

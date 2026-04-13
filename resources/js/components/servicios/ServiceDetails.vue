@@ -97,7 +97,7 @@ const goMarcas = () => {
             class="h-11 rounded-xl border px-6 text-gray-700 transition hover:bg-gray-100"
             @click="goMarcas"
           >
-            Ver marcas
+            Ver más
           </button>
         </div>
       </div>

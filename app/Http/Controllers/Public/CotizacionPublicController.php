@@ -42,7 +42,7 @@ class CotizacionPublicController extends Controller {
         $servicios = Servicio::query()
             ->where('status', 'activo')
             ->orderBy('nombre')
-            ->get(['id', 'nombre', 'precio']);
+            ->get(['id', 'nombre', 'descripcion', 'precio']);
 
         return Inertia::render('cotizaciones/GuestCreate', [
             'meta' => [

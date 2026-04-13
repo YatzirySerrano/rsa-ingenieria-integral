@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input'
 import { swalErr, swalLoading, swalClose, swalConfirm } from '@/lib/swal'
 import ProductDetailModal from '@/components/catalogo/ProductDetailModal.vue'
 import type { ProductDetailItem } from '@/types/product-detail'
+import ServiceDetailModal from '@/components/catalogo/ServiceDetailModal.vue'
+import type { ServiceDetailItem } from '@/types/service-detail'
 import { useQuoteCart } from '@/composables/useQuoteCart'
 
 import {
@@ -21,11 +23,7 @@ import {
   Eye,
 } from 'lucide-vue-next'
 
-type Servicio = {
-  id: number
-  nombre: string
-  precio: number | string
-}
+type Servicio = ServiceDetailItem
 
 const props = defineProps<{
   meta: { productos: ProductDetailItem[]; servicios: Servicio[] }
@@ -240,6 +238,25 @@ async function submit() {
     }
   )
 }
+
+const showServiceModal = ref(false)
+const selectedService = ref<ServiceDetailItem | null>(null)
+
+function viewService(service: ServiceDetailItem) {
+  selectedService.value = service
+  showServiceModal.value = true
+}
+
+function closeServiceModal() {
+  showServiceModal.value = false
+  selectedService.value = null
+}
+
+function addServiceFromModal(service: ServiceDetailItem) {
+  addServicio(service.id)
+  closeServiceModal()
+}
+
 </script>
 
 <template>
@@ -470,7 +487,8 @@ async function submit() {
                         class="col-span-full rounded-3xl border border-dashed border-black/10 bg-white/70 p-10 text-center text-slate-600
                             dark:border-white/10 dark:bg-zinc-950/40 dark:text-zinc-400"
                     >
-                        Sin resultados en productos.
+                        ¿No encuentras el producto que buscas?
+                        Contáctanos por WhatsApp o redes sociales y con gusto te ayudamos a revisar una opción de acuerdo con lo que necesitas.
                     </div>
                     </div>
 
@@ -498,8 +516,21 @@ async function submit() {
                             </span>
                         </div>
 
+                        <div class="mt-3 grid grid-cols-2 gap-2">
                         <Button
-                            class="mt-3 h-11 w-full rounded-2xl font-extrabold gap-2 bg-sky-600 text-white shadow-sm
+                            type="button"
+                            variant="outline"
+                            class="h-11 rounded-2xl border-black/10 font-extrabold text-slate-900
+                                transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-50
+                                dark:border-white/10 dark:bg-white/5 dark:text-zinc-100 dark:hover:bg-white/10"
+                            @click="viewService(s)"
+                        >
+                            <Eye class="h-4 w-4 mr-2" />
+                            Ver
+                        </Button>
+
+                        <Button
+                            class="h-11 rounded-2xl font-extrabold gap-2 bg-sky-600 text-white shadow-sm
                                 transition-all duration-200 hover:bg-sky-500 hover:-translate-y-0.5 hover:shadow-md active:scale-[.99]"
                             @click="addServicio(s.id)"
                             type="button"
@@ -508,6 +539,7 @@ async function submit() {
                             Agregar
                         </Button>
                         </div>
+                        </div>
                     </div>
 
                     <div
@@ -515,7 +547,8 @@ async function submit() {
                         class="col-span-full rounded-3xl border border-dashed border-black/10 bg-white/70 p-10 text-center text-slate-600
                             dark:border-white/10 dark:bg-zinc-950/40 dark:text-zinc-400"
                     >
-                        Sin resultados en servicios.
+                        ¿No encuentras el servicio que buscas?
+                        Contáctanos por WhatsApp o redes sociales y con gusto te ayudamos a revisar una opción de acuerdo con lo que necesitas.
                     </div>
                     </div>
                 </div>
@@ -693,4 +726,12 @@ async function submit() {
     @close="closeProductModal"
     @add-to-cart="addProductFromModal"
     />
+
+    <ServiceDetailModal
+    :open="showServiceModal"
+    :service="selectedService"
+    @close="closeServiceModal"
+    @add-to-cart="addServiceFromModal"
+    />
+
 </template>
