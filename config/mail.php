@@ -115,4 +115,7 @@ return [
         'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
+    'notify_to' => env('MAIL_NOTIFY_ADDRESS', env('MAIL_FROM_ADDRESS', 'hello@example.com')),
+    'notify_name' => env('MAIL_NOTIFY_NAME', env('MAIL_FROM_NAME', 'Example')),
+
 ];

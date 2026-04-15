@@ -2,16 +2,21 @@
 
 namespace App\Services\Cotizaciones;
 
+use App\Mail\CotizacionRecibidaClienteMail;
+use App\Mail\NuevaCotizacionInternaMail;
 use App\Models\Cotizacion;
 use App\Models\CotizacionDetalle;
 use App\Models\Producto;
 use App\Models\Servicio;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
 class CotizacionCreator {
 
     public function __construct(private CotizacionTotals $totals) {}
+
     public function create(
         ?int $usuarioId,
         ?int $personaId,
@@ -19,8 +24,9 @@ class CotizacionCreator {
         ?string $telefonoDestino,
         array $items
     ): Cotizacion {
-        return DB::transaction(function () use ($usuarioId, $personaId, $emailDestino, $telefonoDestino, $items) {
+        $cotizacion = DB::transaction(function () use ($usuarioId, $personaId, $emailDestino, $telefonoDestino, $items) {
             $token = (string) Str::uuid();
+
             $cotizacion = Cotizacion::create([
                 'usuario_id' => $usuarioId,
                 'persona_id' => $personaId,
@@ -33,19 +39,27 @@ class CotizacionCreator {
                 'total' => 0,
                 'status' => 'activo',
             ]);
+
             $cotizacion->folio = 'COT-' . now()->format('Ymd') . '-' . str_pad((string) $cotizacion->id, 5, '0', STR_PAD_LEFT);
             $cotizacion->save();
-            // Merge items repetidos (P:ID / S:ID)
+
             $merged = [];
+
             foreach ($items as $it) {
                 $tipo = strtoupper((string) ($it['tipo'] ?? ''));
                 $cantidad = (float) ($it['cantidad'] ?? 0);
-                if ($cantidad <= 0) continue;
+
+                if ($cantidad <= 0) {
+                    continue;
+                }
+
                 $productoId = $tipo === 'PRODUCTO' ? (int) ($it['producto_id'] ?? 0) : null;
                 $servicioId = $tipo === 'SERVICIO' ? (int) ($it['servicio_id'] ?? 0) : null;
+
                 $key = $tipo === 'PRODUCTO'
                     ? 'P:' . (string) $productoId
                     : 'S:' . (string) $servicioId;
+
                 if (!isset($merged[$key])) {
                     $merged[$key] = [
                         'tipo' => $tipo,
@@ -54,8 +68,10 @@ class CotizacionCreator {
                         'cantidad' => 0.0,
                     ];
                 }
+
                 $merged[$key]['cantidad'] += $cantidad;
             }
+
             $productoIds = collect($merged)
                 ->where('tipo', 'PRODUCTO')
                 ->pluck('producto_id')
@@ -63,6 +79,7 @@ class CotizacionCreator {
                 ->unique()
                 ->values()
                 ->all();
+
             $servicioIds = collect($merged)
                 ->where('tipo', 'SERVICIO')
                 ->pluck('servicio_id')
@@ -70,23 +87,31 @@ class CotizacionCreator {
                 ->unique()
                 ->values()
                 ->all();
+
             $productos = Producto::query()
                 ->where('status', 'activo')
                 ->whereIn('id', $productoIds)
                 ->get(['id', 'precio_venta'])
                 ->keyBy('id');
+
             $servicios = Servicio::query()
                 ->where('status', 'activo')
                 ->whereIn('id', $servicioIds)
                 ->get(['id', 'precio'])
                 ->keyBy('id');
+
             foreach ($merged as $m) {
                 $tipo = $m['tipo'];
                 $cantidad = round((float) $m['cantidad'], 2);
+
                 if ($tipo === 'PRODUCTO') {
                     $pid = (int) $m['producto_id'];
                     $precio = (float) ($productos[$pid]->precio_venta ?? 0);
-                    if ($precio <= 0) continue;
+
+                    if ($precio <= 0) {
+                        continue;
+                    }
+
                     CotizacionDetalle::create([
                         'cotizacion_id' => $cotizacion->id,
                         'producto_id' => $pid,
@@ -99,7 +124,11 @@ class CotizacionCreator {
                 } else {
                     $sid = (int) $m['servicio_id'];
                     $precio = (float) ($servicios[$sid]->precio ?? 0);
-                    if ($precio <= 0) continue;
+
+                    if ($precio <= 0) {
+                        continue;
+                    }
+
                     CotizacionDetalle::create([
                         'cotizacion_id' => $cotizacion->id,
                         'producto_id' => null,
@@ -111,8 +140,9 @@ class CotizacionCreator {
                     ]);
                 }
             }
+
             $this->totals->recalc($cotizacion->fresh());
-            // Si ya tiene items, se vuelve EN_REVISION automáticamente
+
             if (
                 $cotizacion->fresh()
                     ->detalles()
@@ -123,8 +153,63 @@ class CotizacionCreator {
                 $cotizacion->estatus = 'EN_REVISION';
                 $cotizacion->save();
             }
+
             return $cotizacion->fresh();
         });
+
+        $cotizacion->load([
+            'detalles' => fn ($q) => $q->where('status', 'activo')->orderBy('id'),
+            'detalles.producto:id,sku,nombre',
+            'detalles.servicio:id,nombre',
+        ]);
+
+        $detalles = $cotizacion->detalles->map(function ($d) {
+            $descripcion = $d->servicio?->nombre
+                ?: trim(($d->producto?->nombre ?? 'Producto') . (!empty($d->producto?->sku) ? ' - ' . $d->producto->sku : ''));
+
+            return [
+                'descripcion' => $descripcion,
+                'cantidad' => (float) $d->cantidad,
+                'precio_unitario' => (float) $d->precio_unitario,
+                'total_linea' => (float) $d->total_linea,
+            ];
+        })->values()->all();
+
+        try {
+            if (!empty($cotizacion->email_destino)) {
+                Mail::to($cotizacion->email_destino)->send(
+                    new CotizacionRecibidaClienteMail($cotizacion)
+                );
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            Log::error('No se pudo enviar correo de confirmación al cliente.', [
+                'cotizacion_id' => $cotizacion->id,
+                'to' => $cotizacion->email_destino,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        try {
+            $notifyTo = (string) config('mail.notify_to');
+
+            if ($notifyTo !== '') {
+                Mail::to($notifyTo)->send(
+                    new NuevaCotizacionInternaMail(
+                        cotizacion: $cotizacion,
+                        detalles: $detalles
+                    )
+                );
+            }
+        } catch (\Throwable $e) {
+            report($e);
+            Log::error('No se pudo enviar correo interno de nueva cotización.', [
+                'cotizacion_id' => $cotizacion->id,
+                'to' => config('mail.notify_to'),
+                'error' => $e->getMessage(),
+            ]);
+        }
+        return $cotizacion;
     }
 
 }
