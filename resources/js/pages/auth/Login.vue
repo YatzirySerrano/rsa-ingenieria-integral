@@ -14,6 +14,7 @@
     import { register } from '@/routes'
     import { store } from '@/routes/login'
     import { request } from '@/routes/password'
+    import logo from '@/img/logoRSA.png'
 
     defineProps<{
         status?: string
@@ -33,14 +34,9 @@
             <!-- Brand (solo desktop, en móvil va encima del cover) -->
             <div class="hidden lg:flex justify-center gap-2 pt-6">
                 <Link href="/" class="flex items-center gap-2 font-medium transition hover:opacity-90">
-                <div class="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                    <GalleryVerticalEnd class="size-10" />
+                <div class="flex h-25 w-55 items-center justify-center overflow-hidden rounded-md bg-white">
+                    <img :src="logo" alt="RSA" class="h-full w-full object-contain" />
                 </div>
-
-                <span class="leading-tight">
-                    <span class="block -mb-0.5 font-semibold tracking-tight">RSA</span>
-                    <span class="block text-xl text-muted-foreground">Ingeniería Integral</span>
-                </span>
                 </Link>
             </div>
 
@@ -60,16 +56,9 @@
                         ring-1 ring-black/10 backdrop-blur
                         transition hover:bg-white/95 dark:bg-black/55
                         dark:hover:bg-black/65 dark:ring-white/10">
-                        <div class="flex h-7 w-7 items-center
-                        justify-center rounded-md bg-primary
-                        text-primary-foreground">
-                            <GalleryVerticalEnd class="size-4" />
+                        <div class="flex h-15 w-45 items-center justify-center overflow-hidden rounded-md bg-white">
+                            <img :src="logo" alt="RSA" class="h-full w-full object-contain" />
                         </div>
-
-                        <span class="leading-tight">
-                            <span class="block -mb-0.5 text-sm font-semibold tracking-tight">RSA</span>
-                            <span class="block text-[11px] text-muted-foreground">Ingeniería Integral</span>
-                        </span>
                         </Link>
                     </div>
                 </div>

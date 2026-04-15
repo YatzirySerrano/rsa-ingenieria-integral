@@ -7,10 +7,9 @@ import { Label } from '@/components/ui/label'
 import { Spinner } from '@/components/ui/spinner'
 import { Form, Head, Link } from '@inertiajs/vue3'
 import { GalleryVerticalEnd } from 'lucide-vue-next'
-
 import loginCoverMobile from '@/img/login-cover-mobile.jpg'
 import loginCoverDesktop from '@/img/login-cover-desktop.png'
-
+import logo from '@/img/logoRSA.png'
 import { login } from '@/routes'
 import { email } from '@/routes/password'
 
@@ -28,14 +27,9 @@ defineProps<{
       <!-- Brand (solo desktop) -->
       <div class="hidden lg:flex justify-center gap-2 pt-6">
         <Link href="/" class="flex items-center gap-2 font-medium transition hover:opacity-90">
-          <div class="flex h-10 w-10 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <GalleryVerticalEnd class="size-6" />
-          </div>
-
-          <span class="leading-tight">
-            <span class="block -mb-0.5 font-semibold tracking-tight">RSA</span>
-            <span class="block text-xl text-muted-foreground">Ingeniería Integral</span>
-          </span>
+            <div class="flex h-25 w-55 items-center justify-center overflow-hidden rounded-md bg-white">
+                <img :src="logo" alt="RSA" class="h-full w-full object-contain" />
+            </div>
         </Link>
       </div>
 
@@ -57,14 +51,9 @@ defineProps<{
               class="inline-flex items-center gap-2 rounded-2xl bg-white/85 px-3 py-2 shadow-sm ring-1 ring-black/10 backdrop-blur
                      transition hover:bg-white/95 dark:bg-black/55 dark:hover:bg-black/65 dark:ring-white/10"
             >
-              <div class="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground">
-                <GalleryVerticalEnd class="size-4" />
-              </div>
-
-              <span class="leading-tight">
-                <span class="block -mb-0.5 text-sm font-semibold tracking-tight">RSA</span>
-                <span class="block text-[11px] text-muted-foreground">Ingeniería Integral</span>
-              </span>
+                <div class="flex h-15 w-45 items-center justify-center overflow-hidden rounded-md bg-white">
+                    <img :src="logo" alt="RSA" class="h-full w-full object-contain" />
+                </div>
             </Link>
           </div>
         </div>
