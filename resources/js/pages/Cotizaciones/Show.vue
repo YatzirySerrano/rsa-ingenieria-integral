@@ -608,7 +608,7 @@ onMounted(() => {
                     class="col-span-full rounded-3xl border border-dashed border-black/10 bg-white/70 p-10 text-center
                            text-slate-600 dark:border-white/10 dark:bg-zinc-950/40 dark:text-zinc-400"
                   >
-                    Sin resultados en productos.
+                    ¿No encuentras el producto que buscas? Contáctanos por WhatsApp o redes sociales y con gusto te ayudamos a revisar una opción de acuerdo con lo que necesitas.
                   </div>
                 </div>
 
@@ -657,7 +657,7 @@ onMounted(() => {
                     class="col-span-full rounded-3xl border border-dashed border-black/10 bg-white/70 p-10 text-center
                            text-slate-600 dark:border-white/10 dark:bg-zinc-950/40 dark:text-zinc-400"
                   >
-                    Sin resultados en servicios.
+                    ¿No encuentras el servicio que buscas? Contáctanos por WhatsApp o redes sociales y con gusto te ayudamos a revisar una opción de acuerdo con lo que necesitas.
                   </div>
                 </div>
               </div>
