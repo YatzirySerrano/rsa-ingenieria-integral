@@ -17,9 +17,9 @@ const props = withDefaults(
   }
 )
 
-const address = 'Calle Geranio 91, 62570 Jiutepec, Mor.'
-const mapsLink = 'https://maps.app.goo.gl/emHBBUx4TUGja8ss8'
-const mapsEmbed = 'https://www.google.com/maps?q=Av.%20Cuauhnahuac%20y%20Geranio%2C%2062570%20Jiutepec%2C%20Mor.&output=embed'
+const address = 'Ampliación Civac Tetecolala, 62522 Jiutepec, Mor.'
+const mapsLink = 'https://maps.app.goo.gl/8DTm6FgUmDyg5pHE8'
+const mapsEmbed = 'https://www.google.com/maps?q=18.9241001,-99.1645045&z=17&output=embed'
 
 const facebook = 'https://www.facebook.com/share/17udw6z1Gx/?mibextid=wwXIfr'
 const tiktok = 'https://www.tiktok.com/@rsa.ingenieria.in?_r=1&_t=ZS-92YsP7r2oVN'
