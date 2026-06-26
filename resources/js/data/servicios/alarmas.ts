@@ -1,4 +1,5 @@
 import alarmasHeroImg from '@/img/alarmas.png'
+import alarmasBeneficios from '@/img/alarmasBeneficio.jpg'
 
 import hikvisionLogo from '@/img/brands/hikvision.svg'
 import epcomLogo from '@/img/brands/epcom.png'
@@ -13,6 +14,7 @@ export const alarmasService = {
     description:
       'Diseñamos e instalamos sistemas de alarma para detección, aviso y respuesta ante intrusión o eventos de riesgo. Integramos panel, sensores, sirenas, conectividad y configuración según el tipo de inmueble, nivel de seguridad y operación requerida.',
     image: alarmasHeroImg,
+    imagePosition: 'left center',
     applications: ['Residencial', 'Comercial', 'Oficinas', 'Bodegas'],
     highlights: [
       { title: 'Sensores y zonas', text: 'Cobertura según riesgo y distribución' },
@@ -60,7 +62,7 @@ export const alarmasService = {
   },
 
   benefitsSection: {
-    image: alarmasHeroImg,
+    image: alarmasBeneficios,
     badge: 'RSA • Alarmas',
     imageTitles: [
       'Detección más oportuna.',

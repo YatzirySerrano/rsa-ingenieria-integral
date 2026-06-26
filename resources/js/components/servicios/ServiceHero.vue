@@ -4,8 +4,9 @@ type HeroHighlight = {
   text: string
 }
 
-defineProps<{
+const props = withDefaults(defineProps<{
   image: string
+  imagePosition?: string
   waLink: string
   goCotizar: () => void
   goTo: (id: string) => void
@@ -15,7 +16,9 @@ defineProps<{
   applications: string[]
   highlights: HeroHighlight[]
   bottomText: string
-}>()
+}>(), {
+  imagePosition: 'center',
+})
 </script>
 
 <template>
@@ -23,6 +26,7 @@ defineProps<{
     <img
       :src="image"
       class="absolute inset-0 h-full w-full object-cover"
+      :style="{ objectPosition: imagePosition }"
     />
 
     <div class="absolute inset-0 bg-black/50"></div>

@@ -1,4 +1,5 @@
-import cctvHeroImg from '@/img/cctv.jpg'
+import cctvHeroImg from '@/img/cctvHero.jpg'
+import cctvBeneficios from '@/img/cctvBeneficio1.jpg'
 
 import accessproLogo from '@/img/brands/accesspro.png'
 import epcomLogo from '@/img/brands/epcom.png'
@@ -65,7 +66,7 @@ export const cctvService = {
   },
 
   benefitsSection: {
-    image: cctvHeroImg,
+    image: cctvBeneficios,
     badge: 'RSA • CCTV',
     imageTitles: [
       'Evidencia que sí sirve.',

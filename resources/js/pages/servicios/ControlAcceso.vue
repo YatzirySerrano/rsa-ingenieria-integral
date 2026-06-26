@@ -54,6 +54,7 @@ onMounted(() => {
   <PublicLayout>
     <ServiceHero
       :image="controlAccesoService.hero.image"
+      :imagePosition="controlAccesoService.hero.imagePosition"
       :goCotizar="goCotizarServicios"
       :goTo="goTo"
       :waLink="waLink"

@@ -1,4 +1,5 @@
 import instalacionesElectricasHeroImg from '@/img/instalaciones-electricas.png'
+import instalacionesElectricasBeneficios from '@/img/instaElecBeneficios.jpg'
 
 export const instalacionesElectricasService = {
   hero: {
@@ -55,7 +56,7 @@ export const instalacionesElectricasService = {
   },
 
   benefitsSection: {
-    image: instalacionesElectricasHeroImg,
+    image: instalacionesElectricasBeneficios,
     badge: 'RSA • Instalaciones eléctricas',
     imageTitles: [
       'Distribución más ordenada.',

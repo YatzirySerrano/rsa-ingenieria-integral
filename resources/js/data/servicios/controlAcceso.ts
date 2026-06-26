@@ -1,4 +1,5 @@
-import controlAccesoHeroImg from '@/img/control-acceso.png'
+import controlAccesoHeroImg from '@/img/controlAccesoHero.png'
+import controlAccesoBeneficio from '@/img/controlAccesoBeneficio.jpg'
 
 import hikvisionLogo from '@/img/brands/hikvision.svg'
 import epcomLogo from '@/img/brands/epcom.png'
@@ -14,6 +15,7 @@ export const controlAccesoService = {
     description:
       'Diseñamos e instalamos soluciones de control de acceso para casas, oficinas, privadas, edificios y negocios. Integramos validación por huella, tarjeta, PIN, QR, app o videoportero según el nivel de seguridad, flujo de usuarios y operación requerida.',
     image: controlAccesoHeroImg,
+    imagePosition: 'left center',
     applications: ['Residencial', 'Corporativo', 'Condominios', 'Comercial'],
     highlights: [
       { title: 'Huella / tarjeta / PIN', text: 'Acceso según perfil de usuario' },
@@ -61,7 +63,7 @@ export const controlAccesoService = {
   },
 
   benefitsSection: {
-    image: controlAccesoHeroImg,
+    image: controlAccesoBeneficio,
     badge: 'RSA • Control de acceso',
     imageTitles: [
       'Accesos más seguros.',

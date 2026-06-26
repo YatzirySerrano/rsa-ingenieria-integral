@@ -32,9 +32,9 @@ import accesoImg from '@/img/control-acceso.png'
 import dashcamImg from '@/img/dashcam.png'
 import instalacionesElectricasImg from '@/img/instalaciones-electricas.png'
 
-import carrusel1Img from '@/img/carrusel1.png'
-import carrusel2Img from '@/img/carrusel2.png'
-import carrusel3Img from '@/img/carrusel3.png'
+import carrusel1Img from '@/img/carrusel1.jpg'
+import carrusel2Img from '@/img/carrusel2.jpg'
+import carrusel3Img from '@/img/carrusel3.jpg'
 
 const COTIZAR_URL = urlFrom(CotizarRoutes as any, ['create', 'cotizarCreate'], '/cotizar')
 
@@ -737,8 +737,7 @@ onBeforeUnmount(() => {
                   </div>
 
                   <div class="mt-3 max-w-xl text-sm text-white/90">
-                    Evidencia visual de ejecución, operación y trazabilidad. (Autoplay; al pasar el mouse se pausa.)
-                  </div>
+                    Soluciones instaladas con orden, precisión y respaldo técnico.                  </div>
 
                   <div class="mt-4 flex items-center gap-2">
                     <button
