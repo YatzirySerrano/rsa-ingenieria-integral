@@ -31,6 +31,7 @@ import cercaImg from '@/img/cerca-electrica.png'
 import accesoImg from '@/img/control-acceso.png'
 import dashcamImg from '@/img/dashcam.png'
 import instalacionesElectricasImg from '@/img/instalaciones-electricas.png'
+import infraestructuraRedImg from '@/img/infraestructura-red.jpg'
 
 import carrusel1Img from '@/img/carrusel1.jpg'
 import carrusel2Img from '@/img/carrusel2.jpg'
@@ -79,6 +80,11 @@ const SVC_URL = {
     ServiciosRoutes as any,
     ['serviciosInstalacionesElectricas', 'InstalacionesElectricas'],
     '/servicios/InstalacionesElectricas'
+  ),
+  infraestructuraRed: urlFrom(
+    ServiciosRoutes as any,
+    ['serviciosInfraestructuraRed', 'InfraestructuraRed', 'infraestructura_red'],
+    '/servicios/InfraestructuraRed'
   ),
 } as const
 
@@ -216,9 +222,18 @@ const serviciosTiles: ServicioTile[] = [
     subtitle: 'Canalización, cableado y distribución',
     desc: 'Realizamos canalización en losa y muro, ranurado, acometidas, centros de carga, cableado e instalación de lámparas, contactos y apagadores para casa, negocio y obra.',
     image: instalacionesElectricasImg,
-    span: 'lg:col-span-3',
+    span: 'lg:col-span-1',
     theme: 'light',
     href: SVC_URL.electricas,
+  },
+  {
+    title: 'Infraestructura de red',
+    subtitle: 'Redes y cableado estructurado',
+    desc: 'Diseño e instalación de cableado estructurado, switches, routers, WiFi empresarial, racks y puntos de red para operación estable.',
+    image: infraestructuraRedImg,
+    span: 'lg:col-span-2',
+    theme: 'dark',
+    href: SVC_URL.infraestructuraRed,
   },
 ]
 
@@ -563,8 +578,21 @@ onBeforeUnmount(() => {
                 No somos una opción. Somos tu solución.
               </div>
 
-              <h1 class="mt-6 text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-6xl">
-                <span :class="babyBlue">RSA Ingeniería Integral</span>
+              <h1
+                class="mx-auto mt-6 max-w-5xl text-5xl font-black leading-[0.92] tracking-[-0.055em]
+                      sm:text-6xl md:text-7xl lg:text-8xl
+                      bg-gradient-to-br from-[#EAF8FF] via-[#2F80C9] to-[#082A5A]
+                      bg-clip-text text-transparent
+                      drop-shadow-[0_7px_22px_rgba(255,255,255,0.55)]"
+              >
+                RSA Ingeniería
+                <span
+                  class="block bg-gradient-to-br from-[#CDEEFF] via-[#2563A8] to-[#061F45]
+                        bg-clip-text text-transparent
+                        drop-shadow-[0_8px_24px_rgba(255,255,255,0.45)]"
+                >
+                  Integral
+                </span>
               </h1>
 
               <div class="mt-3 text-lg font-semibold text-white/90 sm:text-xl">

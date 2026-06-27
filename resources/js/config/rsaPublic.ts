@@ -3,7 +3,7 @@ export type NavLink = { label: string; id: string }
 // Vite build-safe: importar assets (NO strings "@/img/...")
 import logoSrc from '@/img/logoRSA.png'
 import logoBlancoSrc from '@/img/logoBlancoRSA.png'
-import heroSrc from '@/img/hero-rsa.png'
+import heroSrc from '@/img/hero-rsa2.png'
 
 export const RSA_PUBLIC = {
   logoSrc,

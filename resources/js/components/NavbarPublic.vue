@@ -31,6 +31,7 @@ import cercaImg from '@/img/cerca-electrica.png'
 import controlAccesoImg from '@/img/control-acceso.png'
 import dashcamImg from '@/img/dashcam.png'
 import instalacionesElectricasImg from '@/img/instalaciones-electricas.png'
+import infraestructuraRedImg from '@/img/infraestructura-red.jpg'
 
 /**
  * =========================
@@ -121,6 +122,11 @@ const SVC_URL = {
     ['serviciosInstalacionesElectricas', 'InstalacionesElectricas'],
     '/servicios/InstalacionesElectricas'
   ),
+  infraestructuraRed: urlFrom(
+    ServiciosRoutes as any,
+    ['serviciosInfraestructuraRed', 'InfraestructuraRed', 'infraestructura_red'],
+    '/servicios/InfraestructuraRed'
+  ),
 } as const
 
 /**
@@ -140,6 +146,12 @@ const serviceItems: readonly ServicioItem[] = [
     desc: 'Canalización, cableado y distribución',
     image: instalacionesElectricasImg,
     href: SVC_URL.electricas
+  },
+  {
+    label: 'Infraestructura de red',
+    desc: 'Conectividad y gestión de red',
+    image: infraestructuraRedImg,
+    href: SVC_URL.infraestructuraRed
   },
 ]
 

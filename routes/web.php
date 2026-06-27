@@ -57,6 +57,11 @@ Route::get('/servicios/InstalacionesElectricas', function () {
     return Inertia::render('servicios/InstalacionesElectricas');
 })->name('Servicios.InstalacionesElectricas');
 
+// Página pública de servicios infraestructura de red
+Route::get('/servicios/InfraestructuraRed', function () {
+    return Inertia::render('servicios/InfraestructuraRed');
+})->name('Servicios.InfraestructuraRed');
+
 Route::get('/catalogo', [PublicProductoController::class, 'index'])
     ->name('catalogo.publico');
 
