@@ -31,7 +31,7 @@ import cercaImg from '@/img/cerca-electrica.png'
 import accesoImg from '@/img/control-acceso.png'
 import dashcamImg from '@/img/dashcam.png'
 import instalacionesElectricasImg from '@/img/instalaciones-electricas.png'
-import infraestructuraRedImg from '@/img/infraestructura-red.jpg'
+import infraestructuraRedImg from '@/img/infraestructura-red-hero.jpeg'
 
 import carrusel1Img from '@/img/carrusel1.jpg'
 import carrusel2Img from '@/img/carrusel2.jpg'
